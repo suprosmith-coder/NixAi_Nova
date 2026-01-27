@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyanix AI | Groq-Powered Assistant</title>
+    <title>Cyanix AI | NixAI-Powered Assistant</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1547,15 +1547,15 @@
             box-shadow: 0 5px 15px rgba(0, 243, 255, 0.3);
         }
 
-        /* Groq API Key Modal */
+        /* OpenAI API Key Modal */
         .api-key-input {
             font-family: 'Courier New', monospace;
             font-size: 14px;
             letter-spacing: 1px;
         }
 
-        .groq-badge {
-            background: linear-gradient(135deg, #00A67D, #00D4AA);
+        .openai-badge {
+            background: linear-gradient(135deg, #10A37F, #19C37D);
             color: white;
             padding: 4px 10px;
             border-radius: 6px;
@@ -1564,7 +1564,7 @@
             margin-left: 10px;
         }
 
-        .groq-info {
+        .openai-info {
             background: rgba(0, 243, 255, 0.1);
             border: 1px solid rgba(0, 243, 255, 0.3);
             border-radius: 10px;
@@ -1572,7 +1572,7 @@
             margin-top: 20px;
         }
 
-        .groq-info h4 {
+        .openai-info h4 {
             color: var(--cyan-primary);
             margin-bottom: 10px;
             display: flex;
@@ -1580,21 +1580,21 @@
             gap: 8px;
         }
 
-        .groq-info ul {
+        .openai-info ul {
             color: var(--cyan-light);
             font-size: 13px;
             line-height: 1.6;
             padding-left: 20px;
         }
 
-        .groq-info a {
+        .openai-info a {
             color: var(--cyan-primary);
             text-decoration: none;
             transition: all 0.3s;
             border-bottom: 1px solid transparent;
         }
 
-        .groq-info a:hover {
+        .openai-info a:hover {
             border-bottom: 1px solid var(--cyan-primary);
             text-shadow: 0 0 10px var(--cyan-primary);
         }
@@ -1792,7 +1792,7 @@
             <i class="fas fa-robot"></i>
         </div>
         <h1 class="splash-title">Cyanix AI</h1>
-        <p class="splash-subtitle">Powered by Groq Cloud</p>
+        <p class="splash-subtitle">Powered by NixAI</p>
         <div class="loading-bar">
             <div class="loading-progress" id="loadingProgress"></div>
         </div>
@@ -1801,17 +1801,17 @@
     <!-- Toast Container -->
     <div id="toastContainer"></div>
 
-    <!-- Groq API Key Modal -->
-    <div id="groqKeyModal" class="modal-overlay">
+    <!-- OpenAI API Key Modal -->
+    <div id="openaiKeyModal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">Groq Cloud API Key <span class="groq-badge">FAST</span></h3>
-                <button class="modal-close" onclick="closeGroqKeyModal()">&times;</button>
+                <h3 class="modal-title">OpenAI API Key <span class="openai-badge">GPT-4</span></h3>
+                <button class="modal-close" onclick="closeOpenAIKeyModal()">&times;</button>
             </div>
             <div class="modal-content">
                 <div class="form-group">
-                    <label class="form-label">Groq Cloud API Key</label>
-                    <input type="password" id="groqApiKey" class="form-input api-key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                    <label class="form-label">OpenAI API Key</label>
+                    <input type="password" id="openaiApiKey" class="form-input api-key-input" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
                     <div id="apiKeyStatus" class="api-key-status"></div>
                     <div style="font-size: 12px; color: var(--cyan-light); margin-top: 5px;">
                         Your key is stored locally and never sent to our servers
@@ -1819,11 +1819,11 @@
                 </div>
                 
                 <div class="api-key-actions">
-                    <button class="api-key-action-btn" onclick="testGroqApiKey()">
+                    <button class="api-key-action-btn" onclick="testOpenAIApiKey()">
                         <i class="fas fa-vial"></i>
                         Test Key
                     </button>
-                    <button class="api-key-action-btn" onclick="openGroqConsole()">
+                    <button class="api-key-action-btn" onclick="openOpenAIConsole()">
                         <i class="fas fa-external-link-alt"></i>
                         Get API Key
                     </button>
@@ -1833,19 +1833,19 @@
                     </button>
                 </div>
                 
-                <div class="groq-info">
-                    <h4><i class="fas fa-bolt"></i> Groq Cloud Features:</h4>
+                <div class="openai-info">
+                    <h4><i class="fas fa-brain"></i> OpenAI Features:</h4>
                     <ul>
-                        <li>Extremely fast inference (up to 500 tokens/sec)</li>
-                        <li>Free tier available with generous limits</li>
-                        <li>Llama 3, Mixtral, and other top models</li>
-                        <li>Low-latency responses</li>
-                        <li>Enterprise-grade reliability</li>
+                        <li>Most advanced AI models (GPT-4, GPT-4 Turbo, GPT-3.5)</li>
+                        <li>Vision capabilities with GPT-4 Vision</li>
+                        <li>128K context window</li>
+                        <li>Advanced reasoning and analysis</li>
+                        <li>Reliable and production-ready</li>
                     </ul>
                     
                     <h4 style="margin-top: 15px;"><i class="fas fa-key"></i> How to get your API key:</h4>
                     <ul>
-                        <li>Visit <a href="https://console.groq.com/keys" target="_blank" id="groqApiLink">Groq Cloud Console</a></li>
+                        <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
                         <li>Sign up or log in to your account</li>
                         <li>Create a new API key</li>
                         <li>Copy and paste it into the field above</li>
@@ -1855,8 +1855,8 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button class="modal-btn secondary" onclick="closeGroqKeyModal()">Cancel</button>
-                    <button class="modal-btn primary" onclick="saveGroqApiKey()">Save API Key</button>
+                    <button class="modal-btn secondary" onclick="closeOpenAIKeyModal()">Cancel</button>
+                    <button class="modal-btn primary" onclick="saveOpenAIApiKey()">Save API Key</button>
                 </div>
             </div>
         </div>
@@ -1871,39 +1871,40 @@
             </div>
             <div class="modal-content">
                 <p class="modal-description">
-                    Choose which AI model you'd like to use. All models are powered by Groq Cloud's ultra-fast inference.
+                    Choose which AI model you'd like to use. All models are powered by OpenAI's advanced AI.
                 </p>
                 
                 <div class="model-selector" id="modelSelector">
                     <div class="model-btn active" data-model="cyanix-pro" onclick="selectModel('cyanix-pro')">
                         <i class="fas fa-brain model-icon"></i>
                         <div class="model-name">Cyanix Pro</div>
-                        <div class="model-desc">Llama 3 70B - Most capable</div>
+                        <div class="model-desc">GPT-4 Turbo - Most capable</div>
                     </div>
                     <div class="model-btn" data-model="cyanix-flash" onclick="selectModel('cyanix-flash')">
                         <i class="fas fa-bolt model-icon"></i>
                         <div class="model-name">Cyanix Flash</div>
-                        <div class="model-desc">Llama 3 8B - Fast & efficient</div>
+                        <div class="model-desc">GPT-3.5 Turbo - Fast & efficient</div>
                     </div>
                     <div class="model-btn" data-model="cyanix-vision" onclick="selectModel('cyanix-vision')">
                         <i class="fas fa-eye model-icon"></i>
                         <div class="model-name">Cyanix Vision</div>
-                        <div class="model-desc">Llama 3 70B - Text only</div>
+                        <div class="model-desc">GPT-4 Vision - Multimodal</div>
                     </div>
                     <div class="model-btn" data-model="cyanix-advanced" onclick="selectModel('cyanix-advanced')">
                         <i class="fas fa-robot model-icon"></i>
                         <div class="model-name">Cyanix Advanced</div>
-                        <div class="model-desc">Mixtral 8x7B - Expert model</div>
+                        <div class="model-desc">GPT-4 - Advanced reasoning</div>
                     </div>
                 </div>
                 
-                <div class="groq-info">
+                <div class="openai-info">
                     <h4><i class="fas fa-info-circle"></i> Model Information:</h4>
                     <ul>
-                        <li><strong>Cyanix Pro:</strong> Llama 3 70B - Best for complex reasoning</li>
-                        <li><strong>Cyanix Flash:</strong> Llama 3 8B - Fastest response times</li>
-                        <li><strong>Cyanix Advanced:</strong> Mixtral 8x7B - Specialized expertise</li>
-                        <li>All models powered by Groq's LPU inference engine</li>
+                        <li><strong>Cyanix Pro:</strong> GPT-4 Turbo - Latest & most capable</li>
+                        <li><strong>Cyanix Flash:</strong> GPT-3.5 Turbo - Fastest response times</li>
+                        <li><strong>Cyanix Vision:</strong> GPT-4 Vision - Image analysis</li>
+                        <li><strong>Cyanix Advanced:</strong> GPT-4 - Advanced reasoning</li>
+                        <li>All models powered by OpenAI's API</li>
                     </ul>
                 </div>
                 
@@ -1926,12 +1927,12 @@
             </div>
             
             <h1 class="auth-title">Welcome to the Future of AI Conversation</h1>
-            <p class="auth-subtitle">Powered by Groq Cloud with ultra-fast inference</p>
+            <p class="auth-subtitle">Powered by OpenAI's advanced models</p>
             
             <div class="features-list">
                 <div class="feature-item">
-                    <i class="fas fa-bolt feature-icon"></i>
-                    <span>Groq Cloud Integration</span>
+                    <i class="fas fa-brain feature-icon"></i>
+                    <span>OpenAI Integration</span>
                 </div>
                 <div class="feature-item">
                     <i class="fas fa-key feature-icon"></i>
@@ -2066,20 +2067,6 @@
                         Already have an account? <a href="#" onclick="switchAuthTab('signin')">Sign In</a>
                     </p>
                 </div>
-
-                <!-- OTP Form -->
-                <div id="otpForm" class="auth-form-content" style="display: none;">
-                    <div class="form-group">
-                        <label class="form-label">Verification Code</label>
-                        <input type="text" id="otpCode" class="form-input" placeholder="Enter the 6-digit code sent to your email">
-                    </div>
-                    
-                    <button class="auth-btn" onclick="verifyOTP()">Verify Code</button>
-                    
-                    <p class="auth-footer">
-                        Didn't receive the code? <a href="#" onclick="resendOTP()">Resend</a>
-                    </p>
-                </div>
             </div>
         </div>
     </div>
@@ -2124,9 +2111,9 @@
                         <i class="fas fa-brain sidebar-btn-icon"></i>
                         <span>Change AI Model</span>
                     </div>
-                    <div class="sidebar-btn" onclick="openGroqKeyModal()">
+                    <div class="sidebar-btn" onclick="openOpenAIKeyModal()">
                         <i class="fas fa-key sidebar-btn-icon"></i>
-                        <span>Groq API Key</span>
+                        <span>OpenAI API Key</span>
                     </div>
                 </div>
                 
@@ -2156,7 +2143,7 @@
                         <i class="fas fa-brain"></i>
                         AI Model
                     </button>
-                    <button class="header-btn" onclick="openGroqKeyModal()">
+                    <button class="header-btn" onclick="openOpenAIKeyModal()">
                         <i class="fas fa-key"></i>
                         API Key
                     </button>
@@ -2179,7 +2166,7 @@
                     </div>
                     <h1 class="welcome-title">Welcome to Cyanix AI</h1>
                     <p class="welcome-subtitle">
-                        Powered by Groq Cloud's ultra-fast inference. I can help with writing, analysis, coding, 
+                        Powered by OpenAI's advanced models. I can help with writing, analysis, coding, 
                         creative tasks, and much more. What would you like to explore?
                     </p>
                     
@@ -2259,19 +2246,17 @@
         // ==================== APP STATE ====================
         let currentUser = null;
         let currentChatId = null;
-        let isVerifyingOTP = false;
-        let tempEmail = null;
         let selectedModel = 'cyanix-pro';
         let conversationHistory = [];
-        let groqApiKey = null;
-        let hasGroqKey = false;
+        let openaiApiKey = null;
+        let hasOpenAIKey = false;
 
-        // Model mapping to Groq models
+        // Model mapping to OpenAI models
         const MODEL_MAPPING = {
-            'cyanix-pro': 'llama3-70b-8192',
-            'cyanix-flash': 'llama3-8b-8192',
-            'cyanix-vision': 'llama3-70b-8192',
-            'cyanix-advanced': 'mixtral-8x7b-32768'
+            'cyanix-pro': 'gpt-4-1106-preview',      // GPT-4 Turbo
+            'cyanix-flash': 'gpt-3.5-turbo-1106',    // GPT-3.5 Turbo
+            'cyanix-vision': 'gpt-4-vision-preview', // GPT-4 Vision
+            'cyanix-advanced': 'gpt-4'               // GPT-4
         };
 
         // ==================== INITIALIZATION ====================
@@ -2301,18 +2286,14 @@
                     // Check Firebase auth state
                     auth.onAuthStateChanged((user) => {
                         if (user) {
-                            if (isVerifyingOTP) {
-                                // Do nothing, waiting for OTP verification
-                            } else {
-                                handleUserSignedIn(user);
-                            }
+                            handleUserSignedIn(user);
                         } else {
                             handleUserSignedOut();
                         }
                     });
                     
                     // Load saved API key
-                    loadGroqApiKey();
+                    loadOpenAIApiKey();
                     
                 }, 500);
             }, 3000);
@@ -2330,13 +2311,13 @@
             
             showChatInterface();
             loadUserSettings();
-            showToast('Welcome to Cyanix AI! Powered by Groq Cloud.', 'success');
+            showToast('Welcome to Cyanix AI! Powered by OpenAI.', 'success');
             
             // Check if API key is set
-            if (!groqApiKey) {
+            if (!openaiApiKey) {
                 setTimeout(() => {
-                    showToast('Please add your Groq API key to enable AI responses', 'warning');
-                    openGroqKeyModal();
+                    showToast('Please add your OpenAI API key to enable AI responses', 'warning');
+                    openOpenAIKeyModal();
                 }, 2000);
             }
         }
@@ -2346,43 +2327,43 @@
             showAuth();
         }
 
-        // ==================== GROQ API KEY MANAGEMENT ====================
-        function openGroqKeyModal() {
-            document.getElementById('groqKeyModal').classList.add('active');
-            loadGroqApiKey();
+        // ==================== OPENAI API KEY MANAGEMENT ====================
+        function openOpenAIKeyModal() {
+            document.getElementById('openaiKeyModal').classList.add('active');
+            loadOpenAIApiKey();
         }
 
-        function closeGroqKeyModal() {
-            document.getElementById('groqKeyModal').classList.remove('active');
+        function closeOpenAIKeyModal() {
+            document.getElementById('openaiKeyModal').classList.remove('active');
         }
 
-        function openGroqConsole() {
-            window.open('https://console.groq.com/keys', '_blank', 'noopener,noreferrer');
-            showToast('Opened Groq Cloud Console. Create your API key there.', 'info');
+        function openOpenAIConsole() {
+            window.open('https://platform.openai.com/api-keys', '_blank', 'noopener,noreferrer');
+            showToast('Opened OpenAI Platform. Create your API key there.', 'info');
         }
 
-        function saveGroqApiKey() {
-            const keyInput = document.getElementById('groqApiKey');
+        function saveOpenAIApiKey() {
+            const keyInput = document.getElementById('openaiApiKey');
             const key = keyInput.value.trim();
             
             if (!key) {
-                showToast('Please enter your Groq API key', 'error');
+                showToast('Please enter your OpenAI API key', 'error');
                 return;
             }
 
-            if (!key.startsWith('gsk_')) {
-                showToast('Invalid Groq API key format. Should start with gsk_...', 'error');
+            if (!key.startsWith('sk-')) {
+                showToast('Invalid OpenAI API key format. Should start with sk-...', 'error');
                 return;
             }
 
             try {
                 // Save to localStorage
-                localStorage.setItem('groqApiKey', key);
-                groqApiKey = key;
-                hasGroqKey = true;
+                localStorage.setItem('openaiApiKey', key);
+                openaiApiKey = key;
+                hasOpenAIKey = true;
                 
-                showToast('Groq API key saved successfully!', 'success');
-                closeGroqKeyModal();
+                showToast('OpenAI API key saved successfully!', 'success');
+                closeOpenAIKeyModal();
                 updateModelStatus(true);
                 
             } catch (error) {
@@ -2391,11 +2372,11 @@
             }
         }
 
-        async function testGroqApiKey() {
-            const keyInput = document.getElementById('groqApiKey');
+        async function testOpenAIApiKey() {
+            const keyInput = document.getElementById('openaiApiKey');
             const key = keyInput.value.trim();
             
-            if (!key || !key.startsWith('gsk_')) {
+            if (!key || !key.startsWith('sk-')) {
                 showApiKeyStatus('Invalid API key format', 'invalid');
                 return false;
             }
@@ -2403,8 +2384,8 @@
             showApiKeyStatus('Testing API key connection...', 'info');
             
             try {
-                // Test the Groq API
-                const isValid = await testGroqApiConnection(key);
+                // Test the OpenAI API
+                const isValid = await testOpenAIApiConnection(key);
                 
                 if (isValid) {
                     showApiKeyStatus('API key is valid and active', 'valid');
@@ -2421,9 +2402,9 @@
             }
         }
 
-        async function testGroqApiConnection(apiKey) {
+        async function testOpenAIApiConnection(apiKey) {
             try {
-                const response = await fetch('https://api.groq.com/openai/v1/models', {
+                const response = await fetch('https://api.openai.com/v1/models', {
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json'
@@ -2436,7 +2417,7 @@
                     return false;
                 }
             } catch (error) {
-                console.error('Groq API test failed:', error);
+                console.error('OpenAI API test failed:', error);
                 return false;
             }
         }
@@ -2453,7 +2434,7 @@
         }
 
         function copyCurrentApiKey() {
-            const keyInput = document.getElementById('groqApiKey');
+            const keyInput = document.getElementById('openaiApiKey');
             const key = keyInput.value.trim();
             
             if (!key) {
@@ -2469,37 +2450,37 @@
             });
         }
 
-        function loadGroqApiKey() {
-            const savedKey = localStorage.getItem('groqApiKey');
-            if (savedKey && savedKey.startsWith('gsk_')) {
-                groqApiKey = savedKey;
-                hasGroqKey = true;
-                document.getElementById('groqApiKey').value = savedKey;
+        function loadOpenAIApiKey() {
+            const savedKey = localStorage.getItem('openaiApiKey');
+            if (savedKey && savedKey.startsWith('sk-')) {
+                openaiApiKey = savedKey;
+                hasOpenAIKey = true;
+                document.getElementById('openaiApiKey').value = savedKey;
                 updateModelStatus(true);
             } else {
-                groqApiKey = null;
-                hasGroqKey = false;
-                document.getElementById('groqApiKey').value = '';
+                openaiApiKey = null;
+                hasOpenAIKey = false;
+                document.getElementById('openaiApiKey').value = '';
                 updateModelStatus(false);
             }
         }
 
-        async function callGroqAPI(message) {
-            if (!groqApiKey) {
-                throw new Error('No Groq API key configured. Please add your API key in settings.');
+        async function callOpenAIAPI(message) {
+            if (!openaiApiKey) {
+                throw new Error('No OpenAI API key configured. Please add your API key in settings.');
             }
 
-            const groqModel = MODEL_MAPPING[selectedModel] || 'llama3-70b-8192';
+            const openaiModel = MODEL_MAPPING[selectedModel] || 'gpt-4-1106-preview';
             
             try {
-                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${groqApiKey}`,
+                        'Authorization': `Bearer ${openaiApiKey}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: groqModel,
+                        model: openaiModel,
                         messages: [
                             {
                                 role: 'user',
@@ -2507,24 +2488,33 @@
                             }
                         ],
                         temperature: 0.7,
-                        max_tokens: 1024,
+                        max_tokens: 2000,
                         top_p: 1,
-                        stream: false,
-                        stop: null
+                        frequency_penalty: 0,
+                        presence_penalty: 0
                     })
                 });
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Groq API error: ${response.status} - ${errorText}`);
+                    const errorData = await response.json();
+                    const errorMessage = errorData.error?.message || 'Unknown error';
+                    
+                    // Check for specific errors
+                    if (errorMessage.includes('insufficient_quota')) {
+                        throw new Error('API key has insufficient quota. Please check your OpenAI billing.');
+                    } else if (errorMessage.includes('invalid_api_key')) {
+                        throw new Error('Invalid API key. Please check your OpenAI API key.');
+                    }
+                    
+                    throw new Error(`OpenAI API error: ${response.status} - ${errorMessage}`);
                 }
 
                 const data = await response.json();
                 return data.choices[0].message.content;
                 
             } catch (error) {
-                console.error('Groq API Error:', error);
-                throw new Error(`Failed to get response from Groq API: ${error.message}`);
+                console.error('OpenAI API Error:', error);
+                throw error;
             }
         }
 
@@ -2538,26 +2528,26 @@
             return modelNames[model] || 'Cyanix Pro';
         }
 
-        function getGroqModelDisplayName(model) {
+        function getOpenAIModelDisplayName(model) {
             const modelNames = {
-                'cyanix-pro': 'Llama 3 70B',
-                'cyanix-flash': 'Llama 3 8B',
-                'cyanix-vision': 'Llama 3 70B',
-                'cyanix-advanced': 'Mixtral 8x7B'
+                'cyanix-pro': 'GPT-4 Turbo',
+                'cyanix-flash': 'GPT-3.5 Turbo',
+                'cyanix-vision': 'GPT-4 Vision',
+                'cyanix-advanced': 'GPT-4'
             };
-            return modelNames[model] || 'Llama 3 70B';
+            return modelNames[model] || 'GPT-4 Turbo';
         }
 
         function updateModelStatus(isActive) {
             const indicator = document.getElementById('modelIndicator');
             const text = document.getElementById('modelStatusText');
             
-            if (isActive && groqApiKey) {
+            if (isActive && openaiApiKey) {
                 indicator.style.background = 'var(--green-neon)';
                 indicator.style.boxShadow = '0 0 10px var(--green-neon)';
                 indicator.style.animation = 'pulse 2s infinite';
-                text.textContent = `${getModelDisplayName(selectedModel)} • ${getGroqModelDisplayName(selectedModel)} • Active`;
-            } else if (groqApiKey) {
+                text.textContent = `${getModelDisplayName(selectedModel)} • ${getOpenAIModelDisplayName(selectedModel)} • Active`;
+            } else if (openaiApiKey) {
                 indicator.style.background = 'var(--yellow-neon)';
                 indicator.style.boxShadow = '0 0 10px var(--yellow-neon)';
                 indicator.style.animation = 'none';
@@ -2567,7 +2557,7 @@
                 indicator.style.boxShadow = '0 0 10px var(--red-neon)';
                 indicator.style.animation = 'none';
                 indicator.style.opacity = '0.5';
-                text.textContent = 'Groq API Key Required';
+                text.textContent = 'OpenAI API Key Required';
             }
         }
 
@@ -2649,19 +2639,16 @@
         function switchAuthTab(tab) {
             const signinForm = document.getElementById('signinForm');
             const signupForm = document.getElementById('signupForm');
-            const otpForm = document.getElementById('otpForm');
             const authTabs = document.getElementById('authTabs');
             
             if (tab === 'signin') {
                 authTabs.classList.remove('signup-active');
                 signinForm.style.display = 'block';
                 signupForm.style.display = 'none';
-                otpForm.style.display = 'none';
             } else {
                 authTabs.classList.add('signup-active');
                 signinForm.style.display = 'none';
                 signupForm.style.display = 'block';
-                otpForm.style.display = 'none';
             }
         }
 
@@ -2704,103 +2691,10 @@
                 await auth.setPersistence(persistence);
                 const userCredential = await auth.signInWithEmailAndPassword(email, password);
                 const user = userCredential.user;
-
-                // Generate 6-digit OTP
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                const otpTime = new Date();
-
-                // Store OTP in Firestore
-                await db.collection('users').doc(user.uid).update({
-                    tempOtp: otp,
-                    tempOtpTime: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                // Store temp email for resend
-                tempEmail = email;
-
-                // Set verifying flag
-                isVerifyingOTP = true;
-
-                // Switch to OTP form
-                document.getElementById('signinForm').style.display = 'none';
-                document.getElementById('otpForm').style.display = 'block';
-
-                showToast('Verification code sent to your email', 'success');
+                
+                showToast('Signed in successfully!', 'success');
             } catch (error) {
                 showToast(getFirebaseError(error), 'error');
-            }
-        }
-
-        async function verifyOTP() {
-            const code = document.getElementById('otpCode').value.trim();
-
-            if (code.length !== 6) {
-                showToast('Please enter a 6-digit code', 'error');
-                return;
-            }
-
-            try {
-                const user = auth.currentUser;
-                if (!user) {
-                    showToast('Session expired. Please sign in again', 'error');
-                    switchAuthTab('signin');
-                    return;
-                }
-
-                const userDocSnap = await db.collection('users').doc(user.uid).get();
-                const data = userDocSnap.data();
-
-                if (!data || !data.tempOtp) {
-                    showToast('No verification code found. Please sign in again', 'error');
-                    auth.signOut();
-                    return;
-                }
-
-                const savedOtp = data.tempOtp;
-                const otpTime = data.tempOtpTime.toDate();
-                const now = new Date();
-
-                if (now - otpTime > 5 * 60 * 1000) { // 5 minutes expiration
-                    showToast('Verification code expired. Please sign in again', 'error');
-                    auth.signOut();
-                    return;
-                }
-
-                if (savedOtp === code) {
-                    // Clear temp OTP
-                    await userDocSnap.ref.update({
-                        tempOtp: firebase.firestore.FieldValue.delete(),
-                        tempOtpTime: firebase.firestore.FieldValue.delete()
-                    });
-
-                    // Proceed to signed in state
-                    isVerifyingOTP = false;
-                    handleUserSignedIn(user);
-                    showToast('Verification successful!', 'success');
-                } else {
-                    showToast('Invalid verification code', 'error');
-                }
-            } catch (error) {
-                showToast('Error verifying code: ' + error.message, 'error');
-            }
-        }
-
-        async function resendOTP() {
-            try {
-                const user = auth.currentUser;
-                if (!user || !tempEmail) return;
-
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                const otpTime = new Date();
-
-                await db.collection('users').doc(user.uid).update({
-                    tempOtp: otp,
-                    tempOtpTime: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                showToast('New code sent to your email', 'success');
-            } catch (error) {
-                showToast('Error resending code', 'error');
             }
         }
 
@@ -2867,6 +2761,10 @@
                 });
                 
                 showToast('Account created! Please check your email for verification.', 'success');
+                
+                // Switch to sign in tab
+                switchAuthTab('signin');
+                
             } catch (error) {
                 showToast(getFirebaseError(error), 'error');
             }
@@ -2986,7 +2884,6 @@
             setTimeout(() => {
                 document.getElementById('authContainer').style.opacity = '1';
             }, 10);
-            document.getElementById('otpForm').style.display = 'none';
             switchAuthTab('signin');
         }
 
@@ -3020,10 +2917,10 @@
             
             if (!message) return;
 
-            // Check if Groq API key is configured
-            if (!groqApiKey) {
-                showToast('Please configure your Groq API key first', 'warning');
-                openGroqKeyModal();
+            // Check if OpenAI API key is configured
+            if (!openaiApiKey) {
+                showToast('Please configure your OpenAI API key first', 'warning');
+                openOpenAIKeyModal();
                 return;
             }
             
@@ -3071,12 +2968,12 @@
                     });
                 }
                 
-                // Generate AI response using Groq API
+                // Generate AI response using OpenAI API
                 let aiResponse;
                 try {
-                    aiResponse = await callGroqAPI(message);
+                    aiResponse = await callOpenAIAPI(message);
                 } catch (apiError) {
-                    console.error('Groq API failed:', apiError);
+                    console.error('OpenAI API failed:', apiError);
                     hideTypingIndicator();
                     showToast(`API Error: ${apiError.message}`, 'error');
                     return;
@@ -3278,7 +3175,7 @@
                 return;
             }
 
-            let exportText = `Cyanix AI Conversation Export\nDate: ${new Date().toLocaleString()}\nModel: ${getModelDisplayName(selectedModel)}\nPowered by: Groq Cloud\n\n`;
+            let exportText = `Cyanix AI Conversation Export\nDate: ${new Date().toLocaleString()}\nModel: ${getModelDisplayName(selectedModel)}\nPowered by: OpenAI\n\n`;
             
             conversationHistory.forEach((msg, index) => {
                 exportText += `${msg.role === 'user' ? 'You' : 'AI'}: ${msg.content}\n\n`;
@@ -3312,4 +3209,4 @@
         }
     </script>
 </body>
-</html>
+</html>>
