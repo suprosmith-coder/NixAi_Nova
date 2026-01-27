@@ -1922,7 +1922,7 @@
             <div class="modal-content">
                 <div class="form-group">
                     <label class="form-label">Nix AI Nova API Key</label>
-                    <input type="password" id="cyanixApiKey" class="form-input api-key-input" placeholder="NIX-YOUR-API-KEY-HERE">
+                    <input type="password" id="cyanixApiKey" class="form-input api-key-input" placeholder="CYX-YOUR-API-KEY-HERE">
                     <div id="apiKeyStatus" class="api-key-status"></div>
                     <div style="font-size: 12px; color: var(--cyan-light); margin-top: 5px;">
                         Your key is stored locally and never sent to our servers
@@ -2450,7 +2450,7 @@
             window.addEventListener('storage', (event) => {
                 if (event.key === 'nix_api_key_transfer') {
                     const apiKey = event.newValue;
-                    if (apiKey && apiKey.startsWith('NIX-')) {
+                    if (apiKey && apiKey.startsWith('CYX-')) {
                         handleIncomingApiKey(apiKey);
                         // Clear the transfer key
                         localStorage.removeItem('nix_api_key_transfer');
@@ -2493,7 +2493,7 @@
             const apiKeyParam = urlParams.get('apiKey');
             const apiKeyParam2 = urlParams.get('nix_api_key');
             
-            if (apiKeyParam && apiKeyParam.startsWith('NIX-')) {
+            if (apiKeyParam && apiKeyParam.startsWith('CYX-')) {
                 // Found API key in URL (redirect from Nix AI site)
                 showToast('Detected API key in URL. Processing...', 'info');
                 
@@ -2502,7 +2502,7 @@
                 
                 // Process the API key
                 handleIncomingApiKey(apiKeyParam);
-            } else if (apiKeyParam2 && apiKeyParam2.startsWith('NIX-')) {
+            } else if (apiKeyParam2 && apiKeyParam2.startsWith('CYX-')) {
                 // Alternative parameter name
                 showToast('Detected API key in URL. Processing...', 'info');
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -2519,8 +2519,8 @@
                 return;
             }
 
-            if (!key.startsWith('NIX-')) {
-                showToast('Invalid Nix AI Nova API key format. Should start with NIX-...', 'error');
+            if (!key.startsWith('CYX-')) {
+                showToast('Invalid Nix AI Nova API key format. Should start with CYX-...', 'error');
                 return;
             }
 
@@ -2544,7 +2544,7 @@
             const keyInput = document.getElementById('cyanixApiKey');
             const key = keyInput.value.trim();
             
-            if (!key || !key.startsWith('NIX-')) {
+            if (!key || !key.startsWith('CYX-')) {
                 showApiKeyStatus('Invalid API key format', 'invalid');
                 return false;
             }
@@ -2576,8 +2576,8 @@
             return new Promise((resolve) => {
                 setTimeout(() => {
                     // Simulate API validation
-                    // For demo purposes, accept any key that starts with NIX-
-                    const isValid = apiKey.startsWith('NIX-') && apiKey.length > 10;
+                    // For demo purposes, accept any key that starts with CYX-
+                    const isValid = apiKey.startsWith('CYX-') && apiKey.length > 10;
                     
                     // Also check if we can make a simple API call
                     if (isValid) {
@@ -2620,7 +2620,7 @@
 
         function loadNixApiKey() {
             const savedKey = localStorage.getItem('nixApiKey');
-            if (savedKey && savedKey.startsWith('NIX-')) {
+            if (savedKey && savedKey.startsWith('CYX-')) {
                 nixApiKey = savedKey;
                 hasNixKey = true;
                 document.getElementById('cyanixApiKey').value = savedKey;
