@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyanix AI | Nix-Powered Assistant</title>
+    <title>Cyanix AI | Groq-Powered Assistant</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -2271,7 +2270,7 @@
         const MODEL_MAPPING = {
             'cyanix-pro': 'llama3-70b-8192',
             'cyanix-flash': 'llama3-8b-8192',
-            'cyanix-vision': 'llama3-70b-8192', // Vision not supported, use same as pro
+            'cyanix-vision': 'llama3-70b-8192',
             'cyanix-advanced': 'mixtral-8x7b-32768'
         };
 
@@ -2487,7 +2486,7 @@
 
         async function callGroqAPI(message) {
             if (!groqApiKey) {
-                throw new Error('No Groq API key configured');
+                throw new Error('No Groq API key configured. Please add your API key in settings.');
             }
 
             const groqModel = MODEL_MAPPING[selectedModel] || 'llama3-70b-8192';
@@ -2516,7 +2515,8 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Groq API error: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Groq API error: ${response.status} - ${errorText}`);
                 }
 
                 const data = await response.json();
@@ -2524,9 +2524,7 @@
                 
             } catch (error) {
                 console.error('Groq API Error:', error);
-                
-                // Fallback to mock response if API fails
-                return generateLocalAIResponse(message);
+                throw new Error(`Failed to get response from Groq API: ${error.message}`);
             }
         }
 
@@ -3078,9 +3076,10 @@
                 try {
                     aiResponse = await callGroqAPI(message);
                 } catch (apiError) {
-                    console.warn('Groq API failed, using local response:', apiError);
-                    aiResponse = generateLocalAIResponse(message);
-                    showToast('Using local AI mode. Check your API key.', 'warning');
+                    console.error('Groq API failed:', apiError);
+                    hideTypingIndicator();
+                    showToast(`API Error: ${apiError.message}`, 'error');
+                    return;
                 }
                 
                 hideTypingIndicator();
@@ -3099,12 +3098,7 @@
             } catch (error) {
                 console.error('Error sending message:', error);
                 hideTypingIndicator();
-                showToast('Error generating response: ' + error.message, 'error');
-                
-                // Fallback to local response
-                const fallbackResponse = generateLocalAIResponse(message);
-                addMessageToUI(fallbackResponse, 'assistant');
-                conversationHistory.push({ role: 'assistant', content: fallbackResponse });
+                showToast('Error: ' + error.message, 'error');
             }
         }
 
@@ -3164,31 +3158,6 @@
                     }
                 }, 300);
             }
-        }
-
-        function generateLocalAIResponse(userMessage) {
-            // Enhanced local responses for when Groq API is not available
-            const modelResponses = {
-                'cyanix-pro': [
-                    `**Cyanix Pro Response (Llama 3 70B):**\n\nI understand you're asking about: "${userMessage}". As Cyanix Pro AI powered by Groq's ultra-fast inference, I can provide comprehensive insights on this topic. The key considerations involve understanding the core concepts, practical applications, and potential implications.\n\nWould you like me to elaborate on any specific aspect?`,
-                    `**Cyanix Analysis (Llama 3 70B):**\n\nProcessing your query through Groq's LPU inference engine. For "${userMessage}", I recommend considering:\n\n1. **Fundamental Understanding**: Core principles and definitions\n2. **Current Applications**: How this is used today\n3. **Future Potential**: Where this technology is headed\n4. **Best Practices**: Recommended approaches\n\nWhat specific area interests you most?`
-                ],
-                'cyanix-flash': [
-                    `**Cyanix Flash Response (Llama 3 8B):**\n\nQuick analysis complete! Regarding "${userMessage}", here's what I can tell you:\n\nThis topic involves several important factors. The main points include understanding the basics, recognizing applications, and knowing implementation steps.\n\nNeed more details on any particular aspect?`,
-                    `**Cyanix Flash (Llama 3 8B):**\n\nFast processing via Groq's LPU! For "${userMessage}", consider these key elements:\n\n- Core concept explanation\n- Practical use cases\n- Implementation guidance\n- Common challenges\n\nLet me know which area to focus on!`
-                ],
-                'cyanix-vision': [
-                    `**Cyanix Vision Response (Llama 3 70B):**\n\nAnalyzing your query with comprehensive capabilities. Regarding "${userMessage}", I approach this with full contextual understanding across different perspectives.\n\nThe analysis involves both detailed reasoning and contextual awareness. How would you like me to structure the response?`,
-                    `**Cyanix Vision (Llama 3 70B):**\n\nProcessing with advanced intelligence. For "${userMessage}", I consider:\n\n• Textual analysis and comprehension\n• Contextual understanding\n• Cross-domain connections\n• Practical implementation\n\nShall I proceed with detailed analysis?`
-                ],
-                'cyanix-advanced': [
-                    `**Cyanix Advanced Response (Mixtral 8x7B):**\n\nEngaging expert reasoning capabilities for: "${userMessage}"\n\n**Processing Parameters:**\n- Model: Mixtral 8x7B via Groq\n- Context Window: Extended\n- Reasoning Mode: Expert-level\n- Analysis Depth: Comprehensive\n\n**Analysis Complete:** This topic benefits from specialized knowledge and cross-disciplinary insights. Specify your preferred detail level for tailored response.`,
-                    `**Cyanix Advanced (Mixtral 8x7B):**\n\nActivating expert processing for optimal response generation.\n\n**System Status:**\n- Multi-expert Reasoning: Active\n- Cross-domain Understanding: Ready\n- Response Optimization: Maximum\n- Speed: Groq LPU accelerated\n\n**Response Generated:** This area requires nuanced understanding and specialized knowledge. How technical would you like the response to be?`
-                ]
-            };
-
-            const responses = modelResponses[selectedModel] || modelResponses['cyanix-pro'];
-            return responses[Math.floor(Math.random() * responses.length)];
         }
 
         // ==================== UTILITY FUNCTIONS ====================
@@ -3340,7 +3309,6 @@
             showToast('Loading chat...', 'info');
             // In a real implementation, you would load the chat from Firestore
             newChat();
-            addMessageToUI('Welcome back! I loaded your previous conversation about Python programming.', 'assistant');
         }
     </script>
 </body>
