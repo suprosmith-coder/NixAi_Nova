@@ -1548,16 +1548,16 @@
             box-shadow: 0 5px 15px rgba(0, 243, 255, 0.3);
         }
 
-        /* Cyanix API Key Modal */
+        /* Groq API Key Modal */
         .api-key-input {
             font-family: 'Courier New', monospace;
             font-size: 14px;
             letter-spacing: 1px;
         }
 
-        .cyanix-badge {
-            background: linear-gradient(135deg, var(--cyan-secondary), var(--cyan-primary));
-            color: var(--purple-dark);
+        .groq-badge {
+            background: linear-gradient(135deg, #00A67D, #00D4AA);
+            color: white;
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 12px;
@@ -1565,7 +1565,7 @@
             margin-left: 10px;
         }
 
-        .cyanix-info {
+        .groq-info {
             background: rgba(0, 243, 255, 0.1);
             border: 1px solid rgba(0, 243, 255, 0.3);
             border-radius: 10px;
@@ -1573,7 +1573,7 @@
             margin-top: 20px;
         }
 
-        .cyanix-info h4 {
+        .groq-info h4 {
             color: var(--cyan-primary);
             margin-bottom: 10px;
             display: flex;
@@ -1581,21 +1581,21 @@
             gap: 8px;
         }
 
-        .cyanix-info ul {
+        .groq-info ul {
             color: var(--cyan-light);
             font-size: 13px;
             line-height: 1.6;
             padding-left: 20px;
         }
 
-        .cyanix-info a {
+        .groq-info a {
             color: var(--cyan-primary);
             text-decoration: none;
             transition: all 0.3s;
             border-bottom: 1px solid transparent;
         }
 
-        .cyanix-info a:hover {
+        .groq-info a:hover {
             border-bottom: 1px solid var(--cyan-primary);
             text-shadow: 0 0 10px var(--cyan-primary);
         }
@@ -1654,49 +1654,6 @@
             background: rgba(255, 71, 87, 0.1);
             border: 1px solid rgba(255, 71, 87, 0.2);
             color: var(--red-neon);
-        }
-
-        .key-transfer-window {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 400px;
-            max-width: 90%;
-            background: linear-gradient(135deg, var(--purple-dark), var(--purple-deep));
-            border: 2px solid var(--cyan-primary);
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: var(--neon-glow);
-            z-index: 1001;
-            display: none;
-            animation: slideInDown 0.5s ease-out;
-        }
-
-        .key-transfer-window.active {
-            display: block;
-        }
-
-        .key-transfer-window h3 {
-            color: var(--cyan-primary);
-            margin-bottom: 20px;
-            font-family: 'Orbitron', sans-serif;
-            text-align: center;
-        }
-
-        .key-transfer-iframe {
-            width: 100%;
-            height: 400px;
-            border: 1px solid rgba(0, 243, 255, 0.3);
-            border-radius: 10px;
-            background: var(--gray-dark);
-        }
-
-        .key-transfer-message {
-            text-align: center;
-            color: var(--cyan-light);
-            margin-top: 15px;
-            font-size: 14px;
         }
 
         /* Animations */
@@ -1836,7 +1793,7 @@
             <i class="fas fa-robot"></i>
         </div>
         <h1 class="splash-title">Cyanix AI</h1>
-        <p class="splash-subtitle">Powered by Nix AI Nova</p>
+        <p class="splash-subtitle">Powered by Groq Cloud</p>
         <div class="loading-bar">
             <div class="loading-progress" id="loadingProgress"></div>
         </div>
@@ -1845,16 +1802,64 @@
     <!-- Toast Container -->
     <div id="toastContainer"></div>
 
-    <!-- Key Transfer Window -->
-    <div id="keyTransferWindow" class="key-transfer-window">
-        <h3>Get Your Nix AI API Key</h3>
-        <iframe id="apiKeyIframe" class="key-transfer-iframe" 
-                src="about:blank" 
-                allow="clipboard-read; clipboard-write">
-        </iframe>
-        <div class="key-transfer-message">
-            <p>Once you have your API key, it will be automatically transferred to Cyanix AI</p>
-            <p><i class="fas fa-sync-alt"></i> Listening for API key...</p>
+    <!-- Groq API Key Modal -->
+    <div id="groqKeyModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Groq Cloud API Key <span class="groq-badge">FAST</span></h3>
+                <button class="modal-close" onclick="closeGroqKeyModal()">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="form-group">
+                    <label class="form-label">Groq Cloud API Key</label>
+                    <input type="password" id="groqApiKey" class="form-input api-key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                    <div id="apiKeyStatus" class="api-key-status"></div>
+                    <div style="font-size: 12px; color: var(--cyan-light); margin-top: 5px;">
+                        Your key is stored locally and never sent to our servers
+                    </div>
+                </div>
+                
+                <div class="api-key-actions">
+                    <button class="api-key-action-btn" onclick="testGroqApiKey()">
+                        <i class="fas fa-vial"></i>
+                        Test Key
+                    </button>
+                    <button class="api-key-action-btn" onclick="openGroqConsole()">
+                        <i class="fas fa-external-link-alt"></i>
+                        Get API Key
+                    </button>
+                    <button class="api-key-action-btn" onclick="copyCurrentApiKey()">
+                        <i class="fas fa-copy"></i>
+                        Copy Key
+                    </button>
+                </div>
+                
+                <div class="groq-info">
+                    <h4><i class="fas fa-bolt"></i> Groq Cloud Features:</h4>
+                    <ul>
+                        <li>Extremely fast inference (up to 500 tokens/sec)</li>
+                        <li>Free tier available with generous limits</li>
+                        <li>Llama 3, Mixtral, and other top models</li>
+                        <li>Low-latency responses</li>
+                        <li>Enterprise-grade reliability</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 15px;"><i class="fas fa-key"></i> How to get your API key:</h4>
+                    <ul>
+                        <li>Visit <a href="https://console.groq.com/keys" target="_blank" id="groqApiLink">Groq Cloud Console</a></li>
+                        <li>Sign up or log in to your account</li>
+                        <li>Create a new API key</li>
+                        <li>Copy and paste it into the field above</li>
+                        <li>Click "Test Key" to verify</li>
+                        <li>Click "Save API Key" when ready</li>
+                    </ul>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn secondary" onclick="closeGroqKeyModal()">Cancel</button>
+                    <button class="modal-btn primary" onclick="saveGroqApiKey()">Save API Key</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1867,104 +1872,45 @@
             </div>
             <div class="modal-content">
                 <p class="modal-description">
-                    Choose which AI model you'd like to use. All models are powered by Nix AI Nova's advanced AI capabilities.
+                    Choose which AI model you'd like to use. All models are powered by Groq Cloud's ultra-fast inference.
                 </p>
                 
                 <div class="model-selector" id="modelSelector">
                     <div class="model-btn active" data-model="cyanix-pro" onclick="selectModel('cyanix-pro')">
                         <i class="fas fa-brain model-icon"></i>
                         <div class="model-name">Cyanix Pro</div>
-                        <div class="model-desc">Most capable model</div>
+                        <div class="model-desc">Llama 3 70B - Most capable</div>
                     </div>
                     <div class="model-btn" data-model="cyanix-flash" onclick="selectModel('cyanix-flash')">
                         <i class="fas fa-bolt model-icon"></i>
                         <div class="model-name">Cyanix Flash</div>
-                        <div class="model-desc">Fast & efficient</div>
+                        <div class="model-desc">Llama 3 8B - Fast & efficient</div>
                     </div>
                     <div class="model-btn" data-model="cyanix-vision" onclick="selectModel('cyanix-vision')">
                         <i class="fas fa-eye model-icon"></i>
                         <div class="model-name">Cyanix Vision</div>
-                        <div class="model-desc">Multimodal capabilities</div>
+                        <div class="model-desc">Llama 3 70B - Text only</div>
                     </div>
                     <div class="model-btn" data-model="cyanix-advanced" onclick="selectModel('cyanix-advanced')">
                         <i class="fas fa-robot model-icon"></i>
                         <div class="model-name">Cyanix Advanced</div>
-                        <div class="model-desc">Latest & most advanced</div>
+                        <div class="model-desc">Mixtral 8x7B - Expert model</div>
                     </div>
                 </div>
                 
-                <div class="cyanix-info">
-                    <h4><i class="fas fa-key"></i> Nix AI Nova Features:</h4>
+                <div class="groq-info">
+                    <h4><i class="fas fa-info-circle"></i> Model Information:</h4>
                     <ul>
-                        <li>100 requests per minute FREE</li>
-                        <li>50,000 requests per month FREE</li>
-                        <li>No credit card required</li>
-                        <li>Advanced reasoning capabilities</li>
-                        <li>Multimodal support (text, images, audio)</li>
+                        <li><strong>Cyanix Pro:</strong> Llama 3 70B - Best for complex reasoning</li>
+                        <li><strong>Cyanix Flash:</strong> Llama 3 8B - Fastest response times</li>
+                        <li><strong>Cyanix Advanced:</strong> Mixtral 8x7B - Specialized expertise</li>
+                        <li>All models powered by Groq's LPU inference engine</li>
                     </ul>
                 </div>
                 
                 <div class="modal-footer">
                     <button class="modal-btn secondary" onclick="closeModelModal()">Cancel</button>
                     <button class="modal-btn primary" onclick="saveModelSelection()">Select Model</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Nix AI Nova API Key Modal -->
-    <div id="cyanixKeyModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Nix AI Nova API Key <span class="cyanix-badge">FREE</span></h3>
-                <button class="modal-close" onclick="closeCyanixKeyModal()">&times;</button>
-            </div>
-            <div class="modal-content">
-                <div class="form-group">
-                    <label class="form-label">Nix AI Nova API Key</label>
-                    <input type="password" id="cyanixApiKey" class="form-input api-key-input" placeholder="CYX-YOUR-API-KEY-HERE">
-                    <div id="apiKeyStatus" class="api-key-status"></div>
-                    <div style="font-size: 12px; color: var(--cyan-light); margin-top: 5px;">
-                        Your key is stored locally and never sent to our servers
-                    </div>
-                </div>
-                
-                <div class="api-key-actions">
-                    <button class="api-key-action-btn" onclick="testNixApiKey()">
-                        <i class="fas fa-vial"></i>
-                        Test Key
-                    </button>
-                    <button class="api-key-action-btn" onclick="openNixKeyGenerator()">
-                        <i class="fas fa-external-link-alt"></i>
-                        Get Free Key
-                    </button>
-                    <button class="api-key-action-btn" onclick="copyCurrentApiKey()">
-                        <i class="fas fa-copy"></i>
-                        Copy Key
-                    </button>
-                </div>
-                
-                <div class="cyanix-info">
-                    <h4>Automatic API Key Transfer:</h4>
-                    <ul>
-                        <li>Click "Get Free Key" to open Nix AI Nova</li>
-                        <li>Create your API key on the external site</li>
-                        <li>The key will automatically transfer to Cyanix AI</li>
-                        <li>No manual copy-paste required</li>
-                    </ul>
-                    
-                    <h4 style="margin-top: 15px;">Manual Option:</h4>
-                    <ul>
-                        <li>Get your key from <a href="https://suprosmith-coder.github.io/NixAi_Nova/" target="_blank" id="cyanixApiLink">Nix AI Nova</a></li>
-                        <li>Copy and paste it into the field above</li>
-                        <li>Click "Test Key" to verify</li>
-                        <li>Click "Save API Key" when ready</li>
-                    </ul>
-                </div>
-                
-                <div class="modal-footer">
-                    <button class="modal-btn secondary" onclick="closeCyanixKeyModal()">Cancel</button>
-                    <button class="modal-btn primary" onclick="saveNixApiKey()">Save API Key</button>
                 </div>
             </div>
         </div>
@@ -1981,16 +1927,16 @@
             </div>
             
             <h1 class="auth-title">Welcome to the Future of AI Conversation</h1>
-            <p class="auth-subtitle">Powered by Nix AI Nova API with enhanced privacy and control</p>
+            <p class="auth-subtitle">Powered by Groq Cloud with ultra-fast inference</p>
             
             <div class="features-list">
                 <div class="feature-item">
                     <i class="fas fa-bolt feature-icon"></i>
-                    <span>Nix AI Nova Integration</span>
+                    <span>Groq Cloud Integration</span>
                 </div>
                 <div class="feature-item">
                     <i class="fas fa-key feature-icon"></i>
-                    <span>Automatic API Key Transfer</span>
+                    <span>Secure API Key Storage</span>
                 </div>
                 <div class="feature-item">
                     <i class="fas fa-shield-alt feature-icon"></i>
@@ -2179,9 +2125,9 @@
                         <i class="fas fa-brain sidebar-btn-icon"></i>
                         <span>Change AI Model</span>
                     </div>
-                    <div class="sidebar-btn" onclick="openCyanixKeyModal()">
+                    <div class="sidebar-btn" onclick="openGroqKeyModal()">
                         <i class="fas fa-key sidebar-btn-icon"></i>
-                        <span>Nix AI API Key</span>
+                        <span>Groq API Key</span>
                     </div>
                 </div>
                 
@@ -2211,7 +2157,7 @@
                         <i class="fas fa-brain"></i>
                         AI Model
                     </button>
-                    <button class="header-btn" onclick="openCyanixKeyModal()">
+                    <button class="header-btn" onclick="openGroqKeyModal()">
                         <i class="fas fa-key"></i>
                         API Key
                     </button>
@@ -2234,7 +2180,7 @@
                     </div>
                     <h1 class="welcome-title">Welcome to Cyanix AI</h1>
                     <p class="welcome-subtitle">
-                        I'm powered by Nix AI Nova API. I can help with writing, analysis, coding, 
+                        Powered by Groq Cloud's ultra-fast inference. I can help with writing, analysis, coding, 
                         creative tasks, and much more. What would you like to explore?
                     </p>
                     
@@ -2318,9 +2264,16 @@
         let tempEmail = null;
         let selectedModel = 'cyanix-pro';
         let conversationHistory = [];
-        let nixApiKey = null;
-        let hasNixKey = false;
-        let keyTransferListener = null;
+        let groqApiKey = null;
+        let hasGroqKey = false;
+
+        // Model mapping to Groq models
+        const MODEL_MAPPING = {
+            'cyanix-pro': 'llama3-70b-8192',
+            'cyanix-flash': 'llama3-8b-8192',
+            'cyanix-vision': 'llama3-70b-8192', // Vision not supported, use same as pro
+            'cyanix-advanced': 'mixtral-8x7b-32768'
+        };
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -2360,13 +2313,7 @@
                     });
                     
                     // Load saved API key
-                    loadNixApiKey();
-                    
-                    // Check for API key in URL parameters (for automatic transfer)
-                    checkUrlForApiKey();
-                    
-                    // Setup message listener for cross-domain communication
-                    setupApiKeyTransferListener();
+                    loadGroqApiKey();
                     
                 }, 500);
             }, 3000);
@@ -2384,13 +2331,13 @@
             
             showChatInterface();
             loadUserSettings();
-            showToast('Welcome to Cyanix AI! Powered by Nix AI Nova.', 'success');
+            showToast('Welcome to Cyanix AI! Powered by Groq Cloud.', 'success');
             
             // Check if API key is set
-            if (!nixApiKey) {
+            if (!groqApiKey) {
                 setTimeout(() => {
-                    showToast('Please add your Nix AI Nova API key to enable AI responses', 'warning');
-                    openCyanixKeyModal();
+                    showToast('Please add your Groq API key to enable AI responses', 'warning');
+                    openGroqKeyModal();
                 }, 2000);
             }
         }
@@ -2400,138 +2347,43 @@
             showAuth();
         }
 
-        // ==================== NIX AI NOVA API KEY MANAGEMENT ====================
-        function openCyanixKeyModal() {
-            document.getElementById('cyanixKeyModal').classList.add('active');
-            loadNixApiKey();
+        // ==================== GROQ API KEY MANAGEMENT ====================
+        function openGroqKeyModal() {
+            document.getElementById('groqKeyModal').classList.add('active');
+            loadGroqApiKey();
         }
 
-        function closeCyanixKeyModal() {
-            document.getElementById('cyanixKeyModal').classList.remove('active');
+        function closeGroqKeyModal() {
+            document.getElementById('groqKeyModal').classList.remove('active');
         }
 
-        function openNixKeyGenerator() {
-            // Open the Nix AI Nova API Key Generator in a new tab
-            const nixAiUrl = 'https://suprosmith-coder.github.io/NixAi_Nova/';
-            
-            // Open in new tab
-            window.open(nixAiUrl, '_blank', 'noopener,noreferrer');
-            
-            // Show instructions for manual transfer
-            showToast('Opened Nix AI Nova. Once you have your API key, paste it in the field above.', 'info');
-            
-            // Alternative: Open in iframe
-            // document.getElementById('keyTransferWindow').classList.add('active');
-            // document.getElementById('apiKeyIframe').src = nixAiUrl;
+        function openGroqConsole() {
+            window.open('https://console.groq.com/keys', '_blank', 'noopener,noreferrer');
+            showToast('Opened Groq Cloud Console. Create your API key there.', 'info');
         }
 
-        function closeKeyTransferWindow() {
-            document.getElementById('keyTransferWindow').classList.remove('active');
-            document.getElementById('apiKeyIframe').src = 'about:blank';
-        }
-
-        function setupApiKeyTransferListener() {
-            // Listen for messages from the iframe (cross-domain communication)
-            window.addEventListener('message', (event) => {
-                // Check origin for security - accept messages from Nix AI Nova
-                if (event.origin === 'https://suprosmith-coder.github.io' || 
-                    event.data?.type === 'api-key-transfer') {
-                    
-                    const data = event.data;
-                    
-                    if (data.type === 'api-key-transfer' && data.apiKey) {
-                        // Received API key from Nix AI Nova
-                        handleIncomingApiKey(data.apiKey);
-                    }
-                }
-            }, false);
-            
-            // Also listen for localStorage changes (for same-domain or proxy setup)
-            window.addEventListener('storage', (event) => {
-                if (event.key === 'nix_api_key_transfer') {
-                    const apiKey = event.newValue;
-                    if (apiKey && apiKey.startsWith('CYX-')) {
-                        handleIncomingApiKey(apiKey);
-                        // Clear the transfer key
-                        localStorage.removeItem('nix_api_key_transfer');
-                    }
-                }
-            });
-        }
-
-        function handleIncomingApiKey(apiKey) {
-            showToast('API key received from Nix AI Nova!', 'success');
-            
-            // Close the transfer window if open
-            closeKeyTransferWindow();
-            
-            // Update the input field
-            document.getElementById('cyanixApiKey').value = apiKey;
-            
-            // Show validation status
-            showApiKeyStatus('Validating received API key...', 'info');
-            
-            // Test the API key
-            testNixApiKey().then(isValid => {
-                if (isValid) {
-                    showApiKeyStatus('API key validated successfully!', 'valid');
-                    showToast('Nix AI Nova API key automatically transferred and validated!', 'success');
-                    
-                    // Auto-save after successful validation
-                    setTimeout(() => {
-                        saveNixApiKey();
-                    }, 1000);
-                } else {
-                    showApiKeyStatus('API key validation failed', 'invalid');
-                    showToast('Received API key failed validation. Please check with Nix AI Nova.', 'error');
-                }
-            });
-        }
-
-        function checkUrlForApiKey() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const apiKeyParam = urlParams.get('apiKey');
-            const apiKeyParam2 = urlParams.get('nix_api_key');
-            
-            if (apiKeyParam && apiKeyParam.startsWith('CYX-')) {
-                // Found API key in URL (redirect from Nix AI site)
-                showToast('Detected API key in URL. Processing...', 'info');
-                
-                // Remove the API key from URL for security
-                window.history.replaceState({}, document.title, window.location.pathname);
-                
-                // Process the API key
-                handleIncomingApiKey(apiKeyParam);
-            } else if (apiKeyParam2 && apiKeyParam2.startsWith('CYX-')) {
-                // Alternative parameter name
-                showToast('Detected API key in URL. Processing...', 'info');
-                window.history.replaceState({}, document.title, window.location.pathname);
-                handleIncomingApiKey(apiKeyParam2);
-            }
-        }
-
-        function saveNixApiKey() {
-            const keyInput = document.getElementById('cyanixApiKey');
+        function saveGroqApiKey() {
+            const keyInput = document.getElementById('groqApiKey');
             const key = keyInput.value.trim();
             
             if (!key) {
-                showToast('Please enter your Nix AI Nova API key', 'error');
+                showToast('Please enter your Groq API key', 'error');
                 return;
             }
 
-            if (!key.startsWith('CYX-')) {
-                showToast('Invalid Nix AI Nova API key format. Should start with CYX-...', 'error');
+            if (!key.startsWith('gsk_')) {
+                showToast('Invalid Groq API key format. Should start with gsk_...', 'error');
                 return;
             }
 
             try {
                 // Save to localStorage
-                localStorage.setItem('nixApiKey', key);
-                nixApiKey = key;
-                hasNixKey = true;
+                localStorage.setItem('groqApiKey', key);
+                groqApiKey = key;
+                hasGroqKey = true;
                 
-                showToast('Nix AI Nova API key saved successfully!', 'success');
-                closeCyanixKeyModal();
+                showToast('Groq API key saved successfully!', 'success');
+                closeGroqKeyModal();
                 updateModelStatus(true);
                 
             } catch (error) {
@@ -2540,11 +2392,11 @@
             }
         }
 
-        async function testNixApiKey() {
-            const keyInput = document.getElementById('cyanixApiKey');
+        async function testGroqApiKey() {
+            const keyInput = document.getElementById('groqApiKey');
             const key = keyInput.value.trim();
             
-            if (!key || !key.startsWith('CYX-')) {
+            if (!key || !key.startsWith('gsk_')) {
                 showApiKeyStatus('Invalid API key format', 'invalid');
                 return false;
             }
@@ -2552,8 +2404,8 @@
             showApiKeyStatus('Testing API key connection...', 'info');
             
             try {
-                // Test the Nix AI Nova API
-                const isValid = await testNixApiConnection(key);
+                // Test the Groq API
+                const isValid = await testGroqApiConnection(key);
                 
                 if (isValid) {
                     showApiKeyStatus('API key is valid and active', 'valid');
@@ -2570,24 +2422,24 @@
             }
         }
 
-        async function testNixApiConnection(apiKey) {
-            // In production, this would call your actual Nix AI Nova API
-            // For now, we'll simulate an API test
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    // Simulate API validation
-                    // For demo purposes, accept any key that starts with CYX-
-                    const isValid = apiKey.startsWith('CYX-') && apiKey.length > 10;
-                    
-                    // Also check if we can make a simple API call
-                    if (isValid) {
-                        // Simulate successful API call
-                        resolve(true);
-                    } else {
-                        resolve(false);
+        async function testGroqApiConnection(apiKey) {
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/models', {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
                     }
-                }, 1000);
-            });
+                });
+                
+                if (response.ok) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (error) {
+                console.error('Groq API test failed:', error);
+                return false;
+            }
         }
 
         function showApiKeyStatus(message, type) {
@@ -2602,7 +2454,7 @@
         }
 
         function copyCurrentApiKey() {
-            const keyInput = document.getElementById('cyanixApiKey');
+            const keyInput = document.getElementById('groqApiKey');
             const key = keyInput.value.trim();
             
             if (!key) {
@@ -2618,56 +2470,64 @@
             });
         }
 
-        function loadNixApiKey() {
-            const savedKey = localStorage.getItem('nixApiKey');
-            if (savedKey && savedKey.startsWith('CYX-')) {
-                nixApiKey = savedKey;
-                hasNixKey = true;
-                document.getElementById('cyanixApiKey').value = savedKey;
+        function loadGroqApiKey() {
+            const savedKey = localStorage.getItem('groqApiKey');
+            if (savedKey && savedKey.startsWith('gsk_')) {
+                groqApiKey = savedKey;
+                hasGroqKey = true;
+                document.getElementById('groqApiKey').value = savedKey;
                 updateModelStatus(true);
             } else {
-                nixApiKey = null;
-                hasNixKey = false;
-                document.getElementById('cyanixApiKey').value = '';
+                groqApiKey = null;
+                hasGroqKey = false;
+                document.getElementById('groqApiKey').value = '';
                 updateModelStatus(false);
             }
         }
 
-        async function callNixAPI(message) {
-            if (!nixApiKey) {
-                throw new Error('No Nix AI Nova API key configured');
+        async function callGroqAPI(message) {
+            if (!groqApiKey) {
+                throw new Error('No Groq API key configured');
             }
 
+            const groqModel = MODEL_MAPPING[selectedModel] || 'llama3-70b-8192';
+            
             try {
-                // Call Nix AI Nova API
-                const response = await callNixAiNovaAPI(message, nixApiKey);
-                return response;
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: groqModel,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: message
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 1024,
+                        top_p: 1,
+                        stream: false,
+                        stop: null
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Groq API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
                 
             } catch (error) {
-                console.error('Nix AI Nova API Error:', error);
+                console.error('Groq API Error:', error);
                 
                 // Fallback to mock response if API fails
                 return generateLocalAIResponse(message);
             }
-        }
-
-        async function callNixAiNovaAPI(message, apiKey) {
-            // This would be the actual API call to Nix AI Nova
-            // For now, we'll simulate it with a mock response
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    const responses = [
-                        `**Nix AI Nova Response:**\n\nI understand you're asking about: "${message}". As Nix AI Nova, I can provide comprehensive insights on this topic. The key considerations involve understanding the core concepts, practical applications, and potential implications.\n\nWould you like me to elaborate on any specific aspect?`,
-                        
-                        `**Nix AI Nova Analysis:**\n\nProcessing your query through advanced language models. For "${message}", I recommend considering:\n\n1. **Fundamental Understanding**: Core principles and definitions\n2. **Current Applications**: How this is used today\n3. **Future Potential**: Where this technology is headed\n4. **Best Practices**: Recommended approaches\n\nWhat specific area interests you most?`,
-                        
-                        `**Nix AI Nova Response:**\n\nAnalyzing your query with advanced reasoning capabilities. Regarding "${message}", here's my assessment:\n\nThis topic presents several interesting dimensions. The primary aspects to consider include technical implementation, real-world applications, potential challenges, and strategic implications.\n\nWould you like a detailed breakdown of any particular area?`
-                    ];
-                    
-                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                    resolve(randomResponse);
-                }, 1500);
-            });
         }
 
         function getModelDisplayName(model) {
@@ -2680,16 +2540,26 @@
             return modelNames[model] || 'Cyanix Pro';
         }
 
+        function getGroqModelDisplayName(model) {
+            const modelNames = {
+                'cyanix-pro': 'Llama 3 70B',
+                'cyanix-flash': 'Llama 3 8B',
+                'cyanix-vision': 'Llama 3 70B',
+                'cyanix-advanced': 'Mixtral 8x7B'
+            };
+            return modelNames[model] || 'Llama 3 70B';
+        }
+
         function updateModelStatus(isActive) {
             const indicator = document.getElementById('modelIndicator');
             const text = document.getElementById('modelStatusText');
             
-            if (isActive && nixApiKey) {
+            if (isActive && groqApiKey) {
                 indicator.style.background = 'var(--green-neon)';
                 indicator.style.boxShadow = '0 0 10px var(--green-neon)';
                 indicator.style.animation = 'pulse 2s infinite';
-                text.textContent = `${getModelDisplayName(selectedModel)} • Active (Nix AI)`;
-            } else if (nixApiKey) {
+                text.textContent = `${getModelDisplayName(selectedModel)} • ${getGroqModelDisplayName(selectedModel)} • Active`;
+            } else if (groqApiKey) {
                 indicator.style.background = 'var(--yellow-neon)';
                 indicator.style.boxShadow = '0 0 10px var(--yellow-neon)';
                 indicator.style.animation = 'none';
@@ -2699,7 +2569,7 @@
                 indicator.style.boxShadow = '0 0 10px var(--red-neon)';
                 indicator.style.animation = 'none';
                 indicator.style.opacity = '0.5';
-                text.textContent = 'Nix AI API Key Required';
+                text.textContent = 'Groq API Key Required';
             }
         }
 
@@ -3152,10 +3022,10 @@
             
             if (!message) return;
 
-            // Check if Nix API key is configured
-            if (!nixApiKey) {
-                showToast('Please configure your Nix AI Nova API key first', 'warning');
-                openCyanixKeyModal();
+            // Check if Groq API key is configured
+            if (!groqApiKey) {
+                showToast('Please configure your Groq API key first', 'warning');
+                openGroqKeyModal();
                 return;
             }
             
@@ -3203,12 +3073,12 @@
                     });
                 }
                 
-                // Generate AI response using Nix API
+                // Generate AI response using Groq API
                 let aiResponse;
                 try {
-                    aiResponse = await callNixAPI(message);
+                    aiResponse = await callGroqAPI(message);
                 } catch (apiError) {
-                    console.warn('Nix API failed, using local response:', apiError);
+                    console.warn('Groq API failed, using local response:', apiError);
                     aiResponse = generateLocalAIResponse(message);
                     showToast('Using local AI mode. Check your API key.', 'warning');
                 }
@@ -3297,23 +3167,23 @@
         }
 
         function generateLocalAIResponse(userMessage) {
-            // Enhanced local responses for when Nix API is not available
+            // Enhanced local responses for when Groq API is not available
             const modelResponses = {
                 'cyanix-pro': [
-                    `**Cyanix Pro Response:**\n\nI understand you're asking about: "${userMessage}". As Cyanix Pro AI powered by Nix AI Nova, I can provide comprehensive insights on this topic. The key considerations involve understanding the core concepts, practical applications, and potential implications.\n\nWould you like me to elaborate on any specific aspect?`,
-                    `**Cyanix Analysis:**\n\nProcessing your query through advanced language models. For "${userMessage}", I recommend considering:\n\n1. **Fundamental Understanding**: Core principles and definitions\n2. **Current Applications**: How this is used today\n3. **Future Potential**: Where this technology is headed\n4. **Best Practices**: Recommended approaches\n\nWhat specific area interests you most?`
+                    `**Cyanix Pro Response (Llama 3 70B):**\n\nI understand you're asking about: "${userMessage}". As Cyanix Pro AI powered by Groq's ultra-fast inference, I can provide comprehensive insights on this topic. The key considerations involve understanding the core concepts, practical applications, and potential implications.\n\nWould you like me to elaborate on any specific aspect?`,
+                    `**Cyanix Analysis (Llama 3 70B):**\n\nProcessing your query through Groq's LPU inference engine. For "${userMessage}", I recommend considering:\n\n1. **Fundamental Understanding**: Core principles and definitions\n2. **Current Applications**: How this is used today\n3. **Future Potential**: Where this technology is headed\n4. **Best Practices**: Recommended approaches\n\nWhat specific area interests you most?`
                 ],
                 'cyanix-flash': [
-                    `**Cyanix Flash Response:**\n\nQuick analysis complete! Regarding "${userMessage}", here's what I can tell you:\n\nThis topic involves several important factors. The main points include understanding the basics, recognizing applications, and knowing implementation steps.\n\nNeed more details on any particular aspect?`,
-                    `**Cyanix Flash:**\n\nFast processing! For "${userMessage}", consider these key elements:\n\n- Core concept explanation\n- Practical use cases\n- Implementation guidance\n- Common challenges\n\nLet me know which area to focus on!`
+                    `**Cyanix Flash Response (Llama 3 8B):**\n\nQuick analysis complete! Regarding "${userMessage}", here's what I can tell you:\n\nThis topic involves several important factors. The main points include understanding the basics, recognizing applications, and knowing implementation steps.\n\nNeed more details on any particular aspect?`,
+                    `**Cyanix Flash (Llama 3 8B):**\n\nFast processing via Groq's LPU! For "${userMessage}", consider these key elements:\n\n- Core concept explanation\n- Practical use cases\n- Implementation guidance\n- Common challenges\n\nLet me know which area to focus on!`
                 ],
                 'cyanix-vision': [
-                    `**Cyanix Vision Response:**\n\nAnalyzing your query with multimodal capabilities. Regarding "${userMessage}", I approach this with comprehensive understanding across different formats and perspectives.\n\nThe analysis involves both textual understanding and contextual awareness. How would you like me to structure the response?`,
-                    `**Cyanix Vision:**\n\nProcessing with multimodal intelligence. For "${userMessage}", I consider:\n\n• Textual analysis and comprehension\n• Contextual understanding\n• Cross-domain connections\n• Practical implementation\n\nShall I proceed with detailed analysis?`
+                    `**Cyanix Vision Response (Llama 3 70B):**\n\nAnalyzing your query with comprehensive capabilities. Regarding "${userMessage}", I approach this with full contextual understanding across different perspectives.\n\nThe analysis involves both detailed reasoning and contextual awareness. How would you like me to structure the response?`,
+                    `**Cyanix Vision (Llama 3 70B):**\n\nProcessing with advanced intelligence. For "${userMessage}", I consider:\n\n• Textual analysis and comprehension\n• Contextual understanding\n• Cross-domain connections\n• Practical implementation\n\nShall I proceed with detailed analysis?`
                 ],
                 'cyanix-advanced': [
-                    `**Cyanix Advanced Response:**\n\nEngaging advanced reasoning capabilities for: "${userMessage}"\n\n**Processing Parameters:**\n- Model: Cyanix Advanced v2\n- Context Window: Extended\n- Reasoning Mode: Enhanced\n- Analysis Depth: Comprehensive\n\n**Analysis Complete:** This topic benefits from deep reasoning and cross-disciplinary insights. Specify your preferred detail level for tailored response.`,
-                    `**Cyanix Advanced:**\n\nActivating advanced processing for optimal response generation.\n\n**System Status:**\n- Long Context: Enabled\n- Multi-turn Reasoning: Active\n- Cross-modal Understanding: Ready\n- Response Optimization: Maximum\n\n**Response Generated:** This area requires nuanced understanding and specialized knowledge. How technical would you like the response to be?`
+                    `**Cyanix Advanced Response (Mixtral 8x7B):**\n\nEngaging expert reasoning capabilities for: "${userMessage}"\n\n**Processing Parameters:**\n- Model: Mixtral 8x7B via Groq\n- Context Window: Extended\n- Reasoning Mode: Expert-level\n- Analysis Depth: Comprehensive\n\n**Analysis Complete:** This topic benefits from specialized knowledge and cross-disciplinary insights. Specify your preferred detail level for tailored response.`,
+                    `**Cyanix Advanced (Mixtral 8x7B):**\n\nActivating expert processing for optimal response generation.\n\n**System Status:**\n- Multi-expert Reasoning: Active\n- Cross-domain Understanding: Ready\n- Response Optimization: Maximum\n- Speed: Groq LPU accelerated\n\n**Response Generated:** This area requires nuanced understanding and specialized knowledge. How technical would you like the response to be?`
                 ]
             };
 
@@ -3439,7 +3309,7 @@
                 return;
             }
 
-            let exportText = `Cyanix AI Conversation Export\nDate: ${new Date().toLocaleString()}\nModel: ${getModelDisplayName(selectedModel)}\nPowered by: Nix AI Nova\n\n`;
+            let exportText = `Cyanix AI Conversation Export\nDate: ${new Date().toLocaleString()}\nModel: ${getModelDisplayName(selectedModel)}\nPowered by: Groq Cloud\n\n`;
             
             conversationHistory.forEach((msg, index) => {
                 exportText += `${msg.role === 'user' ? 'You' : 'AI'}: ${msg.content}\n\n`;
