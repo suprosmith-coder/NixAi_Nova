@@ -2174,7 +2174,7 @@
         // ==================== SUPABASE CONFIGURATION ====================
         const SUPABASE_URL = 'https://tdbgpvscwaysndrloltl.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
-        const EDGE_FUNCTION_URL = 'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/process-ai-request'; // Replace with your actual Edge Function URL
+        const EDGE_FUNCTION_URL = 'https://xthjbtrdvgsmojcqxnqc.supabase.co/functions/v1/swift-processor';
         
         // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -2199,7 +2199,6 @@
 
         function loadVoices() {
             voices = synth.getVoices();
-            // Prefer English voices
             currentVoice = voices.find(voice => voice.lang.includes('en')) || voices[0];
             
             synth.onvoiceschanged = () => {
@@ -2298,7 +2297,6 @@
             try {
                 console.log('User signed in:', user.email);
                 
-                // Get user profile with API key
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('*')
@@ -2307,7 +2305,6 @@
                 
                 if (profileError) {
                     console.error('Profile error:', profileError);
-                    // Create profile if it doesn't exist
                     const { data: newProfile, error: createError } = await supabase
                         .from('profiles')
                         .insert({
@@ -2326,7 +2323,6 @@
                     currentUser = { ...profile, name: profile.full_name };
                 }
                 
-                // Get user preferences
                 const { data: preferences, error: prefError } = await supabase
                     .from('user_preferences')
                     .select('*')
@@ -2338,13 +2334,10 @@
                     ttsEnabled = preferences.tts_enabled !== false;
                 }
                 
-                // Show chat interface
                 showChatInterface();
                 
-                // Load chat history
                 await loadUserChatHistory();
                 
-                // Update UI
                 updateModelUI();
                 updateTTSUI();
                 
@@ -2380,7 +2373,6 @@
                 showToast('Text-to-Speech disabled', 'info');
             }
             
-            // Save preference
             if (currentUser) {
                 supabase
                     .from('user_preferences')
@@ -2412,10 +2404,8 @@
         function speakText(text) {
             if (!ttsEnabled || !synth) return;
             
-            // Stop any current speech
             synth.cancel();
             
-            // Clean text for speech
             const cleanText = text
                 .replace(/\*\*/g, '')
                 .replace(/\*/g, '')
@@ -2438,10 +2428,8 @@
         function switchAiModel(model) {
             selectedAiModel = model;
             
-            // Update UI
             updateModelUI();
             
-            // Update active state in sidebar
             document.querySelectorAll('.ai-model-option').forEach(option => {
                 option.classList.remove('active');
             });
@@ -2451,7 +2439,6 @@
                 }
             });
             
-            // Save preference
             if (currentUser) {
                 supabase
                     .from('user_preferences')
@@ -2477,7 +2464,6 @@
                 return;
             }
             
-            // Get API key from database
             const { data: profile, error } = await supabase
                 .from('profiles')
                 .select('api_key')
@@ -2534,7 +2520,6 @@
                 throw new Error('User not authenticated');
             }
             
-            // Get API key
             const { data: profile, error } = await supabase
                 .from('profiles')
                 .select('api_key')
@@ -2543,7 +2528,7 @@
             
             if (error) throw error;
             
-            // Call Edge Function
+            // Call Swift Processor Edge Function
             const response = await fetch(EDGE_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
@@ -2553,7 +2538,8 @@
                     message: message,
                     conversation_id: currentChatId,
                     model: selectedAiModel,
-                    api_key: profile.api_key
+                    api_key: profile.api_key,
+                    user_id: currentUser.id
                 })
             });
             
@@ -2562,7 +2548,18 @@
                 throw new Error(error.error || 'AI service error');
             }
             
-            return await response.json();
+            const result = await response.json();
+            
+            // Handle different response formats
+            if (result.response) {
+                return result.response;
+            } else if (result.choices && result.choices[0] && result.choices[0].message) {
+                return result.choices[0].message.content;
+            } else if (result.content) {
+                return result.content;
+            } else {
+                return JSON.stringify(result);
+            }
         }
 
         // ==================== AUTH FUNCTIONS ====================
@@ -2649,7 +2646,6 @@
             const confirmPassword = document.getElementById('signupConfirmPassword').value;
             const acceptTerms = document.getElementById('acceptTerms').checked;
             
-            // Validation
             if (!name) {
                 showToast('Please enter your name', 'error');
                 return;
@@ -2696,7 +2692,6 @@
                 
                 showToast('Account created successfully! API key generated automatically.', 'success');
                 
-                // Switch to sign in tab
                 setTimeout(() => {
                     switchAuthTab('signin');
                     document.getElementById('signinEmail').value = email;
@@ -2781,14 +2776,12 @@
                 authContainer.style.display = 'none';
                 chatContainer.classList.add('active');
                 
-                // Update user info
                 if (currentUser) {
                     document.getElementById('userName').textContent = currentUser.name;
                     document.getElementById('userEmail').textContent = currentUser.email;
                     document.getElementById('userAvatar').textContent = currentUser.avatar || getAvatarInitials(currentUser.name);
                 }
                 
-                // Focus on chat input
                 setTimeout(() => {
                     const chatInput = document.getElementById('chatInput');
                     if (chatInput) chatInput.focus();
@@ -2840,7 +2833,6 @@
             
             document.getElementById('chatTitle').textContent = 'New Chat';
             
-            // Show welcome screen
             const welcomeScreen = document.createElement('div');
             welcomeScreen.id = 'welcomeScreen';
             welcomeScreen.className = 'welcome-screen';
@@ -2888,7 +2880,6 @@
             
             messagesContainer.appendChild(welcomeScreen);
             
-            // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
             showToast('New chat started', 'info');
@@ -2916,25 +2907,20 @@
                 return;
             }
             
-            // Remove welcome screen if present
             const welcomeScreen = document.getElementById('welcomeScreen');
             if (welcomeScreen) {
                 welcomeScreen.remove();
             }
             
-            // Add user message
             addMessageToUI(message, 'user');
             conversationHistory.push({ role: 'user', content: message });
             
-            // Clear input
             input.value = '';
             autoResizeInput(input);
             
-            // Show typing indicator
             showTypingIndicator();
             
             try {
-                // Create conversation in database if this is a new chat
                 if (!currentChatId && currentUser) {
                     const { data, error } = await supabase
                         .from('conversations')
@@ -2952,11 +2938,9 @@
                     currentChatId = data.id;
                     document.getElementById('chatTitle').textContent = message.substring(0, 30) + (message.length > 30 ? '...' : '');
                     
-                    // Update chat history
                     await loadUserChatHistory();
                 }
                 
-                // Save user message
                 if (currentChatId && currentUser) {
                     await supabase
                         .from('messages')
@@ -2969,25 +2953,19 @@
                         });
                 }
                 
-                // Generate AI response
                 let aiResponse;
                 try {
-                    const response = await callAIAPI(message);
-                    aiResponse = response.response;
+                    aiResponse = await callAIAPI(message);
                 } catch (apiError) {
                     console.warn('AI API failed:', apiError);
-                    // Fallback to mock response
-                    aiResponse = await generateMockAIResponse(message);
+                    aiResponse = await generateFallbackResponse(message);
                 }
                 
-                // Hide typing indicator
                 hideTypingIndicator();
                 
-                // Add AI response
                 addMessageToUI(aiResponse, 'assistant');
                 conversationHistory.push({ role: 'assistant', content: aiResponse });
                 
-                // Save AI response
                 if (currentChatId && currentUser) {
                     await supabase
                         .from('messages')
@@ -3000,7 +2978,6 @@
                         });
                 }
                 
-                // Speak the response if TTS is enabled
                 if (ttsEnabled) {
                     speakText(aiResponse);
                 }
@@ -3009,7 +2986,6 @@
                 console.error('Error sending message:', error);
                 hideTypingIndicator();
                 
-                // Fallback response
                 const fallbackResponse = "I apologize, but I encountered an error processing your request. Please try again.";
                 addMessageToUI(fallbackResponse, 'assistant');
                 conversationHistory.push({ role: 'assistant', content: fallbackResponse });
@@ -3018,8 +2994,7 @@
             }
         }
 
-        async function generateMockAIResponse(message) {
-            // Simulate API delay
+        async function generateFallbackResponse(message) {
             await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
             
             const messageLower = message.toLowerCase();
@@ -3040,7 +3015,6 @@ print(f"Result: {result}")
                 return `**${selectedAiModel} Business Insights:**\n\nBased on your query "${message.substring(0, 100)}", here are key considerations:\n\n**Market Analysis:**\n• Target audience identification\n• Competitor research\n• Market opportunities\n\n**Strategic Planning:**\n• Unique value proposition\n• Revenue model development\n• Scalability planning\n\nWould you like to dive deeper into any specific area?`;
             
             } else {
-                // Generic intelligent response
                 return `**${selectedAiModel} Response:**\n\nI've analyzed your query about "${message}". This is an interesting topic that involves several important considerations:\n\n1. **Core Concepts**: Fundamental principles involved\n2. **Applications**: Practical implementations\n3. **Best Practices**: Recommended approaches\n4. **Future Trends**: Where this is headed\n\nWhat specific aspect would you like to explore further?`;
             }
         }
@@ -3139,7 +3113,6 @@ print(f"Result: {result}")
         }
 
         function formatMessage(text) {
-            // Convert markdown-like syntax to HTML
             return text
                 .replace(/\n/g, '<br>')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -3167,10 +3140,8 @@ print(f"Result: {result}")
             
             toastContainer.appendChild(toast);
             
-            // Show toast
             setTimeout(() => toast.classList.add('show'), 10);
             
-            // Auto-remove after 5 seconds
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 500);
@@ -3255,7 +3226,6 @@ print(f"Result: {result}")
         }
 
         function loadChat(chatId) {
-            // In a real app, you would load from database
             showToast('Loading chat...', 'info');
             newChat();
             addMessageToUI('Chat loaded successfully!', 'assistant');
