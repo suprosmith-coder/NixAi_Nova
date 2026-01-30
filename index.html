@@ -129,115 +129,12 @@
             animation: float 30s ease-in-out infinite;
         }
 
-        /* Splash Screen */
-        .splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--purple-dark);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease-in-out;
-        }
-
-        .splash-screen.fade-out {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .splash-logo {
-            width: 140px;
-            height: 140px;
-            background: linear-gradient(135deg, var(--cyan-secondary), var(--cyan-primary));
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 60px;
-            box-shadow: var(--neon-glow);
-            margin-bottom: 30px;
-            animation: pulse 2s infinite alternate, rotate 10s linear infinite;
-            position: relative;
-        }
-
-        .splash-logo::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 24px;
-            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: shine 3s infinite linear;
-        }
-
-        .splash-title {
-            font-size: 48px;
-            font-weight: 900;
-            font-family: 'Orbitron', sans-serif;
-            background: linear-gradient(135deg, var(--cyan-primary), var(--cyan-light), var(--purple-neon));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            animation: textGlow 2s infinite alternate;
-        }
-
-        .splash-subtitle {
-            font-size: 18px;
-            color: var(--cyan-light);
-            opacity: 0.8;
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 1px;
-        }
-
-        .loading-bar {
-            width: 300px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            margin-top: 40px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .loading-progress {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, var(--cyan-primary), var(--purple-neon));
-            border-radius: 2px;
-            transition: width 2.5s ease-in-out;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .loading-progress::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-            animation: loadingShine 2s infinite;
-        }
-
         /* Auth Container */
         .auth-container {
-            display: none;
             min-height: 100vh;
-            opacity: 0;
-            transition: opacity 0.8s ease-in-out;
-        }
-
-        .auth-container.show {
             display: flex;
             opacity: 1;
+            transition: opacity 0.8s ease-in-out;
         }
 
         .auth-left {
@@ -1780,9 +1677,6 @@
             .auth-title {
                 font-size: 32px;
             }
-            .splash-title {
-                font-size: 36px;
-            }
             .chat-header {
                 flex-direction: column;
                 gap: 15px;
@@ -1806,18 +1700,6 @@
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
-    </div>
-
-    <!-- Splash Screen -->
-    <div id="splashScreen" class="splash-screen">
-        <div class="splash-logo">
-            <i class="fas fa-robot"></i>
-        </div>
-        <h1 class="splash-title">Cyanix AI</h1>
-        <p class="splash-subtitle">Powered by Advanced AI</p>
-        <div class="loading-bar">
-            <div class="loading-progress" id="loadingProgress"></div>
-        </div>
     </div>
 
     <!-- API Key Modal -->
@@ -2192,7 +2074,6 @@
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            initSplashScreen();
             loadVoices();
             await initApp();
         });
@@ -2207,50 +2088,22 @@
             };
         }
 
-        function initSplashScreen() {
-            const loadingProgress = document.getElementById('loadingProgress');
-            loadingProgress.style.width = '0%';
-            
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += Math.random() * 25;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(interval);
-                }
-                loadingProgress.style.width = progress + '%';
-            }, 100);
-        }
-
         async function initApp() {
             try {
                 console.log('Initializing Cyanix AI...');
                 
+                // Focus on email input
                 setTimeout(() => {
-                    const splashScreen = document.getElementById('splashScreen');
-                    splashScreen.classList.add('fade-out');
-                    
-                    setTimeout(() => {
-                        splashScreen.style.display = 'none';
-                        showAuthInterface();
-                    }, 500);
-                }, 2500);
+                    const emailInput = document.getElementById('signinEmail');
+                    if (emailInput) emailInput.focus();
+                }, 300);
                 
                 await checkAuthState();
                 
                 console.log('Cyanix AI initialized successfully');
             } catch (error) {
                 console.error('Error during initialization:', error);
-                setTimeout(() => {
-                    const splashScreen = document.getElementById('splashScreen');
-                    splashScreen.classList.add('fade-out');
-                    
-                    setTimeout(() => {
-                        splashScreen.style.display = 'none';
-                        showAuthInterface();
-                        showToast('Welcome to Cyanix AI!', 'info');
-                    }, 500);
-                }, 2500);
+                showToast('Welcome to Cyanix AI!', 'info');
             }
         }
 
