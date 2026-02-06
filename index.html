@@ -9,7 +9,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -25,7 +24,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
     
     <style>
         /* === CYBERPUNK VARIABLES === */
@@ -1213,6 +1211,144 @@
             transform: translateY(-2px);
         }
 
+        /* Settings Modal Specific */
+        .settings-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .settings-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-title i {
+            font-size: 16px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .settings-item:hover {
+            background: rgba(0, 243, 255, 0.1);
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .settings-info {
+            flex: 1;
+        }
+
+        .settings-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 3px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .settings-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 3px;
+            background-color: var(--primary);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: rgba(0, 243, 255, 0.2);
+            border-color: var(--primary);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+            background-color: var(--success);
+        }
+
+        /* API Key Input */
+        .api-key-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 15px;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: var(--primary-glow);
+        }
+
         /* Model Selection */
         .model-grid {
             display: grid;
@@ -1536,7 +1672,95 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <!-- Modals -->
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Settings</h3>
+                <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="settings-section">
+                    <h4 class="settings-title"><i class="fas fa-user-secret"></i> Privacy</h4>
+                    <div class="settings-grid">
+                        <div class="settings-item">
+                            <div class="settings-info">
+                                <div class="settings-name">Hide Account Info</div>
+                                <div class="settings-desc">Hide email and name from sidebar</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="hideAccount" onchange="toggleHideAccount()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="settings-title"><i class="fas fa-volume-up"></i> Voice & Audio</h4>
+                    <div class="settings-grid">
+                        <div class="settings-item">
+                            <div class="settings-info">
+                                <div class="settings-name">Text-to-Speech</div>
+                                <div class="settings-desc">Read AI responses aloud</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="ttsEnabled" onchange="toggleTTS()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="settings-title"><i class="fas fa-key"></i> Gemini API Configuration</h4>
+                    <div class="settings-grid">
+                        <div class="settings-item" style="flex-direction: column; align-items: flex-start;">
+                            <div class="settings-info" style="width: 100%; margin-bottom: 10px;">
+                                <div class="settings-name">Gemini API Key</div>
+                                <div class="settings-desc">Enter your Gemini API key for AI responses</div>
+                            </div>
+                            <input type="password" 
+                                   id="geminiApiKey" 
+                                   class="api-key-input" 
+                                   placeholder="Enter your Gemini API key"
+                                   onchange="saveApiKey()">
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;">
+                                Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: var(--primary);">Google AI Studio</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="settings-title"><i class="fas fa-brain"></i> AI Settings</h4>
+                    <div class="settings-grid">
+                        <div class="settings-item">
+                            <div class="settings-info">
+                                <div class="settings-name">Response Temperature</div>
+                                <div class="settings-desc">Creativity level (0.1-1.0)</div>
+                            </div>
+                            <input type="range" 
+                                   id="temperature" 
+                                   min="0.1" 
+                                   max="1.0" 
+                                   step="0.1" 
+                                   value="0.7"
+                                   style="width: 100px;"
+                                   onchange="updateTemperature(this.value)">
+                            <span style="font-size: 12px; color: var(--primary); margin-left: 10px;" id="tempValue">0.7</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" onclick="closeSettingsModal()">Cancel</button>
+                <button class="modal-button primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Selection Modal -->
     <div id="modelModal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
@@ -1545,30 +1769,23 @@
             </div>
             <div class="modal-content">
                 <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">
-                    Choose the AI model that best suits your needs.
+                    Choose the Gemini AI model that best suits your needs.
                 </p>
                 
                 <div class="model-grid" id="modelGrid">
-                    <div class="model-card active" data-model="cyanix-basic" onclick="selectModel('cyanix-basic')">
+                    <div class="model-card active" data-model="gemini-pro" onclick="selectModel('gemini-pro')">
                         <div class="model-icon">
-                            <i class="fas fa-brain"></i>
+                            <i class="fas fa-robot"></i>
                         </div>
-                        <div class="model-name">CYANIX BASIC</div>
-                        <div class="model-desc">General purpose AI model</div>
+                        <div class="model-name">GEMINI PRO</div>
+                        <div class="model-desc">Best for general tasks and conversations</div>
                     </div>
-                    <div class="model-card" data-model="cyanix-code" onclick="selectModel('cyanix-code')">
+                    <div class="model-card" data-model="gemini-pro-vision" onclick="selectModel('gemini-pro-vision')">
                         <div class="model-icon">
-                            <i class="fas fa-code"></i>
+                            <i class="fas fa-eye"></i>
                         </div>
-                        <div class="model-name">CYANIX CODE</div>
-                        <div class="model-desc">Specialized for code generation</div>
-                    </div>
-                    <div class="model-card" data-model="cyanix-analytics" onclick="selectModel('cyanix-analytics')">
-                        <div class="model-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="model-name">CYANIX ANALYTICS</div>
-                        <div class="model-desc">Data analysis and insights</div>
+                        <div class="model-name">GEMINI PRO VISION</div>
+                        <div class="model-desc">Text and image understanding</div>
                     </div>
                 </div>
             </div>
@@ -1590,12 +1807,12 @@
             </div>
             
             <h1 class="auth-title">Advanced Neural Interface</h1>
-            <p class="auth-subtitle">Powered by Python Backend · Enterprise-grade security · Real-time processing</p>
+            <p class="auth-subtitle">Powered by Gemini AI · Firebase authentication · Real-time processing</p>
             
             <div class="feature-grid">
                 <div class="feature-chip">
                     <i class="fas fa-bolt feature-icon"></i>
-                    <span class="feature-text">Instant Access</span>
+                    <span class="feature-text">Gemini AI Powered</span>
                 </div>
                 <div class="feature-chip">
                     <i class="fas fa-shield-alt feature-icon"></i>
@@ -1606,8 +1823,8 @@
                     <span class="feature-text">Multiple AI Models</span>
                 </div>
                 <div class="feature-chip">
-                    <i class="fas fa-server feature-icon"></i>
-                    <span class="feature-text">Python Backend</span>
+                    <i class="fas fa-google feature-icon"></i>
+                    <span class="feature-text">Google Gemini API</span>
                 </div>
                 <div class="feature-chip">
                     <i class="fas fa-fire feature-icon"></i>
@@ -1615,7 +1832,7 @@
                 </div>
                 <div class="feature-chip">
                     <i class="fas fa-history feature-icon"></i>
-                    <span class="feature-text">Unlimited History</span>
+                    <span class="feature-text">Chat History</span>
                 </div>
             </div>
         </div>
@@ -1787,6 +2004,10 @@
                             <i class="fas fa-brain sidebar-action-icon"></i>
                             <span>Change AI Model</span>
                         </button>
+                        <button class="sidebar-action" onclick="openSettingsModal()">
+                            <i class="fas fa-cog sidebar-action-icon"></i>
+                            <span>Settings</span>
+                        </button>
                         <button class="sidebar-action" onclick="exportChat()">
                             <i class="fas fa-download sidebar-action-icon"></i>
                             <span>Export Chat</span>
@@ -1817,12 +2038,12 @@
                     <div class="chat-title" id="chatTitle">New Chat</div>
                     <div class="model-badge" onclick="openModelModal()">
                         <i class="fas fa-brain"></i>
-                        <span id="currentModel">Cyanix Basic</span>
+                        <span id="currentModel">Gemini Pro</span>
                     </div>
                 </div>
                 
                 <div class="chat-actions">
-                    <button class="header-action" onclick="openModelModal()">
+                    <button class="header-action" onclick="openSettingsModal()">
                         <i class="fas fa-cog"></i> Settings
                     </button>
                     <button class="header-action" onclick="exportChat()">
@@ -1840,8 +2061,8 @@
                         </div>
                         <h1 class="welcome-title">CYANIX AI</h1>
                         <p class="welcome-subtitle">
-                            Advanced neural interface for intelligent conversations. 
-                            Powered by Python backend with API key management.
+                            Advanced AI interface powered by Google's Gemini. 
+                            Configure your API key in settings to start chatting.
                         </p>
                         
                         <div class="example-grid">
@@ -1907,24 +2128,31 @@
 
     <script>
         // ==================== CONFIGURATION ====================
-        // Update these with your actual Firebase and Backend configurations
-        const BACKEND_URL = 'http://localhost:5000'; // Change to your backend URL
         const FIREBASE_CONFIG = {
-         apiKey: "AIzaSyAtUrEx-xIDqYZsIzWU-mG8_Fbc3s6D3Ic",
-         authDomain: "nixai-d93cb.firebaseapp.com",
-         projectId: "nixai-d93cb",
-         storageBucket: "nixai-d93cb.firebasestorage.app",
-         messagingSenderId: "120045328987",
-         appId: "1:120045328987:web:01ab5651163b5c6c483d7e",
-         measurementId: "G-4J7K0ZFMNT"
+            apiKey: "AIzaSyAtUrEx-xIDqYZsIzWU-mG8_Fbc3s6D3Ic",
+            authDomain: "nixai-d93cb.firebaseapp.com",
+            projectId: "nixai-d93cb",
+            storageBucket: "nixai-d93cb.firebasestorage.app",
+            messagingSenderId: "120045328987",
+            appId: "1:120045328987:web:01ab5651163b5c6c483d7e",
+            measurementId: "G-4J7K0ZFMNT"
         };
+
+        // Gemini API Configuration
+        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
         // ==================== APP STATE ====================
         let currentUser = null;
         let currentChatId = null;
-        let currentModel = 'cyanix-basic';
+        let currentModel = 'gemini-pro';
         let conversationHistory = [];
-        let userApiKey = null;
+        let settings = {
+            hideAccount: false,
+            ttsEnabled: false,
+            temperature: 0.7
+        };
+        let geminiApiKey = '';
+        let speechSynthesis = window.speechSynthesis;
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1948,6 +2176,10 @@
                 breaks: true,
                 gfm: true
             });
+            
+            // Load settings and API key
+            loadSettings();
+            loadApiKey();
         });
 
         function initializeAuth() {
@@ -1960,6 +2192,89 @@
             });
         }
 
+        // ==================== SETTINGS FUNCTIONS ====================
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('cyanix_settings');
+            if (savedSettings) {
+                settings = { ...settings, ...JSON.parse(savedSettings) };
+                updateSettingsUI();
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem('cyanix_settings', JSON.stringify(settings));
+            updateSettingsUI();
+            closeSettingsModal();
+            showToast('Settings saved successfully!', 'success');
+        }
+
+        function updateSettingsUI() {
+            document.getElementById('hideAccount').checked = settings.hideAccount;
+            document.getElementById('ttsEnabled').checked = settings.ttsEnabled;
+            document.getElementById('temperature').value = settings.temperature;
+            document.getElementById('tempValue').textContent = settings.temperature;
+            
+            // Apply settings
+            toggleHideAccount();
+        }
+
+        function loadApiKey() {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                geminiApiKey = savedKey;
+                document.getElementById('geminiApiKey').value = savedKey;
+            }
+        }
+
+        function saveApiKey() {
+            const apiKey = document.getElementById('geminiApiKey').value.trim();
+            if (apiKey) {
+                geminiApiKey = apiKey;
+                localStorage.setItem('gemini_api_key', apiKey);
+                showToast('API key saved successfully!', 'success');
+            }
+        }
+
+        function toggleHideAccount() {
+            settings.hideAccount = document.getElementById('hideAccount').checked;
+            const userInfo = document.querySelector('.user-info');
+            if (userInfo && currentUser) {
+                if (settings.hideAccount) {
+                    userInfo.style.opacity = '0.3';
+                    userInfo.style.filter = 'blur(2px)';
+                } else {
+                    userInfo.style.opacity = '1';
+                    userInfo.style.filter = 'none';
+                }
+            }
+        }
+
+        function toggleTTS() {
+            settings.ttsEnabled = document.getElementById('ttsEnabled').checked;
+        }
+
+        function updateTemperature(value) {
+            settings.temperature = parseFloat(value);
+            document.getElementById('tempValue').textContent = value;
+        }
+
+        // ==================== MODAL FUNCTIONS ====================
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function openModelModal() {
+            document.getElementById('modelModal').classList.add('active');
+        }
+
+        function closeModelModal() {
+            document.getElementById('modelModal').classList.remove('active');
+        }
+
         // ==================== AUTH FUNCTIONS ====================
         async function handleUserSignedIn(user) {
             currentUser = {
@@ -1970,61 +2285,13 @@
             };
             
             updateUserUI();
-            
-            // Register user in backend and get API key
-            await registerUserInBackend();
-            
             showChat();
             showToast('Welcome to Cyanix AI!', 'success');
         }
 
         function handleUserSignedOut() {
             currentUser = null;
-            userApiKey = null;
             showAuth();
-        }
-
-        async function registerUserInBackend() {
-            if (!currentUser) return;
-            
-            try {
-                // Register user in backend
-                const registerResponse = await fetch(`${BACKEND_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        email: currentUser.email,
-                        user_id: currentUser.uid
-                    })
-                });
-                
-                if (!registerResponse.ok) {
-                    throw new Error('Failed to register user in backend');
-                }
-                
-                // Generate API key
-                const keyResponse = await fetch(`${BACKEND_URL}/keys/generate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        user_id: currentUser.uid,
-                        name: 'Default Key'
-                    })
-                });
-                
-                if (keyResponse.ok) {
-                    const keyData = await keyResponse.json();
-                    userApiKey = keyData.api_key;
-                    localStorage.setItem('cyanix_api_key', userApiKey);
-                    showToast('API key generated successfully!', 'success');
-                }
-                
-            } catch (error) {
-                console.error('Backend registration error:', error);
-                showToast('Backend setup failed. Using demo mode.', 'warning');
-                // Use a demo API key for testing
-                userApiKey = 'demo_api_key_for_testing';
-            }
         }
 
         function showAuth() {
@@ -2040,8 +2307,8 @@
         function updateUserUI() {
             if (!currentUser) return;
             
-            document.getElementById('userName').textContent = currentUser.name;
-            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userName').textContent = settings.hideAccount ? 'User' : currentUser.name;
+            document.getElementById('userEmail').textContent = settings.hideAccount ? 'hidden@example.com' : currentUser.email;
             document.getElementById('userAvatar').textContent = currentUser.avatar;
         }
 
@@ -2279,6 +2546,13 @@
                 return;
             }
             
+            // Check if API key is set
+            if (!geminiApiKey) {
+                showToast('Please set your Gemini API key in settings first', 'error');
+                openSettingsModal();
+                return;
+            }
+            
             // Hide welcome screen
             const welcomeScreen = document.getElementById('welcomeScreen');
             if (welcomeScreen) {
@@ -2297,8 +2571,8 @@
             showTypingIndicator();
             
             try {
-                // Get AI response from backend
-                const aiResponse = await getAIResponse(message);
+                // Get AI response from Gemini API
+                const aiResponse = await getGeminiResponse(message);
                 
                 // Remove typing indicator
                 hideTypingIndicator();
@@ -2310,13 +2584,88 @@
                 conversationHistory.push({ role: 'user', content: message });
                 conversationHistory.push({ role: 'assistant', content: aiResponse });
                 
+                // Text-to-speech if enabled
+                if (settings.ttsEnabled && speechSynthesis) {
+                    speakText(aiResponse);
+                }
+                
             } catch (error) {
                 console.error('Error getting AI response:', error);
                 hideTypingIndicator();
-                showToast('Error getting response from AI', 'error');
+                showToast('Error getting response from AI: ' + error.message, 'error');
                 
                 // Add error message
-                addMessage("I apologize, but I encountered an error processing your request. Please try again.", 'assistant');
+                addMessage("I apologize, but I encountered an error processing your request. Please check your API key and try again.", 'assistant');
+            }
+        }
+
+        async function getGeminiResponse(message) {
+            if (!geminiApiKey) {
+                throw new Error('Gemini API key not configured');
+            }
+            
+            // Select the appropriate model endpoint
+            const model = currentModel === 'gemini-pro-vision' ? 'gemini-pro-vision' : 'gemini-pro';
+            
+            const url = `${GEMINI_API_URL}${model}:generateContent?key=${geminiApiKey}`;
+            
+            const requestBody = {
+                contents: [{
+                    parts: [{
+                        text: message
+                    }]
+                }],
+                generationConfig: {
+                    temperature: settings.temperature,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 2048,
+                },
+                safetySettings: [
+                    {
+                        category: "HARM_CATEGORY_HARASSMENT",
+                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_HATE_SPEECH",
+                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                    }
+                ]
+            };
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    return data.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error('Unexpected response format from Gemini API');
+                }
+                
+            } catch (error) {
+                console.error('Gemini API error:', error);
+                throw error;
             }
         }
 
@@ -2383,146 +2732,22 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // ==================== BACKEND API FUNCTIONS ====================
-        async function getAIResponse(message) {
-            if (!userApiKey) {
-                throw new Error('No API key available');
-            }
+        // ==================== TTS FUNCTIONS ====================
+        function speakText(text) {
+            if (!speechSynthesis) return;
             
-            try {
-                const response = await fetch(`${BACKEND_URL}/ai/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'X-API-Key': userApiKey,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        model: currentModel
-                    })
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        throw new Error('Invalid API key');
-                    }
-                    throw new Error(`API error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                return data.response;
-                
-            } catch (error) {
-                console.error('AI Response Error:', error);
-                throw error;
-            }
-        }
-
-        async function getAvailableModels() {
-            if (!userApiKey) return [];
+            // Remove markdown and code blocks for cleaner speech
+            const cleanText = text.replace(/```[\s\S]*?```/g, '')
+                                 .replace(/`[^`]*`/g, '')
+                                 .replace(/[#*\[\]]/g, '')
+                                 .replace(/\n+/g, '. ');
             
-            try {
-                const response = await fetch(`${BACKEND_URL}/ai/models`, {
-                    headers: {
-                        'X-API-Key': userApiKey
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    return data.models || [];
-                }
-            } catch (error) {
-                console.error('Error fetching models:', error);
-            }
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 0.8;
             
-            return [];
-        }
-
-        async function getUserStats() {
-            if (!userApiKey) return null;
-            
-            try {
-                const response = await fetch(`${BACKEND_URL}/stats`, {
-                    headers: {
-                        'X-API-Key': userApiKey
-                    }
-                });
-                
-                if (response.ok) {
-                    return await response.json();
-                }
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-            }
-            
-            return null;
-        }
-
-        // ==================== MODEL MANAGEMENT ====================
-        async function openModelModal() {
-            const models = await getAvailableModels();
-            
-            // Update model grid
-            const modelGrid = document.getElementById('modelGrid');
-            modelGrid.innerHTML = '';
-            
-            models.forEach(model => {
-                const modelCard = document.createElement('div');
-                modelCard.className = `model-card ${model.id === currentModel ? 'active' : ''}`;
-                modelCard.dataset.model = model.id;
-                modelCard.onclick = () => selectModel(model.id);
-                
-                const iconMap = {
-                    'cyanix-basic': 'fa-brain',
-                    'cyanix-code': 'fa-code',
-                    'cyanix-analytics': 'fa-chart-line'
-                };
-                
-                modelCard.innerHTML = `
-                    <div class="model-icon">
-                        <i class="fas ${iconMap[model.id] || 'fa-robot'}"></i>
-                    </div>
-                    <div class="model-name">${model.name.toUpperCase()}</div>
-                    <div class="model-desc">${model.description}</div>
-                `;
-                
-                modelGrid.appendChild(modelCard);
-            });
-            
-            document.getElementById('modelModal').classList.add('active');
-        }
-
-        function closeModelModal() {
-            document.getElementById('modelModal').classList.remove('active');
-        }
-
-        function selectModel(model) {
-            currentModel = model;
-            
-            // Update UI
-            const modelCards = document.querySelectorAll('.model-card');
-            modelCards.forEach(card => {
-                if (card.dataset.model === model) {
-                    card.classList.add('active');
-                } else {
-                    card.classList.remove('active');
-                }
-            });
-            
-            // Update current model display
-            const modelNames = {
-                'cyanix-basic': 'Cyanix Basic',
-                'cyanix-code': 'Cyanix Code',
-                'cyanix-analytics': 'Cyanix Analytics'
-            };
-            
-            document.getElementById('currentModel').textContent = modelNames[model] || 'Cyanix AI';
-        }
-
-        function saveModelSelection() {
-            showToast('Model updated successfully!', 'success');
-            closeModelModal();
+            speechSynthesis.speak(utterance);
         }
 
         // ==================== UTILITY FUNCTIONS ====================
@@ -2651,32 +2876,42 @@
             }
         }
 
-        // ==================== DEPLOYMENT INSTRUCTIONS ====================
-        /*
-        Deployment Instructions:
-        
-        1. SETUP FIREBASE:
-           - Go to https://console.firebase.google.com/
-           - Create a new project
-           - Enable Authentication (Email/Password, Google, Microsoft, GitHub)
-           - Enable Firestore Database
-           - Enable Storage
-           - Update FIREBASE_CONFIG with your credentials
-        
-        2. SETUP PYTHON BACKEND:
-           - Run the Python Flask server provided earlier
-           - Make sure it's accessible from your frontend (localhost:5000 or deployed URL)
-        
-        3. DEPLOY FRONTEND:
-           - Save this HTML as index.html
-           - Deploy to GitHub Pages, Netlify, Vercel, or any static hosting
-           - Update BACKEND_URL to point to your Python backend
-        
-        4. TEST:
-           - Sign up with email
-           - Backend will automatically generate API key
-           - Start chatting!
-        */
+        function selectModel(model) {
+            currentModel = model;
+            
+            // Update UI
+            const modelCards = document.querySelectorAll('.model-card');
+            modelCards.forEach(card => {
+                if (card.dataset.model === model) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+            
+            // Update current model display
+            const modelNames = {
+                'gemini-pro': 'Gemini Pro',
+                'gemini-pro-vision': 'Gemini Pro Vision'
+            };
+            
+            document.getElementById('currentModel').textContent = modelNames[model] || 'Gemini AI';
+        }
+
+        function saveModelSelection() {
+            showToast('Model updated successfully!', 'success');
+            closeModelModal();
+        }
+
+        // ==================== INITIAL SETUP ====================
+        // Load any existing API key from localStorage on startup
+        window.addEventListener('load', () => {
+            const savedApiKey = localStorage.getItem('gemini_api_key');
+            if (savedApiKey) {
+                geminiApiKey = savedApiKey;
+                document.getElementById('geminiApiKey').value = savedApiKey;
+            }
+        });
     </script>
 </body>
 </html>
