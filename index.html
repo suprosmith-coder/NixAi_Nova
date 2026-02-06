@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyanix AI</title>
+    <title>Cyanix AI | Advanced Neural Interface</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -11,16 +11,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
-    <!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-    
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Markdown Renderer -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <!-- Prism for Code Highlighting -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
@@ -71,7 +69,7 @@
             line-height: 1.6;
         }
 
-        /* === ENHANCED BACKGROUND EFFECTS === */
+        /* === BACKGROUND EFFECTS === */
         .cyber-grid {
             position: fixed;
             top: 0;
@@ -84,40 +82,6 @@
             background-size: 40px 40px;
             z-index: -3;
             animation: gridMove 30s linear infinite;
-        }
-
-        .cyber-scanline {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(to right, transparent, var(--primary), transparent);
-            z-index: 9999;
-            animation: scanline 4s linear infinite;
-            pointer-events: none;
-            filter: blur(1px);
-        }
-
-        .floating-particles {
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            z-index: -2;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
-        .particle {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: var(--primary);
-            border-radius: 50%;
-            animation: particleFloat 15s infinite linear;
-            opacity: 0;
         }
 
         .glow-orb {
@@ -145,99 +109,12 @@
             animation: orbFloat 30s infinite ease-in-out reverse;
         }
 
-        .pulse-ring {
-            position: fixed;
-            border: 1px solid rgba(0, 243, 255, 0.3);
-            border-radius: 50%;
-            animation: pulseRing 8s infinite linear;
-            z-index: -1;
-        }
-
-        /* === SCREEN TRANSITION ANIMATIONS === */
-        .screen-transition {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--accent);
-            z-index: 10002;
-            transform: scaleY(0);
-            transform-origin: bottom;
-            animation: screenTransition 0.8s cubic-bezier(0.87, 0, 0.13, 1);
-        }
-
-        .screen-transition.out {
-            transform-origin: top;
-            animation: screenTransitionOut 0.8s cubic-bezier(0.87, 0, 0.13, 1);
-        }
-
-        .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--background);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10003;
-            opacity: 1;
-            transition: opacity 0.5s ease;
-        }
-
-        .loading-screen.fade-out {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .cyber-loader {
-            text-align: center;
-        }
-
-        .loader-logo {
-            font-size: 48px;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: iconFloat 2s ease-in-out infinite;
-        }
-
-        .loader-text {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
-            color: var(--primary);
-            letter-spacing: 2px;
-            margin-bottom: 30px;
-        }
-
-        .loader-dots {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .loader-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--primary);
-            animation: loadingDots 1.4s infinite ease-in-out both;
-        }
-
-        .loader-dot:nth-child(1) { animation-delay: -0.32s; }
-        .loader-dot:nth-child(2) { animation-delay: -0.16s; }
-
         /* === AUTH INTERFACE === */
         .auth-container {
             display: flex;
             min-height: 100vh;
             position: relative;
             overflow: hidden;
-            opacity: 0;
-            animation: fadeInUp 0.8s ease 0.3s forwards;
         }
 
         .auth-left {
@@ -248,9 +125,6 @@
             flex-direction: column;
             justify-content: center;
             position: relative;
-            transform: translateX(-50px);
-            opacity: 0;
-            animation: slideInLeft 0.8s ease 0.5s forwards;
         }
 
         .auth-left::before {
@@ -274,9 +148,6 @@
             backdrop-filter: blur(20px);
             border-left: 1px solid var(--glass-border);
             position: relative;
-            transform: translateX(50px);
-            opacity: 0;
-            animation: slideInRight 0.8s ease 0.7s forwards;
         }
 
         .auth-logo {
@@ -284,8 +155,6 @@
             align-items: center;
             gap: 15px;
             margin-bottom: 40px;
-            animation: fadeInUp 0.6s ease 0.9s forwards;
-            opacity: 0;
         }
 
         .logo-icon {
@@ -320,8 +189,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             line-height: 1.2;
-            animation: fadeInUp 0.6s ease 1s forwards;
-            opacity: 0;
         }
 
         .auth-subtitle {
@@ -329,8 +196,6 @@
             color: var(--text-secondary);
             margin-bottom: 40px;
             font-family: 'JetBrains Mono', monospace;
-            animation: fadeInUp 0.6s ease 1.1s forwards;
-            opacity: 0;
         }
 
         .feature-grid {
@@ -338,8 +203,6 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             margin-top: 30px;
-            animation: fadeInUp 0.6s ease 1.2s forwards;
-            opacity: 0;
         }
 
         .feature-chip {
@@ -350,7 +213,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
         }
 
         .feature-chip:hover {
@@ -375,8 +238,6 @@
             max-width: 400px;
             margin: 0 auto;
             width: 100%;
-            animation: fadeInUp 0.6s ease 1.3s forwards;
-            opacity: 0;
         }
 
         .auth-tabs {
@@ -426,7 +287,6 @@
 
         .form-group {
             margin-bottom: 20px;
-            animation: fadeInUp 0.5s ease;
         }
 
         .form-label {
@@ -516,7 +376,7 @@
         }
 
         .checkbox input:checked + .checkbox-box::after {
-            content: '?';
+            content: '✓';
             position: absolute;
             color: var(--background);
             font-size: 10px;
@@ -635,8 +495,6 @@
             display: none;
             height: 100vh;
             position: relative;
-            opacity: 0;
-            animation: fadeIn 0.8s ease forwards;
         }
 
         .chat-container.active {
@@ -653,12 +511,6 @@
             flex-direction: column;
             backdrop-filter: blur(10px);
             flex-shrink: 0;
-            transform: translateX(-100%);
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .sidebar.active {
-            transform: translateX(0);
         }
 
         .sidebar-header {
@@ -670,8 +522,6 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            animation: fadeInLeft 0.6s ease 0.2s forwards;
-            opacity: 0;
         }
 
         .sidebar-logo-icon {
@@ -718,8 +568,6 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            animation: fadeInUp 0.6s ease 0.3s forwards;
-            opacity: 0;
         }
 
         .new-chat-button:hover {
@@ -729,13 +577,7 @@
 
         .sidebar-section {
             margin-bottom: 25px;
-            animation: fadeInUp 0.6s ease;
-            opacity: 0;
-            animation-fill-mode: forwards;
         }
-
-        .sidebar-section:nth-child(1) { animation-delay: 0.4s; }
-        .sidebar-section:nth-child(2) { animation-delay: 0.5s; }
 
         .sidebar-title {
             font-size: 11px;
@@ -762,16 +604,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            animation: fadeInLeft 0.5s ease;
-            opacity: 0;
-            animation-fill-mode: forwards;
         }
-
-        .chat-history-item:nth-child(1) { animation-delay: 0.4s; }
-        .chat-history-item:nth-child(2) { animation-delay: 0.45s; }
-        .chat-history-item:nth-child(3) { animation-delay: 0.5s; }
-        .chat-history-item:nth-child(4) { animation-delay: 0.55s; }
-        .chat-history-item:nth-child(5) { animation-delay: 0.6s; }
 
         .chat-history-item:hover {
             background: rgba(0, 243, 255, 0.1);
@@ -838,8 +671,6 @@
             gap: 12px;
             cursor: pointer;
             transition: all 0.3s;
-            animation: fadeInUp 0.6s ease 0.7s forwards;
-            opacity: 0;
         }
 
         .user-profile:hover {
@@ -909,8 +740,6 @@
             font-weight: 700;
             color: var(--text);
             font-family: 'Orbitron', sans-serif;
-            animation: fadeInLeft 0.6s ease 0.2s forwards;
-            opacity: 0;
         }
 
         .model-badge {
@@ -925,8 +754,6 @@
             color: var(--primary);
             cursor: pointer;
             transition: all 0.3s;
-            animation: fadeInUp 0.6s ease 0.3s forwards;
-            opacity: 0;
         }
 
         .model-badge:hover {
@@ -950,13 +777,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            animation: fadeInRight 0.6s ease;
-            opacity: 0;
-            animation-fill-mode: forwards;
         }
-
-        .header-action:nth-child(1) { animation-delay: 0.4s; }
-        .header-action:nth-child(2) { animation-delay: 0.5s; }
 
         .header-action:hover {
             background: rgba(0, 243, 255, 0.1);
@@ -984,7 +805,6 @@
             margin: 0 auto;
             text-align: center;
             padding: 60px 20px;
-            animation: fadeIn 0.8s ease;
         }
 
         .welcome-icon {
@@ -1032,15 +852,7 @@
             text-align: left;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeInUp 0.6s ease;
-            opacity: 0;
-            animation-fill-mode: forwards;
         }
-
-        .example-card:nth-child(1) { animation-delay: 0.2s; }
-        .example-card:nth-child(2) { animation-delay: 0.3s; }
-        .example-card:nth-child(3) { animation-delay: 0.4s; }
-        .example-card:nth-child(4) { animation-delay: 0.5s; }
 
         .example-card:hover {
             background: rgba(0, 243, 255, 0.1);
@@ -1179,155 +991,6 @@
             border: 1px solid rgba(0, 243, 255, 0.2);
         }
 
-        /* Attachments */
-        .attachments-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 15px;
-            margin-bottom: 10px;
-        }
-
-        .attachment-item {
-            position: relative;
-            background: rgba(0, 243, 255, 0.05);
-            border: 1px solid rgba(0, 243, 255, 0.1);
-            border-radius: 8px;
-            padding: 10px;
-            max-width: 200px;
-            transition: all 0.3s;
-            animation: fadeInUp 0.3s ease;
-        }
-
-        .attachment-item:hover {
-            background: rgba(0, 243, 255, 0.1);
-        }
-
-        .attachment-preview {
-            position: relative;
-            overflow: hidden;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            background: rgba(0, 0, 0, 0.2);
-        }
-
-        .attachment-preview img {
-            width: 100%;
-            height: auto;
-            max-height: 150px;
-            object-fit: cover;
-            display: block;
-        }
-
-        .attachment-icon {
-            width: 100%;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: var(--primary);
-        }
-
-        .attachment-info {
-            padding: 5px;
-        }
-
-        .attachment-name {
-            font-size: 12px;
-            color: var(--text);
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .attachment-size {
-            font-size: 10px;
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .attachment-actions {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            display: flex;
-            gap: 5px;
-        }
-
-        .attachment-action {
-            width: 24px;
-            height: 24px;
-            background: rgba(0, 0, 0, 0.7);
-            border: none;
-            border-radius: 4px;
-            color: var(--text);
-            font-size: 10px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-
-        .attachment-action:hover {
-            background: rgba(0, 243, 255, 0.5);
-        }
-
-        /* File Preview Modal */
-        .file-preview-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10001;
-            backdrop-filter: blur(10px);
-        }
-
-        .file-preview-modal.active {
-            display: flex;
-            animation: modalFadeIn 0.3s ease-out;
-        }
-
-        .file-preview-content {
-            max-width: 90vw;
-            max-height: 90vh;
-            background: var(--glass);
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            border: 1px solid var(--glass-border);
-            animation: modalSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .file-preview-image {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
-            display: block;
-        }
-
-        .file-preview-iframe {
-            width: 800px;
-            height: 600px;
-            border: none;
-            background: white;
-        }
-
-        .file-preview-actions {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-        }
-
         /* Input Area */
         .input-container {
             padding: 20px;
@@ -1375,67 +1038,6 @@
             color: rgba(255, 255, 255, 0.3);
         }
 
-        .selected-files-preview {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 10px;
-            padding: 10px;
-            background: rgba(0, 243, 255, 0.05);
-            border-radius: 8px;
-            border: 1px solid rgba(0, 243, 255, 0.1);
-            max-height: 150px;
-            overflow-y: auto;
-            animation: fadeInUp 0.3s ease;
-        }
-
-        .selected-file {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            background: rgba(0, 243, 255, 0.1);
-            border-radius: 6px;
-            font-size: 12px;
-            max-width: 200px;
-        }
-
-        .selected-file-icon {
-            color: var(--primary);
-            font-size: 12px;
-        }
-
-        .selected-file-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .selected-file-name {
-            color: var(--text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .selected-file-size {
-            color: var(--text-secondary);
-            font-size: 10px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .selected-file-remove {
-            background: none;
-            border: none;
-            color: var(--error);
-            cursor: pointer;
-            font-size: 10px;
-            transition: all 0.3s;
-        }
-
-        .selected-file-remove:hover {
-            transform: scale(1.2);
-        }
-
         .input-actions {
             position: absolute;
             right: 12px;
@@ -1481,23 +1083,6 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Progress Bar */
-        .upload-progress {
-            width: 100%;
-            height: 4px;
-            background: rgba(0, 243, 255, 0.1);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-
-        .upload-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--success));
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
         /* Typing Indicator */
         .typing-indicator {
             display: flex;
@@ -1509,7 +1094,6 @@
             border-radius: 12px;
             max-width: 200px;
             margin-bottom: 20px;
-            animation: fadeIn 0.3s ease;
         }
 
         .typing-dots {
@@ -1545,7 +1129,7 @@
 
         .modal-overlay.active {
             display: flex;
-            animation: modalFadeIn 0.3s ease-out;
+            animation: fadeIn 0.3s ease-out;
         }
 
         .modal {
@@ -1645,15 +1229,7 @@
             cursor: pointer;
             transition: all 0.3s;
             text-align: center;
-            animation: fadeInUp 0.5s ease;
-            opacity: 0;
-            animation-fill-mode: forwards;
         }
-
-        .model-card:nth-child(1) { animation-delay: 0.1s; }
-        .model-card:nth-child(2) { animation-delay: 0.2s; }
-        .model-card:nth-child(3) { animation-delay: 0.3s; }
-        .model-card:nth-child(4) { animation-delay: 0.4s; }
 
         .model-card:hover {
             background: rgba(0, 243, 255, 0.1);
@@ -1764,32 +1340,10 @@
             color: var(--primary);
         }
 
-        /* === ENHANCED ANIMATIONS === */
+        /* === ANIMATIONS === */
         @keyframes gridMove {
             0% { background-position: 0 0; }
             100% { background-position: 40px 40px; }
-        }
-
-        @keyframes scanline {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100vw); }
-        }
-
-        @keyframes particleFloat {
-            0% {
-                transform: translateY(100vh) translateX(0);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.5;
-            }
-            90% {
-                opacity: 0.5;
-            }
-            100% {
-                transform: translateY(-100px) translateX(100px);
-                opacity: 0;
-            }
         }
 
         @keyframes orbFloat {
@@ -1801,21 +1355,6 @@
             }
             66% {
                 transform: translate(-30px, 20px) scale(0.9);
-            }
-        }
-
-        @keyframes pulseRing {
-            0% {
-                width: 100px;
-                height: 100px;
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(0.5);
-            }
-            100% {
-                width: 500px;
-                height: 500px;
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(1);
             }
         }
 
@@ -1850,11 +1389,6 @@
             }
         }
 
-        @keyframes modalFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
         @keyframes toastSlide {
             to {
                 transform: translateX(0);
@@ -1877,109 +1411,7 @@
             to { opacity: 1; }
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes fadeInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes screenTransition {
-            0% {
-                transform: scaleY(0);
-            }
-            50% {
-                transform: scaleY(1);
-            }
-            100% {
-                transform: scaleY(0);
-                display: none;
-            }
-        }
-
-        @keyframes screenTransitionOut {
-            0% {
-                transform: scaleY(0);
-            }
-            50% {
-                transform: scaleY(1);
-            }
-            100% {
-                transform: scaleY(0);
-                display: none;
-            }
-        }
-
-        @keyframes loadingDots {
-            0%, 80%, 100% {
-                transform: scale(0);
-                opacity: 0;
-            }
-            40% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
         /* === RESPONSIVE DESIGN === */
-        @media (max-width: 1024px) {
-            .sidebar {
-                width: 250px;
-            }
-            
-            .messages-wrapper {
-                max-width: 90%;
-            }
-        }
-
         @media (max-width: 768px) {
             .auth-container {
                 flex-direction: column;
@@ -1991,15 +1423,15 @@
             
             .sidebar {
                 position: fixed;
-                left: 0;
+                left: -280px;
                 top: 0;
                 height: 100%;
                 z-index: 1000;
-                transform: translateX(-100%);
+                transition: transform 0.3s;
             }
             
             .sidebar.active {
-                transform: translateX(0);
+                transform: translateX(280px);
             }
             
             .mobile-menu-button {
@@ -2054,8 +1486,6 @@
             z-index: 1001;
             box-shadow: var(--primary-glow);
             transition: all 0.3s;
-            animation: fadeIn 0.5s ease 0.5s forwards;
-            opacity: 0;
         }
 
         .mobile-menu-button:hover {
@@ -2098,50 +1528,13 @@
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="cyber-loader">
-            <div class="loader-logo">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="loader-text">CYANIX AI</div>
-            <div class="loader-dots">
-                <div class="loader-dot"></div>
-                <div class="loader-dot"></div>
-                <div class="loader-dot"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Screen Transition -->
-    <div class="screen-transition" id="screenTransition"></div>
-
     <!-- Enhanced Background Effects -->
     <div class="cyber-grid"></div>
-    <div class="cyber-scanline"></div>
-    <div class="floating-particles" id="particles"></div>
     <div class="glow-orb orb-cyan"></div>
     <div class="glow-orb orb-purple"></div>
 
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
-
-    <!-- File Preview Modal -->
-    <div id="filePreviewModal" class="file-preview-modal">
-        <div class="file-preview-content">
-            <div class="file-preview-actions">
-                <button class="input-button" onclick="downloadPreviewFile()" title="Download">
-                    <i class="fas fa-download"></i>
-                </button>
-                <button class="input-button" onclick="closeFilePreview()" title="Close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <img id="previewImage" class="file-preview-image" src="" alt="Preview">
-            <iframe id="previewIframe" class="file-preview-iframe" style="display: none;"></iframe>
-            <div id="previewText" style="display: none; padding: 30px; color: var(--text); font-family: 'JetBrains Mono', monospace; max-height: 80vh; overflow-y: auto; white-space: pre-wrap;"></div>
-        </div>
-    </div>
 
     <!-- Modals -->
     <div id="modelModal" class="modal-overlay">
@@ -2152,96 +1545,36 @@
             </div>
             <div class="modal-content">
                 <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">
-                    Choose the AI model that best suits your needs. Each model has different strengths and capabilities.
+                    Choose the AI model that best suits your needs.
                 </p>
                 
                 <div class="model-grid" id="modelGrid">
-                    <div class="model-card active" data-model="cyanix-pro" onclick="selectModel('cyanix-pro')">
+                    <div class="model-card active" data-model="cyanix-basic" onclick="selectModel('cyanix-basic')">
                         <div class="model-icon">
                             <i class="fas fa-brain"></i>
                         </div>
-                        <div class="model-name">CYANIX PRO</div>
-                        <div class="model-desc">Most capable model for complex reasoning</div>
+                        <div class="model-name">CYANIX BASIC</div>
+                        <div class="model-desc">General purpose AI model</div>
                     </div>
-                    <div class="model-card" data-model="cyanix-flash" onclick="selectModel('cyanix-flash')">
+                    <div class="model-card" data-model="cyanix-code" onclick="selectModel('cyanix-code')">
                         <div class="model-icon">
-                            <i class="fas fa-bolt"></i>
+                            <i class="fas fa-code"></i>
                         </div>
-                        <div class="model-name">CYANIX FLASH</div>
-                        <div class="model-desc">Fast responses for everyday tasks</div>
+                        <div class="model-name">CYANIX CODE</div>
+                        <div class="model-desc">Specialized for code generation</div>
                     </div>
-                    <div class="model-card" data-model="cyanix-vision" onclick="selectModel('cyanix-vision')">
+                    <div class="model-card" data-model="cyanix-analytics" onclick="selectModel('cyanix-analytics')">
                         <div class="model-icon">
-                            <i class="fas fa-eye"></i>
+                            <i class="fas fa-chart-line"></i>
                         </div>
-                        <div class="model-name">CYANIX VISION</div>
-                        <div class="model-desc">Image analysis and description</div>
-                    </div>
-                    <div class="model-card" data-model="cyanix-advanced" onclick="selectModel('cyanix-advanced')">
-                        <div class="model-icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <div class="model-name">CYANIX ADVANCED</div>
-                        <div class="model-desc">Expert model for specialized tasks</div>
-                    </div>
-                </div>
-                
-                <div style="background: rgba(0, 243, 255, 0.05); padding: 15px; border-radius: 10px; margin-top: 20px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <i class="fas fa-info-circle" style="color: var(--primary);"></i>
-                        <span style="color: var(--text); font-weight: 600;">Model Information</span>
-                    </div>
-                    <div style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
-                        All models are powered by Cyanix's advanced neural infrastructure.
+                        <div class="model-name">CYANIX ANALYTICS</div>
+                        <div class="model-desc">Data analysis and insights</div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="modal-button secondary" onclick="closeModelModal()">Cancel</button>
                 <button class="modal-button primary" onclick="saveModelSelection()">Select Model</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- File Modal -->
-    <div id="fileModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Attach Files</h3>
-                <button class="modal-close" onclick="closeFileModal()">&times;</button>
-            </div>
-            <div class="modal-content">
-                <div class="drop-zone" id="dropZone" 
-                     style="text-align: center; padding: 40px; border: 2px dashed rgba(0, 243, 255, 0.3); border-radius: 12px; margin-bottom: 20px; cursor: pointer; transition: all 0.3s;">
-                    <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--primary); margin-bottom: 15px;"></i>
-                    <div style="color: var(--text); font-weight: 600; margin-bottom: 10px;">Drag & Drop Files Here</div>
-                    <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">or click to browse files</div>
-                    <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">
-                        Supported: Images (JPG, PNG, GIF, WebP, SVG, BMP), PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, ZIP, and more
-                    </div>
-                    <button class="modal-button primary" onclick="document.getElementById('fileInput').click()">
-                        <i class="fas fa-folder-open"></i> Browse Files
-                    </button>
-                    <input type="file" id="fileInput" multiple style="display: none;" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.js,.py,.html,.css,.json,.xml,.csv,.mp3,.mp4,.wav,.mov,.avi,.mkv">
-                </div>
-                
-                <div id="selectedFiles" style="max-height: 200px; overflow-y: auto;"></div>
-                
-                <div id="uploadProgress" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: var(--text); font-size: 12px;">Uploading...</span>
-                        <span id="uploadPercentage" style="color: var(--primary); font-size: 12px;">0%</span>
-                    </div>
-                    <div class="upload-progress">
-                        <div class="upload-progress-bar" id="uploadProgressBar"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-button secondary" onclick="closeFileModal()">Cancel</button>
-                <button class="modal-button primary" onclick="uploadFiles()">
-                    <i class="fas fa-upload"></i> Upload Files
-                </button>
             </div>
         </div>
     </div>
@@ -2257,28 +1590,28 @@
             </div>
             
             <h1 class="auth-title">Advanced Neural Interface</h1>
-            <p class="auth-subtitle">Termux Compatible ¡¤ Real-time AI ¡¤ Full Chat Memory</p>
+            <p class="auth-subtitle">Powered by Python Backend · Enterprise-grade security · Real-time processing</p>
             
             <div class="feature-grid">
                 <div class="feature-chip">
                     <i class="fas fa-bolt feature-icon"></i>
-                    <span class="feature-text">Local AI Server</span>
+                    <span class="feature-text">Instant Access</span>
                 </div>
                 <div class="feature-chip">
                     <i class="fas fa-shield-alt feature-icon"></i>
-                    <span class="feature-text">Termux Ready</span>
+                    <span class="feature-text">End-to-End Security</span>
                 </div>
                 <div class="feature-chip">
                     <i class="fas fa-brain feature-icon"></i>
-                    <span class="feature-text">Chat Memory</span>
+                    <span class="feature-text">Multiple AI Models</span>
                 </div>
                 <div class="feature-chip">
-                    <i class="fas fa-file-export feature-icon"></i>
-                    <span class="feature-text">File Support</span>
+                    <i class="fas fa-server feature-icon"></i>
+                    <span class="feature-text">Python Backend</span>
                 </div>
                 <div class="feature-chip">
-                    <i class="fas fa-paperclip feature-icon"></i>
-                    <span class="feature-text">Multiple Models</span>
+                    <i class="fas fa-fire feature-icon"></i>
+                    <span class="feature-text">Firebase Auth</span>
                 </div>
                 <div class="feature-chip">
                     <i class="fas fa-history feature-icon"></i>
@@ -2440,9 +1773,9 @@
                 <div class="sidebar-section">
                     <div class="sidebar-title">RECENT CHATS</div>
                     <div class="chat-history" id="chatHistory">
-                        <div class="chat-history-item active" onclick="newChat()">
+                        <div class="chat-history-item active">
                             <i class="fas fa-comment chat-history-icon"></i>
-                            <span class="chat-history-text">New Chat</span>
+                            <span class="chat-history-text">Welcome to Cyanix AI</span>
                         </div>
                     </div>
                 </div>
@@ -2453,10 +1786,6 @@
                         <button class="sidebar-action" onclick="openModelModal()">
                             <i class="fas fa-brain sidebar-action-icon"></i>
                             <span>Change AI Model</span>
-                        </button>
-                        <button class="sidebar-action" onclick="openServerConfig()">
-                            <i class="fas fa-server sidebar-action-icon"></i>
-                            <span>Server Settings</span>
                         </button>
                         <button class="sidebar-action" onclick="exportChat()">
                             <i class="fas fa-download sidebar-action-icon"></i>
@@ -2488,11 +1817,7 @@
                     <div class="chat-title" id="chatTitle">New Chat</div>
                     <div class="model-badge" onclick="openModelModal()">
                         <i class="fas fa-brain"></i>
-                        <span id="currentModel">Cyanix Pro</span>
-                    </div>
-                    <div class="server-status" id="serverStatus" style="display: flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 8px; background: rgba(0, 255, 0, 0.1); border: 1px solid rgba(0, 255, 0, 0.2); border-radius: 10px; color: #00ff88;">
-                        <i class="fas fa-circle" style="font-size: 8px;"></i>
-                        <span>Server Connected</span>
+                        <span id="currentModel">Cyanix Basic</span>
                     </div>
                 </div>
                 
@@ -2515,8 +1840,8 @@
                         </div>
                         <h1 class="welcome-title">CYANIX AI</h1>
                         <p class="welcome-subtitle">
-                            Advanced neural interface with Termux compatibility. 
-                            Connect to your local server for real AI responses.
+                            Advanced neural interface for intelligent conversations. 
+                            Powered by Python backend with API key management.
                         </p>
                         
                         <div class="example-grid">
@@ -2558,7 +1883,6 @@
             
             <div class="input-container">
                 <div class="input-wrapper">
-                    <div id="selectedFilesPreview" class="selected-files-preview" style="display: none;"></div>
                     <div class="chat-input-container">
                         <textarea 
                             id="chatInput" 
@@ -2571,9 +1895,6 @@
                         
                         <div class="input-actions">
                             <span class="char-count" id="charCount">0/2000</span>
-                            <button class="input-button" onclick="openFileModal()" title="Attach Files">
-                                <i class="fas fa-paperclip"></i>
-                            </button>
                             <button class="input-button send" onclick="sendMessage()" title="Send Message">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
@@ -2584,103 +1905,37 @@
         </div>
     </div>
 
-    <!-- Server Config Modal -->
-    <div id="serverConfigModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Server Configuration</h3>
-                <button class="modal-close" onclick="closeServerConfig()">&times;</button>
-            </div>
-            <div class="modal-content">
-                <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">
-                    Configure your Termux server connection for AI responses.
-                </p>
-                
-                <div class="form-group">
-                    <label class="form-label">SERVER URL</label>
-                    <input type="text" id="serverUrl" class="form-input" placeholder="http://63.245.118.99:3000" value="http://63.245.118.99:3000">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">GROQ API KEY (Optional)</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="groqApiKey" class="form-input" placeholder="Enter your Groq API key">
-                        <button class="password-toggle" type="button" onclick="togglePassword('groqApiKey')">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div style="background: rgba(0, 243, 255, 0.05); padding: 15px; border-radius: 10px; margin-top: 20px; margin-bottom: 20px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <i class="fas fa-terminal" style="color: var(--primary);"></i>
-                        <span style="color: var(--text); font-weight: 600;">Termux Setup Commands</span>
-                    </div>
-                    <pre style="background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 8px; font-size: 11px; color: var(--text-secondary); overflow-x: auto;">
-pkg update && pkg upgrade
-pkg install nodejs -y
-mkdir cyanix-server && cd cyanix-server
-npm init -y
-npm install express cors axios
-nano server.js
-                    </pre>
-                </div>
-                
-                <div id="serverTestResult" style="display: none; padding: 10px; border-radius: 8px; margin-bottom: 15px;"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-button secondary" onclick="testServerConnection()">
-                    <i class="fas fa-wifi"></i> Test Connection
-                </button>
-                <button class="modal-button primary" onclick="saveServerConfig()">
-                    <i class="fas fa-save"></i> Save Configuration
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // ==================== CONFIGURATION ====================
-        // Default server configuration
-        const DEFAULT_CONFIG = {
-            SERVER_URL: 'http://63.245.118.99:3000',
-            GROQ_API_KEY: '',
-            MODELS: {
-                'cyanix-pro': 'llama3-70b-8192',
-                'cyanix-flash': 'llama3-8b-8192',
-                'cyanix-vision': 'llava-v1.5-7b-4096-preview',
-                'cyanix-advanced': 'mixtral-8x7b-32768'
-            },
-            DEFAULT_MODEL: 'cyanix-pro'
+        // Update these with your actual Firebase and Backend configurations
+        const BACKEND_URL = 'http://localhost:5000'; // Change to your backend URL
+        const FIREBASE_CONFIG = {
+         apiKey: "AIzaSyAtUrEx-xIDqYZsIzWU-mG8_Fbc3s6D3Ic",
+         authDomain: "nixai-d93cb.firebaseapp.com",
+         projectId: "nixai-d93cb",
+         storageBucket: "nixai-d93cb.firebasestorage.app",
+         messagingSenderId: "120045328987",
+         appId: "1:120045328987:web:01ab5651163b5c6c483d7e",
+         measurementId: "G-4J7K0ZFMNT"
         };
 
         // ==================== APP STATE ====================
         let currentUser = null;
         let currentChatId = null;
-        let currentModel = DEFAULT_CONFIG.DEFAULT_MODEL;
+        let currentModel = 'cyanix-basic';
         let conversationHistory = [];
-        let attachedFiles = [];
-        let selectedFiles = [];
-        let isTyping = false;
-        let chats = [];
-        let serverConfig = { ...DEFAULT_CONFIG };
+        let userApiKey = null;
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            // Hide loading screen after 1.5 seconds
-            setTimeout(() => {
-                document.getElementById('loadingScreen').classList.add('fade-out');
-                setTimeout(() => {
-                    document.getElementById('loadingScreen').style.display = 'none';
-                    initializeBackground();
-                    initializeApp();
-                }, 500);
-            }, 1500);
-        });
-
-        async function initializeApp() {
-            // Initialize background effects
-            initializeBackground();
+            // Initialize Firebase
+            try {
+                firebase.initializeApp(FIREBASE_CONFIG);
+                initializeAuth();
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                showToast('Firebase initialization failed. Please check your configuration.', 'error');
+            }
             
             // Initialize marked for markdown rendering
             marked.setOptions({
@@ -2693,270 +1948,20 @@ nano server.js
                 breaks: true,
                 gfm: true
             });
-            
-            // Load saved configuration
-            loadServerConfig();
-            
-            // Initialize Firebase if configured
-            try {
-                const firebaseConfig = {
-                    apiKey: "AIzaSyAtUrEx-xIDqYZsIzWU-mG8_Fbc3s6D3Ic",
-                    authDomain: "nixai-d93cb.firebaseapp.com",
-                    projectId: "nixai-d93cb",
-                    storageBucket: "nixai-d93cb.firebasestorage.app",
-                    messagingSenderId: "120045328987",
-                    appId: "1:120045328987:web:01ab5651163b5c6c483d7e",
-                    measurementId: "G-4J7K0ZFMNT"
-                };
-                
-                firebase.initializeApp(firebaseConfig);
-                initializeAuth();
-            } catch (error) {
-                console.log('Firebase not available, using local mode');
-            }
-            
-            // Initialize other components
-            setupEventListeners();
-            initializeFileDropZone();
-            
-            // Test server connection
-            testServerConnectionSilent();
-            
-            // Start with auth interface or chat if already authenticated
-            if (localStorage.getItem('cyanix_authenticated') === 'true') {
-                // Auto-login with saved credentials
-                showChat();
-            } else {
-                showAuth();
-            }
-        }
-
-        function initializeBackground() {
-            // Create floating particles
-            const particlesContainer = document.getElementById('particles');
-            for (let i = 0; i < 50; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                particle.style.left = `${Math.random() * 100}%`;
-                particle.style.top = `${Math.random() * 100}%`;
-                particle.style.animationDelay = `${Math.random() * 15}s`;
-                particle.style.opacity = Math.random() * 0.3;
-                particlesContainer.appendChild(particle);
-            }
-            
-            // Create pulse rings
-            createPulseRing();
-            setInterval(createPulseRing, 2000);
-        }
-
-        function createPulseRing() {
-            const ring = document.createElement('div');
-            ring.className = 'pulse-ring';
-            ring.style.left = `${Math.random() * 100}%`;
-            ring.style.top = `${Math.random() * 100}%`;
-            document.body.appendChild(ring);
-            
-            setTimeout(() => {
-                ring.remove();
-            }, 8000);
-        }
+        });
 
         function initializeAuth() {
-            const auth = firebase.auth();
-            
-            auth.onAuthStateChanged((user) => {
+            firebase.auth().onAuthStateChanged(async (user) => {
                 if (user) {
-                    handleUserSignedIn(user);
+                    await handleUserSignedIn(user);
                 } else {
                     handleUserSignedOut();
                 }
             });
         }
 
-        function setupEventListeners() {
-            // File input
-            const fileInput = document.getElementById('fileInput');
-            fileInput.addEventListener('change', handleFileSelect);
-            
-            // Character count
-            const chatInput = document.getElementById('chatInput');
-            chatInput.addEventListener('input', updateCharacterCount);
-            
-            // Close modals on escape
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    closeAllModals();
-                    closeFilePreview();
-                }
-            });
-        }
-
-        function initializeFileDropZone() {
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-            
-            // Prevent default drag behaviors
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, false);
-                document.body.addEventListener(eventName, preventDefaults, false);
-            });
-            
-            // Highlight drop zone when item is dragged over it
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, highlight, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, unhighlight, false);
-            });
-            
-            // Handle dropped files
-            dropZone.addEventListener('drop', handleDrop, false);
-            
-            // Click to open file dialog
-            dropZone.addEventListener('click', () => {
-                fileInput.click();
-            });
-        }
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        function highlight() {
-            document.getElementById('dropZone').style.borderColor = 'var(--primary)';
-            document.getElementById('dropZone').style.background = 'rgba(0, 243, 255, 0.1)';
-        }
-
-        function unhighlight() {
-            document.getElementById('dropZone').style.borderColor = 'rgba(0, 243, 255, 0.3)';
-            document.getElementById('dropZone').style.background = '';
-        }
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFileSelect({ target: { files } });
-        }
-
-        // ==================== SERVER CONFIGURATION ====================
-        function loadServerConfig() {
-            const savedConfig = localStorage.getItem('cyanix_server_config');
-            if (savedConfig) {
-                try {
-                    serverConfig = { ...serverConfig, ...JSON.parse(savedConfig) };
-                    document.getElementById('serverUrl').value = serverConfig.SERVER_URL;
-                    document.getElementById('groqApiKey').value = serverConfig.GROQ_API_KEY || '';
-                } catch (error) {
-                    console.error('Error loading server config:', error);
-                }
-            }
-        }
-
-        function saveServerConfig() {
-            serverConfig.SERVER_URL = document.getElementById('serverUrl').value.trim();
-            serverConfig.GROQ_API_KEY = document.getElementById('groqApiKey').value.trim();
-            
-            localStorage.setItem('cyanix_server_config', JSON.stringify(serverConfig));
-            showToast('Server configuration saved!', 'success');
-            closeServerConfig();
-            testServerConnectionSilent();
-        }
-
-        async function testServerConnection() {
-            const serverUrl = document.getElementById('serverUrl').value.trim();
-            const resultDiv = document.getElementById('serverTestResult');
-            
-            if (!serverUrl) {
-                showToast('Please enter server URL', 'error');
-                return;
-            }
-            
-            resultDiv.innerHTML = '<div style="color: var(--primary);"><i class="fas fa-spinner fa-spin"></i> Testing connection...</div>';
-            resultDiv.style.display = 'block';
-            
-            try {
-                const response = await fetch(`${serverUrl}/health`, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    timeout: 5000
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    resultDiv.innerHTML = `<div style="color: var(--success);"><i class="fas fa-check-circle"></i> Server connected successfully!</div>`;
-                    showToast('Server connection successful!', 'success');
-                } else {
-                    throw new Error(`Server responded with ${response.status}`);
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div style="color: var(--error);"><i class="fas fa-times-circle"></i> Connection failed: ${error.message}</div>`;
-                showToast('Server connection failed', 'error');
-            }
-        }
-
-        async function testServerConnectionSilent() {
-            try {
-                const response = await fetch(`${serverConfig.SERVER_URL}/health`, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    timeout: 3000
-                });
-                
-                if (response.ok) {
-                    updateServerStatus(true);
-                } else {
-                    updateServerStatus(false);
-                }
-            } catch (error) {
-                updateServerStatus(false);
-            }
-        }
-
-        function updateServerStatus(connected) {
-            const statusElement = document.getElementById('serverStatus');
-            if (connected) {
-                statusElement.innerHTML = '<i class="fas fa-circle" style="font-size: 8px; color: #00ff88;"></i><span>Server Connected</span>';
-                statusElement.style.background = 'rgba(0, 255, 0, 0.1)';
-                statusElement.style.borderColor = 'rgba(0, 255, 0, 0.2)';
-                statusElement.style.color = '#00ff88';
-            } else {
-                statusElement.innerHTML = '<i class="fas fa-circle" style="font-size: 8px; color: #ff4757;"></i><span>Server Offline</span>';
-                statusElement.style.background = 'rgba(255, 71, 87, 0.1)';
-                statusElement.style.borderColor = 'rgba(255, 71, 87, 0.2)';
-                statusElement.style.color = '#ff4757';
-            }
-        }
-
-        function openServerConfig() {
-            document.getElementById('serverConfigModal').classList.add('active');
-        }
-
-        function closeServerConfig() {
-            document.getElementById('serverConfigModal').classList.remove('active');
-        }
-
-        // ==================== SCREEN TRANSITIONS ====================
-        function playScreenTransition(callback) {
-            const transition = document.getElementById('screenTransition');
-            transition.style.display = 'block';
-            transition.classList.remove('out');
-            
-            setTimeout(() => {
-                if (callback) callback();
-                setTimeout(() => {
-                    transition.classList.add('out');
-                    setTimeout(() => {
-                        transition.style.display = 'none';
-                        transition.classList.remove('out');
-                    }, 800);
-                }, 100);
-            }, 400);
-        }
-
         // ==================== AUTH FUNCTIONS ====================
-        function handleUserSignedIn(user) {
+        async function handleUserSignedIn(user) {
             currentUser = {
                 uid: user.uid,
                 name: user.displayName || user.email.split('@')[0],
@@ -2965,28 +1970,61 @@ nano server.js
             };
             
             updateUserUI();
-            loadUserSettings();
-            loadUserChats();
             
-            localStorage.setItem('cyanix_authenticated', 'true');
+            // Register user in backend and get API key
+            await registerUserInBackend();
             
-            playScreenTransition(() => {
-                showChat();
-            });
-            
+            showChat();
             showToast('Welcome to Cyanix AI!', 'success');
         }
 
         function handleUserSignedOut() {
             currentUser = null;
-            attachedFiles = [];
-            selectedFiles = [];
+            userApiKey = null;
+            showAuth();
+        }
+
+        async function registerUserInBackend() {
+            if (!currentUser) return;
             
-            localStorage.removeItem('cyanix_authenticated');
-            
-            playScreenTransition(() => {
-                showAuth();
-            });
+            try {
+                // Register user in backend
+                const registerResponse = await fetch(`${BACKEND_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: currentUser.email,
+                        user_id: currentUser.uid
+                    })
+                });
+                
+                if (!registerResponse.ok) {
+                    throw new Error('Failed to register user in backend');
+                }
+                
+                // Generate API key
+                const keyResponse = await fetch(`${BACKEND_URL}/keys/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: currentUser.uid,
+                        name: 'Default Key'
+                    })
+                });
+                
+                if (keyResponse.ok) {
+                    const keyData = await keyResponse.json();
+                    userApiKey = keyData.api_key;
+                    localStorage.setItem('cyanix_api_key', userApiKey);
+                    showToast('API key generated successfully!', 'success');
+                }
+                
+            } catch (error) {
+                console.error('Backend registration error:', error);
+                showToast('Backend setup failed. Using demo mode.', 'warning');
+                // Use a demo API key for testing
+                userApiKey = 'demo_api_key_for_testing';
+            }
         }
 
         function showAuth() {
@@ -3039,7 +2077,6 @@ nano server.js
         }
 
         async function signInWithEmail() {
-            // For demo purposes, we'll use localStorage authentication
             const email = document.getElementById('signinEmail').value.trim();
             const password = document.getElementById('signinPassword').value;
             
@@ -3053,19 +2090,13 @@ nano server.js
                 return;
             }
             
-            // Demo authentication
-            currentUser = {
-                uid: 'demo_user_' + Date.now(),
-                name: email.split('@')[0],
-                email: email,
-                avatar: getAvatarInitials(email.split('@')[0])
-            };
-            
-            updateUserUI();
-            localStorage.setItem('cyanix_authenticated', 'true');
-            
-            showChat();
-            showToast('Signed in successfully!', 'success');
+            try {
+                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                showToast('Signed in successfully!', 'success');
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showToast(getAuthError(error), 'error');
+            }
         }
 
         async function signUpWithEmail() {
@@ -3101,77 +2132,74 @@ nano server.js
                 return;
             }
             
-            // Demo registration
-            currentUser = {
-                uid: 'demo_user_' + Date.now(),
-                name: name,
-                email: email,
-                avatar: getAvatarInitials(name)
-            };
-            
-            updateUserUI();
-            localStorage.setItem('cyanix_authenticated', 'true');
-            
-            showChat();
-            showToast('Account created successfully!', 'success');
+            try {
+                const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                
+                // Update profile
+                await userCredential.user.updateProfile({
+                    displayName: name
+                });
+                
+                showToast('Account created successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Sign up error:', error);
+                showToast(getAuthError(error), 'error');
+            }
         }
 
-        function signInWithGoogle() {
-            // Demo social login
-            currentUser = {
-                uid: 'google_user_' + Date.now(),
-                name: 'Google User',
-                email: 'user@google.com',
-                avatar: 'GU'
-            };
-            
-            updateUserUI();
-            localStorage.setItem('cyanix_authenticated', 'true');
-            
-            showChat();
-            showToast('Signed in with Google!', 'success');
+        async function signInWithGoogle() {
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await firebase.auth().signInWithPopup(provider);
+            } catch (error) {
+                console.error('Google sign in error:', error);
+                showToast(getAuthError(error), 'error');
+            }
         }
 
-        function signInWithMicrosoft() {
-            // Demo social login
-            currentUser = {
-                uid: 'microsoft_user_' + Date.now(),
-                name: 'Microsoft User',
-                email: 'user@microsoft.com',
-                avatar: 'MU'
-            };
-            
-            updateUserUI();
-            localStorage.setItem('cyanix_authenticated', 'true');
-            
-            showChat();
-            showToast('Signed in with Microsoft!', 'success');
+        async function signInWithMicrosoft() {
+            try {
+                const provider = new firebase.auth.OAuthProvider('microsoft.com');
+                await firebase.auth().signInWithPopup(provider);
+            } catch (error) {
+                console.error('Microsoft sign in error:', error);
+                showToast(getAuthError(error), 'error');
+            }
         }
 
-        function signInWithGithub() {
-            // Demo social login
-            currentUser = {
-                uid: 'github_user_' + Date.now(),
-                name: 'GitHub User',
-                email: 'user@github.com',
-                avatar: 'GH'
-            };
-            
-            updateUserUI();
-            localStorage.setItem('cyanix_authenticated', 'true');
-            
-            showChat();
-            showToast('Signed in with GitHub!', 'success');
+        async function signInWithGithub() {
+            try {
+                const provider = new firebase.auth.GithubAuthProvider();
+                await firebase.auth().signInWithPopup(provider);
+            } catch (error) {
+                console.error('GitHub sign in error:', error);
+                showToast(getAuthError(error), 'error');
+            }
         }
 
-        function signUpWithGoogle() { signInWithGoogle(); }
-        function signUpWithMicrosoft() { signInWithMicrosoft(); }
-        function signUpWithGithub() { signInWithGithub(); }
+        function signUpWithGoogle() {
+            signInWithGoogle();
+        }
+
+        function signUpWithMicrosoft() {
+            signInWithMicrosoft();
+        }
+
+        function signUpWithGithub() {
+            signInWithGithub();
+        }
 
         function forgotPassword() {
             const email = prompt('Enter your email address to reset password:');
             if (email && validateEmail(email)) {
-                showToast('Password reset email sent! Check your inbox.', 'success');
+                firebase.auth().sendPasswordResetEmail(email)
+                    .then(() => {
+                        showToast('Password reset email sent! Check your inbox.', 'success');
+                    })
+                    .catch(error => {
+                        showToast(getAuthError(error), 'error');
+                    });
             }
         }
 
@@ -3180,391 +2208,47 @@ nano server.js
             return re.test(email);
         }
 
-        // ==================== FILE HANDLING FUNCTIONS ====================
-        function handleFileSelect(e) {
-            const files = Array.from(e.target.files);
-            addFilesToSelection(files);
-        }
-
-        function addFilesToSelection(files) {
-            files.forEach(file => {
-                if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                    selectedFiles.push(file);
-                }
-            });
-            updateSelectedFilesDisplay();
-        }
-
-        function updateSelectedFilesDisplay() {
-            const container = document.getElementById('selectedFiles');
-            const previewContainer = document.getElementById('selectedFilesPreview');
-            
-            container.innerHTML = '';
-            
-            if (selectedFiles.length === 0) {
-                container.innerHTML = '<div style="color: var(--text-secondary); text-align: center; padding: 20px; font-size: 13px;">No files selected</div>';
-                previewContainer.style.display = 'none';
-                return;
+        function getAuthError(error) {
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    return 'Invalid email address';
+                case 'auth/user-disabled':
+                    return 'This account has been disabled';
+                case 'auth/user-not-found':
+                    return 'No account found with this email';
+                case 'auth/wrong-password':
+                    return 'Incorrect password';
+                case 'auth/email-already-in-use':
+                    return 'Email already in use';
+                case 'auth/weak-password':
+                    return 'Password is too weak';
+                case 'auth/network-request-failed':
+                    return 'Network error. Please check your connection';
+                default:
+                    return error.message || 'Authentication failed';
             }
-            
-            selectedFiles.forEach((file, index) => {
-                const fileElement = document.createElement('div');
-                fileElement.style.cssText = `
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 10px;
-                    background: rgba(0, 243, 255, 0.05);
-                    border-radius: 8px;
-                    margin-bottom: 8px;
-                `;
-                
-                const fileIcon = getFileIcon(file.type, file.name);
-                const fileSize = formatFileSize(file.size);
-                
-                fileElement.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                        ${fileIcon}
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${file.name}</div>
-                            <div style="color: var(--text-secondary); font-size: 11px;">${fileSize}</div>
-                        </div>
-                    </div>
-                    <button onclick="removeSelectedFile(${index})" style="background: none; border: none; color: var(--error); cursor: pointer; padding: 5px; margin-left: 10px;">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                
-                container.appendChild(fileElement);
-            });
-            
-            updateSelectedFilesPreview();
-        }
-
-        function updateSelectedFilesPreview() {
-            const previewContainer = document.getElementById('selectedFilesPreview');
-            previewContainer.innerHTML = '';
-            
-            if (selectedFiles.length === 0) {
-                previewContainer.style.display = 'none';
-                return;
-            }
-            
-            previewContainer.style.display = 'flex';
-            
-            selectedFiles.forEach((file, index) => {
-                const fileElement = document.createElement('div');
-                fileElement.className = 'selected-file';
-                
-                const fileIcon = getFileIcon(file.type, file.name, true);
-                const fileSize = formatFileSize(file.size);
-                
-                fileElement.innerHTML = `
-                    ${fileIcon}
-                    <div class="selected-file-info">
-                        <div class="selected-file-name">${file.name}</div>
-                        <div class="selected-file-size">${fileSize}</div>
-                    </div>
-                    <button class="selected-file-remove" onclick="removeSelectedFile(${index})">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                
-                previewContainer.appendChild(fileElement);
-            });
-        }
-
-        function removeSelectedFile(index) {
-            selectedFiles.splice(index, 1);
-            updateSelectedFilesDisplay();
-        }
-
-        function getFileIcon(fileType, fileName, small = false) {
-            const iconSize = small ? '14px' : '20px';
-            
-            if (fileType.startsWith('image/')) {
-                return `<i class="fas fa-image" style="color: var(--primary); font-size: ${iconSize};"></i>`;
-            }
-            if (fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) {
-                return `<i class="fas fa-file-pdf" style="color: #FF6B6B; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('word') || fileName.toLowerCase().endsWith('.doc') || fileName.toLowerCase().endsWith('.docx')) {
-                return `<i class="fas fa-file-word" style="color: #2B579A; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('excel') || fileType.includes('spreadsheet') || fileName.toLowerCase().endsWith('.xls') || fileName.toLowerCase().endsWith('.xlsx')) {
-                return `<i class="fas fa-file-excel" style="color: #217346; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('powerpoint') || fileType.includes('presentation') || fileName.toLowerCase().endsWith('.ppt') || fileName.toLowerCase().endsWith('.pptx')) {
-                return `<i class="fas fa-file-powerpoint" style="color: #D24726; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('zip') || fileType.includes('archive') || fileName.toLowerCase().endsWith('.zip') || fileName.toLowerCase().endsWith('.rar') || fileName.toLowerCase().endsWith('.7z')) {
-                return `<i class="fas fa-file-archive" style="color: #FFA500; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('text') || fileName.toLowerCase().endsWith('.txt') || fileName.toLowerCase().endsWith('.md') || fileName.toLowerCase().endsWith('.rtf')) {
-                return `<i class="fas fa-file-alt" style="color: var(--primary); font-size: ${iconSize};"></i>`;
-            }
-            if (fileName.toLowerCase().endsWith('.js') || fileName.toLowerCase().endsWith('.py') || fileName.toLowerCase().endsWith('.html') || fileName.toLowerCase().endsWith('.css') || fileName.toLowerCase().endsWith('.json') || fileName.toLowerCase().endsWith('.xml')) {
-                return `<i class="fas fa-file-code" style="color: var(--accent); font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.startsWith('audio/')) {
-                return `<i class="fas fa-file-audio" style="color: #00ff88; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.startsWith('video/')) {
-                return `<i class="fas fa-file-video" style="color: #ff4757; font-size: ${iconSize};"></i>`;
-            }
-            return `<i class="fas fa-file" style="color: var(--text-secondary); font-size: ${iconSize};"></i>`;
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        async function uploadFiles() {
-            // For demo, simulate file upload
-            if (selectedFiles.length === 0) {
-                showToast('No files selected', 'warning');
-                return;
-            }
-            
-            showToast('File upload simulated (local mode)', 'info');
-            attachedFiles = selectedFiles.map(file => ({
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                url: URL.createObjectURL(file),
-                uploadedAt: new Date().toISOString()
-            }));
-            
-            selectedFiles = [];
-            updateSelectedFilesDisplay();
-            closeFileModal();
-        }
-
-        // ==================== FILE PREVIEW FUNCTIONS ====================
-        function openFilePreview(file) {
-            const modal = document.getElementById('filePreviewModal');
-            const image = document.getElementById('previewImage');
-            const iframe = document.getElementById('previewIframe');
-            const text = document.getElementById('previewText');
-            
-            image.style.display = 'none';
-            iframe.style.display = 'none';
-            text.style.display = 'none';
-            
-            window.previewFile = file;
-            
-            if (file.type.startsWith('image/')) {
-                image.src = file.url;
-                image.style.display = 'block';
-                modal.classList.add('active');
-            } else if (file.type === 'application/pdf') {
-                iframe.src = file.url;
-                iframe.style.display = 'block';
-                modal.classList.add('active');
-            } else if (file.type.startsWith('text/') || 
-                       file.name.endsWith('.txt') || 
-                       file.name.endsWith('.md') || 
-                       file.name.endsWith('.json') || 
-                       file.name.endsWith('.js') || 
-                       file.name.endsWith('.py') || 
-                       file.name.endsWith('.html') || 
-                       file.name.endsWith('.css')) {
-                if (file.content) {
-                    text.textContent = file.content;
-                } else {
-                    text.textContent = `File: ${file.name}\n\nPreview not available for this file type.`;
-                }
-                text.style.display = 'block';
-                modal.classList.add('active');
-            } else {
-                downloadFile(file);
-            }
-        }
-
-        function closeFilePreview() {
-            document.getElementById('filePreviewModal').classList.remove('active');
-        }
-
-        function downloadPreviewFile() {
-            if (window.previewFile) {
-                downloadFile(window.previewFile);
-            }
-        }
-
-        function downloadFile(file) {
-            const link = document.createElement('a');
-            link.href = file.url;
-            link.download = file.name;
-            link.target = '_blank';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // ==================== CHAT MEMORY FUNCTIONS ====================
-        async function generateChatTitle(firstMessage, aiResponse) {
-            try {
-                const titlePrompt = `Based on this conversation, generate a concise title (max 30 characters):
-                
-                User: ${firstMessage.substring(0, 100)}
-                AI: ${aiResponse.substring(0, 100)}
-                
-                Title:`;
-                
-                // Try to use server if available
-                try {
-                    const response = await fetch(`${serverConfig.SERVER_URL}/api/chat`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model: 'llama3-8b-8192',
-                            messages: [{ role: 'user', content: titlePrompt }],
-                            temperature: 0.7,
-                            max_tokens: 50
-                        })
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        const title = data.choices[0].message.content.trim();
-                        return title.replace(/["']/g, '').substring(0, 30).trim();
-                    }
-                } catch (error) {
-                    console.log('Using fallback title generation');
-                }
-                
-                // Fallback title
-                if (firstMessage && firstMessage.length > 0) {
-                    return firstMessage.substring(0, 30) + (firstMessage.length > 30 ? '...' : '');
-                }
-                return 'New Chat';
-                
-            } catch (error) {
-                console.error('Error generating title:', error);
-                return 'Chat Conversation';
-            }
-        }
-
-        function loadUserChats() {
-            const savedChats = localStorage.getItem('cyanix_chats');
-            if (savedChats) {
-                try {
-                    chats = JSON.parse(savedChats);
-                    updateChatHistoryUI();
-                } catch (error) {
-                    console.error('Error loading chats:', error);
-                    chats = [];
-                }
-            }
-        }
-
-        function saveChats() {
-            localStorage.setItem('cyanix_chats', JSON.stringify(chats));
-        }
-
-        function updateChatHistoryUI() {
-            const chatHistory = document.getElementById('chatHistory');
-            chatHistory.innerHTML = '';
-            
-            const currentChatItem = document.createElement('div');
-            currentChatItem.className = `chat-history-item ${!currentChatId ? 'active' : ''}`;
-            currentChatItem.innerHTML = `
-                <i class="fas fa-comment chat-history-icon"></i>
-                <span class="chat-history-text">New Chat</span>
-            `;
-            currentChatItem.onclick = () => newChat();
-            chatHistory.appendChild(currentChatItem);
-            
-            chats.forEach((chat, index) => {
-                const chatItem = document.createElement('div');
-                chatItem.className = `chat-history-item ${currentChatId === chat.id ? 'active' : ''}`;
-                chatItem.innerHTML = `
-                    <i class="fas fa-comment chat-history-icon"></i>
-                    <span class="chat-history-text">${chat.title || 'Untitled Chat'}</span>
-                `;
-                chatItem.onclick = () => loadChat(chat.id);
-                chatHistory.appendChild(chatItem);
-            });
-        }
-
-        async function loadChat(chatId) {
-            const chat = chats.find(c => c.id === chatId);
-            if (!chat) return;
-            
-            conversationHistory = chat.messages || [];
-            currentChatId = chatId;
-            
-            const messagesWrapper = document.getElementById('messagesWrapper');
-            messagesWrapper.innerHTML = '';
-            
-            conversationHistory.forEach(msg => {
-                addMessageToUI(msg.content, msg.role, msg.files || []);
-            });
-            
-            document.getElementById('chatTitle').textContent = chat.title;
-            
-            const chatHistory = document.getElementById('chatHistory');
-            const items = Array.from(chatHistory.children);
-            items.forEach((item, index) => {
-                item.classList.remove('active');
-                if (index > 0 && chats[index-1]?.id === chatId) {
-                    item.classList.add('active');
-                }
-            });
-            
-            const welcomeScreen = document.getElementById('welcomeScreen');
-            if (welcomeScreen) {
-                welcomeScreen.remove();
-            }
-            
-            toggleSidebar();
-            showToast('Chat loaded', 'success');
-        }
-
-        async function updateChatTitle(chatId, firstMessage, aiResponse) {
-            const title = await generateChatTitle(firstMessage, aiResponse);
-            
-            const chatIndex = chats.findIndex(chat => chat.id === chatId);
-            if (chatIndex !== -1) {
-                chats[chatIndex].title = title;
-                chats[chatIndex].updatedAt = new Date().toISOString();
-                saveChats();
-                updateChatHistoryUI();
-            }
-            
-            document.getElementById('chatTitle').textContent = title;
         }
 
         // ==================== CHAT FUNCTIONS ====================
         function newChat() {
             currentChatId = null;
             conversationHistory = [];
-            attachedFiles = [];
-            selectedFiles = [];
             
+            // Clear messages
             const messagesWrapper = document.getElementById('messagesWrapper');
             messagesWrapper.innerHTML = '';
             
+            // Show welcome screen
             const welcomeScreen = document.getElementById('welcomeScreen').cloneNode(true);
             welcomeScreen.style.display = 'block';
             messagesWrapper.appendChild(welcomeScreen);
             
+            // Update title
             document.getElementById('chatTitle').textContent = 'New Chat';
-            document.getElementById('selectedFilesPreview').style.display = 'none';
             
-            const chatItems = document.querySelectorAll('.chat-history-item');
-            chatItems.forEach(item => {
-                item.classList.remove('active');
-            });
-            if (chatItems[0]) {
-                chatItems[0].classList.add('active');
-            }
-            
+            // Close sidebar on mobile
             toggleSidebar();
+            
             showToast('New chat created', 'info');
         }
 
@@ -3585,8 +2269,8 @@ nano server.js
             const input = document.getElementById('chatInput');
             const message = input.value.trim();
             
-            if (!message && attachedFiles.length === 0 && selectedFiles.length === 0) {
-                showToast('Please enter a message or attach files', 'warning');
+            if (!message) {
+                showToast('Please enter a message', 'warning');
                 return;
             }
             
@@ -3595,86 +2279,48 @@ nano server.js
                 return;
             }
             
+            // Hide welcome screen
             const welcomeScreen = document.getElementById('welcomeScreen');
             if (welcomeScreen) {
                 welcomeScreen.remove();
             }
             
-            if (selectedFiles.length > 0) {
-                await uploadFiles();
-            }
+            // Add user message
+            addMessage(message, 'user');
             
-            addMessage(message, 'user', attachedFiles);
-            
+            // Clear input
             input.value = '';
-            attachedFiles = [];
-            selectedFiles = [];
-            updateSelectedFilesDisplay();
-            document.getElementById('selectedFilesPreview').style.display = 'none';
-            
             autoResize(input);
             updateCharacterCount();
             
+            // Show typing indicator
             showTypingIndicator();
             
-            let isNewChat = false;
-            if (!currentChatId) {
-                currentChatId = 'chat_' + Date.now();
-                isNewChat = true;
-                document.getElementById('chatTitle').textContent = "New Chat";
-            }
-            
             try {
-                const aiResponse = await getAIResponse(message, attachedFiles);
+                // Get AI response from backend
+                const aiResponse = await getAIResponse(message);
                 
+                // Remove typing indicator
                 hideTypingIndicator();
                 
+                // Add AI response
                 addMessage(aiResponse, 'assistant');
                 
-                conversationHistory.push({ 
-                    role: 'user', 
-                    content: message,
-                    files: attachedFiles.map(f => ({ name: f.name, type: f.type, url: f.url }))
-                });
+                // Save to conversation history
+                conversationHistory.push({ role: 'user', content: message });
                 conversationHistory.push({ role: 'assistant', content: aiResponse });
-                
-                if (isNewChat && (message || attachedFiles.length > 0)) {
-                    const chat = {
-                        id: currentChatId,
-                        title: document.getElementById('chatTitle').textContent,
-                        messages: [...conversationHistory],
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    };
-                    chats.unshift(chat);
-                    saveChats();
-                    updateChatHistoryUI();
-                    
-                    setTimeout(() => {
-                        updateChatTitle(currentChatId, message || "File upload", aiResponse);
-                    }, 1000);
-                } else if (currentChatId) {
-                    const chatIndex = chats.findIndex(chat => chat.id === currentChatId);
-                    if (chatIndex !== -1) {
-                        chats[chatIndex].messages = conversationHistory;
-                        chats[chatIndex].updatedAt = new Date().toISOString();
-                        saveChats();
-                    }
-                }
                 
             } catch (error) {
                 console.error('Error getting AI response:', error);
                 hideTypingIndicator();
                 showToast('Error getting response from AI', 'error');
+                
+                // Add error message
                 addMessage("I apologize, but I encountered an error processing your request. Please try again.", 'assistant');
             }
         }
 
-        function addMessage(content, sender, files = []) {
-            addMessageToUI(content, sender, files);
-        }
-
-        function addMessageToUI(content, sender, files = []) {
+        function addMessage(content, sender) {
             const messagesWrapper = document.getElementById('messagesWrapper');
             
             const messageDiv = document.createElement('div');
@@ -3684,39 +2330,6 @@ nano server.js
             const avatar = sender === 'user' ? (currentUser?.avatar || 'U') : 'AI';
             const name = sender === 'user' ? (currentUser?.name || 'You') : 'Cyanix AI';
             
-            let attachmentsHTML = '';
-            if (files && files.length > 0) {
-                attachmentsHTML = '<div class="attachments-container">';
-                files.forEach((file, index) => {
-                    const fileIcon = getFileIcon(file.type, file.name);
-                    const fileSize = formatFileSize(file.size);
-                    
-                    attachmentsHTML += `
-                        <div class="attachment-item" onclick="openFilePreview(${JSON.stringify(file).replace(/"/g, '&quot;')})">
-                            <div class="attachment-actions">
-                                <button class="attachment-action" onclick="event.stopPropagation(); downloadFile(${JSON.stringify(file).replace(/"/g, '&quot;')})" title="Download">
-                                    <i class="fas fa-download"></i>
-                                </button>
-                            </div>
-                            <div class="attachment-preview">
-                                ${file.type.startsWith('image/') ? 
-                                    `<img src="${file.url}" alt="${file.name}" loading="lazy">` : 
-                                    ''
-                                }
-                                <div class="attachment-icon" ${file.type.startsWith('image/') ? 'style="display: none;"' : ''}>
-                                    ${fileIcon}
-                                </div>
-                            </div>
-                            <div class="attachment-info">
-                                <div class="attachment-name">${file.name}</div>
-                                <div class="attachment-size">${fileSize}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                attachmentsHTML += '</div>';
-            }
-            
             messageDiv.innerHTML = `
                 <div class="message-bubble">
                     <div class="message-header">
@@ -3724,7 +2337,6 @@ nano server.js
                         <div class="message-sender">${name}</div>
                         <div class="message-time">${time}</div>
                     </div>
-                    ${attachmentsHTML}
                     <div class="message-content">${formatMessage(content)}</div>
                 </div>
             `;
@@ -3735,6 +2347,7 @@ nano server.js
 
         function formatMessage(content) {
             if (!content) return '';
+            // Use marked to render markdown
             return marked.parse(content);
         }
 
@@ -3767,116 +2380,116 @@ nano server.js
 
         function scrollToBottom() {
             const messagesContainer = document.querySelector('.messages-container');
-            if (messagesContainer) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // ==================== AI RESPONSE FUNCTIONS ====================
-        async function getAIResponse(message, files = []) {
+        // ==================== BACKEND API FUNCTIONS ====================
+        async function getAIResponse(message) {
+            if (!userApiKey) {
+                throw new Error('No API key available');
+            }
+            
             try {
-                const messages = [];
-                
-                const recentHistory = conversationHistory.slice(-10);
-                recentHistory.forEach(msg => {
-                    messages.push({
-                        role: msg.role === 'user' ? 'user' : 'assistant',
-                        content: msg.content
-                    });
+                const response = await fetch(`${BACKEND_URL}/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': userApiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        model: currentModel
+                    })
                 });
-                
-                let fullMessage = message;
-                if (files.length > 0) {
-                    fullMessage += '\n\nAttached files:';
-                    files.forEach(file => {
-                        fullMessage += `\n- ${file.name} (${file.type}, ${formatFileSize(file.size)})`;
-                        if (file.type.startsWith('image/') && currentModel === 'cyanix-vision') {
-                            fullMessage += ` [Image description available]`;
-                        }
-                    });
-                }
-                
-                messages.push({
-                    role: 'user',
-                    content: fullMessage
-                });
-                
-                const modelMapping = {
-                    'cyanix-pro': 'llama3-70b-8192',
-                    'cyanix-flash': 'llama3-8b-8192',
-                    'cyanix-vision': 'llava-v1.5-7b-4096-preview',
-                    'cyanix-advanced': 'mixtral-8x7b-32768'
-                };
-                
-                const groqModel = modelMapping[currentModel] || 'llama3-70b-8192';
-                
-                // Try to use server
-                try {
-                    console.log('? Connecting to server:', serverConfig.SERVER_URL);
-                    
-                    const response = await fetch(`${serverConfig.SERVER_URL}/api/chat`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model: groqModel,
-                            messages: messages,
-                            temperature: 0.7,
-                            max_tokens: 1500
-                        })
-                    });
 
-                    if (!response.ok) {
-                        throw new Error(`Server error: ${response.status}`);
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error('Invalid API key');
                     }
+                    throw new Error(`API error: ${response.status}`);
+                }
 
-                    const data = await response.json();
-                    
-                    if (!data.choices?.[0]?.message?.content) {
-                        throw new Error('Invalid response from server');
-                    }
-                    
-                    console.log('? AI response received successfully');
-                    return data.choices[0].message.content;
-                    
-                } catch (serverError) {
-                    console.log('Server unavailable, using fallback:', serverError.message);
-                    // Fall through to local response
-                }
-                
-                // Fallback: Local responses based on message content
-                const fallbackResponses = {
-                    'brainstorm': "Great question! Let's brainstorm some tech startup ideas combining AI and environmental sustainability:\n\n1. **AI-Powered Recycling System**: Computer vision AI that identifies and sorts recyclable materials automatically.\n2. **Smart Energy Grid Optimization**: AI algorithms to optimize renewable energy distribution in real-time.\n3. **Precision Agriculture Platform**: AI drones analyzing crop health and optimizing water/fertilizer usage.\n4. **Carbon Footprint Tracker**: AI that analyzes your habits and suggests eco-friendly alternatives.\n\nWould you like me to expand on any of these ideas?",
-                    'explain': "Quantum computing is fundamentally different from classical computing. Here's a simple explanation:\n\n**Classical computers** use bits (0s and 1s) - like light switches that are either ON or OFF.\n\n**Quantum computers** use qubits that can be 0, 1, or BOTH at the same time (superposition). This allows them to process massive amounts of data simultaneously.\n\n**Key differences**:\n? Classical: Sequential processing\n? Quantum: Parallel processing\n? Classical: Deterministic results\n? Quantum: Probabilistic results\n\n**Potential applications**:\n? Drug discovery and material science\n? Advanced cryptography\n? Climate modeling\n? Financial modeling\n? AI optimization\n\nThink of it like this: Classical computing is like reading a book page by page, while quantum computing is like reading all pages at once!",
-                    'code': "Here's a Python implementation of the quicksort algorithm with detailed comments:\n\n```python\ndef quicksort(arr):\n    \"\"\"\n    Sort an array using the quicksort algorithm.\n    \n    Parameters:\n    arr (list): List of comparable elements\n    \n    Returns:\n    list: Sorted list\n    \"\"\"\n    # Base case: arrays with 0 or 1 element are already sorted\n    if len(arr) <= 1:\n        return arr\n    \n    # Choose pivot (middle element for balanced partitions)\n    pivot = arr[len(arr) // 2]\n    \n    # Partition the array\n    left = [x for x in arr if x < pivot]    # Elements less than pivot\n    middle = [x for x in arr if x == pivot] # Elements equal to pivot\n    right = [x for x in arr if x > pivot]   # Elements greater than pivot\n    \n    # Recursively sort left and right partitions, then combine\n    return quicksort(left) + middle + quicksort(right)\n\n\n# Example usage:\nif __name__ == \"__main__\":\n    # Test the function\n    test_array = [64, 34, 25, 12, 22, 11, 90]\n    print(\"Original array:\", test_array)\n    \n    sorted_array = quicksort(test_array)\n    print(\"Sorted array:\", sorted_array)\n    \n    # Another example\n    random_array = [3, 6, 8, 10, 1, 2, 1]\n    print(\"\\nRandom array:\", random_array)\n    print(\"Sorted:\", quicksort(random_array))\n```\n\n**Time Complexity**: O(n log n) average case, O(n?) worst case\n**Space Complexity**: O(log n) average case\n\nThis implementation uses:\n1. Divide and conquer strategy\n2. Recursive partitioning\n3. In-place conceptually (though Python creates new lists)\n4. Clear separation of concerns",
-                    'analyze': "**Renewable Energy Analysis**\n\n**SOLAR ENERGY**\n? Pros:\n? Abundant and inexhaustible\n? Low operating costs after installation\n? Scalable from small to large installations\n? Silent operation\n? Can be installed on rooftops\n\n? Cons:\n? Intermittent (no power at night)\n? High initial investment\n? Large land requirements for utility-scale\n? Manufacturing has environmental impact\n? Dependent on weather conditions\n\n**WIND ENERGY**\n? Pros:\n? Clean and pollution-free\n? Cost-effective at scale\n? Can be offshore or onshore\n? Quick construction time\n? Can coexist with agriculture\n\n? Cons:\n? Visual and noise pollution\n? Bird and bat fatalities\n? Intermittent energy source\n? Geographic limitations\n? Maintenance challenges\n\n**HYDRO POWER**\n? Pros:\n? Reliable and predictable\n? Low operating costs\n? Long lifespan (50-100 years)\n? Can provide flood control\n? Can store energy (pumped storage)\n\n? Cons:\n? Environmental impact on ecosystems\n? Displacement of communities\n? High initial costs\n? Dependent on water availability\n? Sedimentation issues\n\n**VS FOSSIL FUELS**\n? Renewables: Lower long-term costs\n? Fossil fuels: More reliable currently\n? Renewables: Zero emissions during operation\n? Fossil fuels: Established infrastructure\n? Renewables: Decentralized potential\n? Fossil fuels: Energy-dense\n\n**Recommendation**: A diversified mix with smart grid technology offers the best solution for energy security and sustainability."
-                };
-                
-                // Determine which fallback to use based on message content
-                let fallbackKey = 'analyze';
-                const messageLower = message.toLowerCase();
-                
-                if (messageLower.includes('brainstorm') || messageLower.includes('idea')) {
-                    fallbackKey = 'brainstorm';
-                } else if (messageLower.includes('explain') || messageLower.includes('quantum')) {
-                    fallbackKey = 'explain';
-                } else if (messageLower.includes('code') || messageLower.includes('python') || messageLower.includes('function')) {
-                    fallbackKey = 'code';
-                } else if (messageLower.includes('renewable') || messageLower.includes('energy') || messageLower.includes('analyze')) {
-                    fallbackKey = 'analyze';
-                }
-                
-                return fallbackResponses[fallbackKey] || "I understand your query. Based on your input, here's my response:\n\n" + 
-                       "For optimal AI responses, please ensure your Termux server is running at " + serverConfig.SERVER_URL + 
-                       "\n\nTo set up the server:\n1. Install Node.js in Termux\n2. Create the server.js file\n3. Run: node server.js\n\nWould you like me to help you with anything specific?";
+                const data = await response.json();
+                return data.response;
                 
             } catch (error) {
                 console.error('AI Response Error:', error);
-                return "I appreciate your question. Currently working in local mode. For full AI capabilities, please set up your Termux server.\n\nSetup commands:\n```bash\npkg install nodejs\nmkdir cyanix-server\ncd cyanix-server\nnpm init -y\nnpm install express cors axios\n```\nThen create server.js with the provided code.";
+                throw error;
             }
         }
 
+        async function getAvailableModels() {
+            if (!userApiKey) return [];
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/ai/models`, {
+                    headers: {
+                        'X-API-Key': userApiKey
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.models || [];
+                }
+            } catch (error) {
+                console.error('Error fetching models:', error);
+            }
+            
+            return [];
+        }
+
+        async function getUserStats() {
+            if (!userApiKey) return null;
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/stats`, {
+                    headers: {
+                        'X-API-Key': userApiKey
+                    }
+                });
+                
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+            
+            return null;
+        }
+
         // ==================== MODEL MANAGEMENT ====================
-        function openModelModal() {
+        async function openModelModal() {
+            const models = await getAvailableModels();
+            
+            // Update model grid
+            const modelGrid = document.getElementById('modelGrid');
+            modelGrid.innerHTML = '';
+            
+            models.forEach(model => {
+                const modelCard = document.createElement('div');
+                modelCard.className = `model-card ${model.id === currentModel ? 'active' : ''}`;
+                modelCard.dataset.model = model.id;
+                modelCard.onclick = () => selectModel(model.id);
+                
+                const iconMap = {
+                    'cyanix-basic': 'fa-brain',
+                    'cyanix-code': 'fa-code',
+                    'cyanix-analytics': 'fa-chart-line'
+                };
+                
+                modelCard.innerHTML = `
+                    <div class="model-icon">
+                        <i class="fas ${iconMap[model.id] || 'fa-robot'}"></i>
+                    </div>
+                    <div class="model-name">${model.name.toUpperCase()}</div>
+                    <div class="model-desc">${model.description}</div>
+                `;
+                
+                modelGrid.appendChild(modelCard);
+            });
+            
             document.getElementById('modelModal').classList.add('active');
         }
 
@@ -3887,6 +2500,7 @@ nano server.js
         function selectModel(model) {
             currentModel = model;
             
+            // Update UI
             const modelCards = document.querySelectorAll('.model-card');
             modelCards.forEach(card => {
                 if (card.dataset.model === model) {
@@ -3896,38 +2510,19 @@ nano server.js
                 }
             });
             
+            // Update current model display
             const modelNames = {
-                'cyanix-pro': 'Cyanix Pro',
-                'cyanix-flash': 'Cyanix Flash',
-                'cyanix-vision': 'Cyanix Vision',
-                'cyanix-advanced': 'Cyanix Advanced'
+                'cyanix-basic': 'Cyanix Basic',
+                'cyanix-code': 'Cyanix Code',
+                'cyanix-analytics': 'Cyanix Analytics'
             };
             
-            document.getElementById('currentModel').textContent = modelNames[model];
-            localStorage.setItem('cyanix_selected_model', model);
+            document.getElementById('currentModel').textContent = modelNames[model] || 'Cyanix AI';
         }
 
-        async function saveModelSelection() {
-            localStorage.setItem('cyanix_selected_model', currentModel);
-            showToast('AI model updated successfully!', 'success');
+        function saveModelSelection() {
+            showToast('Model updated successfully!', 'success');
             closeModelModal();
-        }
-
-        function loadUserSettings() {
-            const savedModel = localStorage.getItem('cyanix_selected_model');
-            if (savedModel) {
-                currentModel = savedModel;
-                selectModel(savedModel);
-            }
-        }
-
-        // ==================== FILE MODAL FUNCTIONS ====================
-        function openFileModal() {
-            document.getElementById('fileModal').classList.add('active');
-        }
-
-        function closeFileModal() {
-            document.getElementById('fileModal').classList.remove('active');
         }
 
         // ==================== UTILITY FUNCTIONS ====================
@@ -3963,6 +2558,7 @@ nano server.js
             
             container.appendChild(toast);
             
+            // Auto remove after 5 seconds
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.remove();
@@ -4003,7 +2599,10 @@ nano server.js
         }
 
         function toggleUserMenu() {
-            showToast('User profile options', 'info');
+            if (confirm('Do you want to sign out?')) {
+                firebase.auth().signOut();
+                showToast('Signed out successfully', 'info');
+            }
         }
 
         function exportChat() {
@@ -4022,14 +2621,6 @@ nano server.js
                 const sender = msg.role === 'user' ? 'You' : 'Cyanix AI';
                 exportText += `${sender}:\n`;
                 exportText += `${msg.content}\n\n`;
-                
-                if (msg.files && msg.files.length > 0) {
-                    exportText += `Attachments:\n`;
-                    msg.files.forEach(file => {
-                        exportText += `- ${file.name} (${file.type}, ${formatFileSize(file.size)})\n`;
-                    });
-                    exportText += `\n`;
-                }
             });
             
             const blob = new Blob([exportText], { type: 'text/plain' });
@@ -4048,34 +2639,44 @@ nano server.js
         function clearChat() {
             if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
                 conversationHistory = [];
-                attachedFiles = [];
-                selectedFiles = [];
                 const messagesWrapper = document.getElementById('messagesWrapper');
                 messagesWrapper.innerHTML = '';
                 
+                // Show welcome screen
                 const welcomeScreen = document.getElementById('welcomeScreen').cloneNode(true);
                 welcomeScreen.style.display = 'block';
                 messagesWrapper.appendChild(welcomeScreen);
-                
-                document.getElementById('selectedFilesPreview').style.display = 'none';
                 
                 showToast('Chat cleared', 'info');
             }
         }
 
-        function closeAllModals() {
-            document.getElementById('modelModal').classList.remove('active');
-            document.getElementById('fileModal').classList.remove('active');
-            document.getElementById('serverConfigModal').classList.remove('active');
-            closeFilePreview();
-        }
-
-        // Initialize on load
-        window.onload = function() {
-            loadServerConfig();
-            loadUserSettings();
-        };
+        // ==================== DEPLOYMENT INSTRUCTIONS ====================
+        /*
+        Deployment Instructions:
+        
+        1. SETUP FIREBASE:
+           - Go to https://console.firebase.google.com/
+           - Create a new project
+           - Enable Authentication (Email/Password, Google, Microsoft, GitHub)
+           - Enable Firestore Database
+           - Enable Storage
+           - Update FIREBASE_CONFIG with your credentials
+        
+        2. SETUP PYTHON BACKEND:
+           - Run the Python Flask server provided earlier
+           - Make sure it's accessible from your frontend (localhost:5000 or deployed URL)
+        
+        3. DEPLOY FRONTEND:
+           - Save this HTML as index.html
+           - Deploy to GitHub Pages, Netlify, Vercel, or any static hosting
+           - Update BACKEND_URL to point to your Python backend
+        
+        4. TEST:
+           - Sign up with email
+           - Backend will automatically generate API key
+           - Start chatting!
+        */
     </script>
 </body>
 </html>
-
