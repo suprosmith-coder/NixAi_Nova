@@ -11,7 +11,8 @@ main { flex:1; padding:1rem; display:flex; flex-direction:column; overflow-y:aut
 #chat { flex:1; display:flex; flex-direction:column; gap:.5rem; overflow-y:auto; margin-bottom:1rem; }
 .message { padding:.5rem 1rem; border-radius:12px; max-width:80%; word-wrap:break-word; }
 .user { background:#00ffff55; align-self:flex-end; }
-.cyanix { background:#ffffff22; align-self:flex-start; }
+.cyanix { background:#ffffff22; align-self:flex-start; position:relative; }
+.typing { font-style:italic; opacity:.7; }
 footer { display:flex; padding:.5rem; background:rgba(0,0,0,0.3); }
 input { flex:1; padding:.5rem; border-radius:12px; border:none; outline:none; }
 button { margin-left:.5rem; padding:.5rem 1rem; border:none; border-radius:12px; background:#00ffffaa; color:#000; font-weight:bold; cursor:pointer; }
@@ -34,13 +35,24 @@ const CYANIX_URL = "https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/chat";
 async function sendMessage() {
   const message = input.value.trim();
   if (!message) return;
+
+  // Show user's message
   const userMsg = document.createElement("div");
   userMsg.className = "message user";
   userMsg.textContent = message;
   chatDiv.appendChild(userMsg);
   chatDiv.scrollTop = chatDiv.scrollHeight;
+
   input.value = "";
   sendBtn.disabled = true;
+
+  // Add typing animation
+  const typingMsg = document.createElement("div");
+  typingMsg.className = "message cyanix typing";
+  typingMsg.textContent = "Cyanix is typing...";
+  chatDiv.appendChild(typingMsg);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+
   try {
     const response = await fetch(CYANIX_URL, {
       method: "POST",
@@ -48,18 +60,25 @@ async function sendMessage() {
       body: JSON.stringify({ message })
     });
     const data = await response.json();
+
+    // Remove typing animation
+    chatDiv.removeChild(typingMsg);
+
     const aiMsg = document.createElement("div");
     aiMsg.className = "message cyanix";
     aiMsg.textContent = data.reply || "Cyanix could not respond.";
     chatDiv.appendChild(aiMsg);
     chatDiv.scrollTop = chatDiv.scrollHeight;
+
   } catch (err) {
+    chatDiv.removeChild(typingMsg);
     const errMsg = document.createElement("div");
     errMsg.className = "message cyanix";
     errMsg.textContent = "Error connecting to Cyanix.";
     chatDiv.appendChild(errMsg);
     chatDiv.scrollTop = chatDiv.scrollHeight;
   }
+
   sendBtn.disabled = false;
   input.focus();
 }
