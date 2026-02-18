@@ -2298,24 +2298,19 @@
 
     <script>
         // ==================== SUPABASE CONFIGURATION ====================
-        const SUPABASE_URL = 'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/chat';
-        const SUPABASE_ANON_KEY = '.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
+        const SUPABASE_URL = 'https://tdbgpvscwaysndrloltl.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
+        const SUPABASE_FUNCTION_URL = `https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/chat`;
 
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ==================== GROQ API CONFIGURATION ====================
-        const GROQ_API_KEY = 'gsk_xxxxxxxxxxxxxx';
-        
-        const GROQ_API_CONFIG = {
-            BASE_URL: 'https://api.groq.com/openai/v1',
-            MODELS: {
-                'cyanix-pro': 'llama3-70b-8192',
-                'cyanix-flash': 'llama3-8b-8192',
-                'cyanix-vision': 'llava-v1.5-7b-4096-preview',
-                'cyanix-advanced': 'mixtral-8x7b-32768'
-            },
-            DEFAULT_MODEL: 'llama3-70b-8192'
+        // ==================== MODEL MAPPING (for display and backend) ====================
+        const MODEL_MAP = {
+            'cyanix-pro': 'llama3-70b-8192',
+            'cyanix-flash': 'llama3-8b-8192',
+            'cyanix-vision': 'llava-v1.5-7b-4096-preview',
+            'cyanix-advanced': 'mixtral-8x7b-32768'
         };
 
         // ==================== APP STATE ====================
@@ -3122,13 +3117,12 @@
             if (files && files.length > 0) {
                 attachmentsHTML = '<div class="attachments-container">';
                 files.forEach((file, index) => {
-                    const fileIcon = getFileIcon(file.type, file.name);
-                    const fileSize = formatFileSize(file.size);
-                    
+                    // Escape file for onclick (simple stringify)
+                    const fileStr = JSON.stringify(file).replace(/"/g, '&quot;');
                     attachmentsHTML += `
-                        <div class="attachment-item" onclick="openFilePreview(${JSON.stringify(file).replace(/"/g, '&quot;')})">
+                        <div class="attachment-item" onclick='openFilePreview(${fileStr})'>
                             <div class="attachment-actions">
-                                <button class="attachment-action" onclick="event.stopPropagation(); downloadFile(${JSON.stringify(file).replace(/"/g, '&quot;')})" title="Download">
+                                <button class="attachment-action" onclick="event.stopPropagation(); downloadFile(${fileStr})" title="Download">
                                     <i class="fas fa-download"></i>
                                 </button>
                             </div>
@@ -3138,12 +3132,12 @@
                                     ''
                                 }
                                 <div class="attachment-icon" ${file.type.startsWith('image/') ? 'style="display: none;"' : ''}>
-                                    ${fileIcon}
+                                    ${getFileIcon(file.type, file.name)}
                                 </div>
                             </div>
                             <div class="attachment-info">
                                 <div class="attachment-name">${file.name}</div>
-                                <div class="attachment-size">${fileSize}</div>
+                                <div class="attachment-size">${formatFileSize(file.size)}</div>
                             </div>
                         </div>
                     `;
@@ -3204,19 +3198,16 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // ==================== AI RESPONSE FUNCTIONS ====================
+        // ==================== AI RESPONSE FUNCTIONS (via Supabase Edge Function) ====================
         async function getAIResponse(message, files = []) {
             try {
-                const messages = [];
-                
-                const recentHistory = conversationHistory.slice(-10);
-                recentHistory.forEach(msg => {
-                    messages.push({
-                        role: msg.role === 'user' ? 'user' : 'assistant',
-                        content: msg.content
-                    });
-                });
-                
+                // Build conversation history (last 10 messages)
+                const messages = conversationHistory.slice(-10).map(msg => ({
+                    role: msg.role === 'user' ? 'user' : 'assistant',
+                    content: msg.content
+                }));
+
+                // Append current user message with file info
                 let fullMessage = message;
                 if (files.length > 0) {
                     fullMessage += '\n\nAttached files:';
@@ -3227,54 +3218,47 @@
                         }
                     });
                 }
-                
+
                 messages.push({
                     role: 'user',
                     content: fullMessage
                 });
-                
-                const groqModel = GROQ_API_CONFIG.MODELS[currentModel] || GROQ_API_CONFIG.DEFAULT_MODEL;
-                
-                const response = await fetch(`${GROQ_API_CONFIG.BASE_URL}/chat/completions`, {
+
+                // Determine Groq model name from current client model
+                const groqModel = MODEL_MAP[currentModel];
+
+                // Call Supabase Edge Function
+                const response = await fetch(SUPABASE_FUNCTION_URL, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${GROQ_API_KEY}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}` // or use supabase auth session if needed
                     },
                     body: JSON.stringify({
-                        model: groqModel,
                         messages: messages,
+                        model: groqModel,
                         temperature: 0.7,
-                        max_tokens: 1500,
-                        top_p: 0.9
+                        max_tokens: 1500
                     })
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Groq API error: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Edge function error (${response.status}): ${errorText}`);
                 }
 
                 const data = await response.json();
                 
                 if (!data.choices?.[0]?.message?.content) {
-                    throw new Error('Invalid response from AI');
+                    throw new Error('Invalid response from AI function');
                 }
-                
+
                 return data.choices[0].message.content;
-                
+
             } catch (error) {
                 console.error('AI Response Error:', error);
-                
-                const fallbacks = {
-                    'cyanix-pro': `I've analyzed your query and here's my comprehensive response...`,
-                    'cyanix-flash': `Here's a quick response to your question...`,
-                    'cyanix-vision': files.length > 0 ? 
-                        `I can see you've uploaded ${files.length} file(s). Based on the images/files provided, here's my analysis...` :
-                        `Based on your query, here's my analysis...`,
-                    'cyanix-advanced': `From a technical perspective, here are the key insights...`
-                };
-                
-                return fallbacks[currentModel] || "I appreciate your question. Let me provide you with some insights...";
+                // Fallback response
+                return `I encountered an error while processing your request. Please try again later. (${error.message})`;
             }
         }
 
@@ -3300,10 +3284,10 @@
             });
             
             const modelNames = {
-                'cyanix-pro': 'Cyanix Pro',
-                'cyanix-flash': 'Cyanix Flash',
-                'cyanix-vision': 'Cyanix Vision',
-                'cyanix-advanced': 'Cyanix Advanced'
+                'cyanix-pro': 'Axion',
+                'cyanix-flash': 'Cyanix',
+                'cyanix-vision': 'Synix',
+                'cyanix-advanced': 'Nebula'
             };
             
             document.getElementById('currentModel').textContent = modelNames[model];
