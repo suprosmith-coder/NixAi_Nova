@@ -1363,7 +1363,7 @@
 
             <div class="auth-form">
                 <div class="form-header">
-                    <div class="form-header-title" id="formHeaderTitle">Gain Access</div>
+                    <div class="form-header-title" id="formHeaderTitle">ENTRY ACCESS</div>
                     <div class="form-header-sub" id="formHeaderSub">// authenticate to continue_</div>
                 </div>
 
@@ -1668,12 +1668,18 @@
     <script>
     /* ================================================================
        SUPABASE CONFIGURATION
+       NOTE: supabase client is initialized INSIDE DOMContentLoaded so
+       that the CDN script is guaranteed to be parsed first. Initializing
+       it at the top level causes a silent TypeError if the CDN hasn't
+       loaded yet, which kills ALL subsequent function definitions and
+       makes every button completely unresponsive.
     ================================================================ */
-    const SUPABASE_URL = 'https://tdbgpvscwaysndrloltl.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
+    const SUPABASE_URL          = 'https://tdbgpvscwaysndrloltl.supabase.co';
+    const SUPABASE_ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
     const SUPABASE_FUNCTION_URL = 'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/chat';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Declared here so all functions can reference it; assigned safely in init()
+    let supabase = null;
 
     /* ================================================================
        MODEL MAPPING
@@ -1699,6 +1705,22 @@
        INITIALIZATION
     ================================================================ */
     document.addEventListener('DOMContentLoaded', () => {
+
+        // ── CRITICAL: Initialize Supabase here, not at top-level ──
+        // Top-level init causes a silent crash if the CDN hasn't loaded yet,
+        // killing ALL function definitions — making every button do nothing.
+        if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+            console.error('[Cyanix] Supabase CDN failed to load.');
+            showToast('Connection error — please refresh the page.', 'error');
+        } else {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } catch (e) {
+                console.error('[Cyanix] Supabase init error:', e);
+                showToast('Auth service failed to initialize. Please refresh.', 'error');
+            }
+        }
+
         initializeBackground();
         initializeNeuralCanvas();
         initializeTypewriter();
@@ -1707,14 +1729,17 @@
         initializeFileDropZone();
         renderWelcomeScreen();
 
-        marked.setOptions({
-            highlight(code, lang) {
-                if (Prism.languages[lang]) return Prism.highlight(code, Prism.languages[lang], lang);
-                return code;
-            },
-            breaks: true,
-            gfm: true
-        });
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                highlight(code, lang) {
+                    if (typeof Prism !== 'undefined' && Prism.languages[lang])
+                        return Prism.highlight(code, Prism.languages[lang], lang);
+                    return code;
+                },
+                breaks: true,
+                gfm: true
+            });
+        }
 
         showAuth();
     });
@@ -1826,6 +1851,7 @@
        AUTH
     ================================================================ */
     function initializeAuth() {
+        if (!supabase) { console.warn('[Cyanix] Supabase not ready — skipping auth init'); return; }
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 handleUserSignedIn(session.user);
@@ -1951,6 +1977,7 @@
         if (!validateEmail(email))  { showToast('Please enter a valid email address', 'error'); return; }
         if (!password)              { showToast('Please enter your password', 'error'); return; }
 
+        if (!supabase) { showToast('Auth service unavailable — please refresh.', 'error'); return; }
         setButtonLoading('signinBtn', true);
         try {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -1976,6 +2003,7 @@
         if (password !== confirmPassword) { showToast('Passwords do not match', 'error'); return; }
         if (!acceptTerms)             { showToast('Please accept the terms and conditions', 'error'); return; }
 
+        if (!supabase) { showToast('Auth service unavailable — please refresh.', 'error'); return; }
         setButtonLoading('signupBtn', true);
         try {
             const { data, error } = await supabase.auth.signUp({
@@ -2005,6 +2033,7 @@
     }
 
     async function signInWithGoogle() {
+        if (!supabase) { showToast('Auth service unavailable — please refresh.', 'error'); return; }
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
