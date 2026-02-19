@@ -1,10 +1,29 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyanix AI | NixAi</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+    <!-- ── SEO & Social Preview (Discord, Twitter, Slack, iMessage) ── -->
+    <meta name="description" content="High-Intelligence AI with High-Tech Design. Powered by NixAi." />
+    <meta name="theme-color" content="#00f0ff">
+    <meta name="color-scheme" content="dark">
+
+    <!-- Open Graph (Facebook, Discord, Slack, iMessage, etc.) -->
+    <meta property="og:title" content="Cyanix AI" />
+    <meta property="og:description" content="High-Intelligence AI with High-Tech Design." />
+    <meta property="og:image" content="https://suprosmith-coder.github.io/NixAi_Nova/images/cyanix-preview.png" />
+    <meta property="og:url" content="https://suprosmith-coder.github.io/NixAi_Nova/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Cyanix AI" />
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Cyanix AI" />
+    <meta name="twitter:description" content="High-Intelligence AI with High-Tech Design." />
+    <meta name="twitter:image" content="https://suprosmith-coder.github.io/NixAi_Nova/images/cyanix-preview.png" />
 
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -679,6 +698,22 @@
             font-size: 12px; color: var(--text-secondary);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
         }
+        .chat-history-item .delete-chat-btn {
+            background: none; border: none;
+            color: rgba(255,255,255,0.2); font-size: 10px;
+            cursor: pointer; padding: 2px 4px;
+            border-radius: 4px; transition: all 0.2s;
+            opacity: 0; flex-shrink: 0;
+        }
+        .chat-history-item:hover .delete-chat-btn { opacity: 1; }
+        .chat-history-item .delete-chat-btn:hover { color: var(--error); background: rgba(255,71,87,0.1); }
+        .chat-history-empty {
+            padding: 16px 8px; text-align: center;
+            color: var(--text-secondary); font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px dashed rgba(0,243,255,0.1);
+            border-radius: 8px; line-height: 1.6;
+        }
         .sidebar-actions { display: flex; flex-direction: column; gap: 6px; }
         .sidebar-action {
             padding: 10px 12px;
@@ -710,6 +745,15 @@
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; color: var(--background); font-size: 14px;
             box-shadow: var(--primary-glow);
+            overflow: hidden; flex-shrink: 0;
+        }
+        .user-avatar img {
+            width: 100%; height: 100%;
+            object-fit: cover; border-radius: 50%;
+        }
+        .message-avatar img {
+            width: 100%; height: 100%;
+            object-fit: cover; border-radius: 50%;
         }
         .user-info { flex: 1; min-width: 0; }
         .user-name {
@@ -859,6 +903,13 @@
         .message-sender { font-size: 13px; font-weight: 600; color: var(--text); }
         .message-time { font-size: 10px; color: var(--text-secondary); margin-left: auto; }
         .message-content { font-size: 14px; line-height: 1.7; color: var(--text); }
+        .message-content.streaming::after {
+            content: '▋';
+            display: inline-block;
+            color: var(--primary);
+            animation: blink 0.7s step-end infinite;
+            margin-left: 1px;
+        }
         .message-content p { margin-bottom: 10px; }
         .message-content pre {
             background: rgba(0,0,0,0.3); padding: 15px;
@@ -1537,9 +1588,8 @@
                 <div class="sidebar-section">
                     <div class="sidebar-title">RECENT CHATS</div>
                     <div class="chat-history" id="chatHistory">
-                        <div class="chat-history-item active">
-                            <i class="fas fa-comment chat-history-icon"></i>
-                            <span class="chat-history-text">Welcome to Cyanix AI</span>
+                        <div class="chat-history-empty">
+                            Sign in to see<br>your chat history
                         </div>
                     </div>
                 </div>
@@ -1688,10 +1738,10 @@
        MODEL MAPPING
     ================================================================ */
     const MODEL_MAP = {
-        'cyanix-pro':      'llama3-70b-8192',
-        'cyanix-flash':    'llama3-8b-8192',
-        'cyanix-vision':   'llava-v1.5-7b-4096-preview',
-        'cyanix-advanced': 'mixtral-8x7b-32768'
+        'cyanix-pro':      'llama-3.3-70b-versatile',
+        'cyanix-flash':    'llama-3.1-8b-instant',
+        'cyanix-vision':   'llama-3.2-11b-vision-preview',
+        'cyanix-advanced': 'llama-3.1-70b-versatile'
     };
 
     /* ================================================================
@@ -1896,16 +1946,24 @@
     }
 
     function handleUserSignedIn(user) {
+        const name = user.user_metadata?.full_name
+                  || user.user_metadata?.name
+                  || user.email?.split('@')[0]
+                  || 'User';
         currentUser = {
-            id:     user.id,
-            name:   user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            email:  user.email,
-            avatar: getAvatarInitials(user.user_metadata?.full_name || user.email)
+            id:        user.id,
+            name,
+            email:     user.email,
+            avatar:    getAvatarInitials(name),
+            avatarUrl: user.user_metadata?.avatar_url
+                    || user.user_metadata?.picture
+                    || null
         };
         updateUserUI();
         loadUserSettings();
+        loadChatHistory();
         showChat();
-        showToast('Welcome to Cyanix AI!', 'success');
+        showToast(`Welcome back, ${name.split(' ')[0]}!`, 'success');
     }
 
     function handleUserSignedOut() {
@@ -1937,7 +1995,12 @@
         if (!currentUser) return;
         document.getElementById('userName').textContent  = currentUser.name;
         document.getElementById('userEmail').textContent = currentUser.email;
-        document.getElementById('userAvatar').textContent = currentUser.avatar;
+        const avatarEl = document.getElementById('userAvatar');
+        if (currentUser.avatarUrl) {
+            avatarEl.innerHTML = `<img src="${currentUser.avatarUrl}" alt="${currentUser.name}" onerror="this.parentElement.innerHTML='${currentUser.avatar}'">`;
+        } else {
+            avatarEl.textContent = currentUser.avatar;
+        }
     }
 
     /* ── FIX 1: switchAuthTab now properly updates button active classes ── */
@@ -2290,8 +2353,10 @@
         renderWelcomeScreen();
         document.getElementById('chatTitle').textContent = 'New Chat';
         document.getElementById('selectedFilesPreview').style.display = 'none';
+        // Deselect all history items
+        document.querySelectorAll('.chat-history-item').forEach(el => el.classList.remove('active'));
         if (window.innerWidth <= 768) toggleSidebar();
-        showToast('New chat created', 'info');
+        showToast('New chat started', 'info');
     }
 
     function useExample(type) {
@@ -2340,14 +2405,17 @@
         if (!currentChatId) {
             try {
                 currentChatId = await createChat(message || 'File upload');
-                document.getElementById('chatTitle').textContent = (message || 'File upload').substring(0, 30) + ((message || 'File upload').length > 30 ? '...' : '');
+                const chatLabel = (message || 'File upload').substring(0, 30) + ((message || 'File upload').length > 30 ? '...' : '');
+                document.getElementById('chatTitle').textContent = chatLabel;
+                loadChatHistory(); // refresh sidebar
             } catch (e) { console.warn('Could not create chat record:', e.message); }
         }
 
         try {
-            const aiResponse = await getAIResponse(message, filesToSend);
+            // Create the AI message bubble immediately, stream tokens into it
             hideTypingIndicator();
-            addMessage(aiResponse, 'assistant');
+            const assistantDiv = createStreamingMessageBubble();
+            const aiResponse   = await streamAIResponse(message, filesToSend, assistantDiv);
             conversationHistory.push({ role: 'user', content: message, files: filesToSend.map(f => ({ name: f.name, type: f.type, url: f.url })) });
             conversationHistory.push({ role: 'assistant', content: aiResponse });
             await saveMessage(message, 'user', filesToSend);
@@ -2366,8 +2434,13 @@
         div.className = `message ${sender}`;
 
         const time   = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const avatar = sender === 'user' ? (currentUser?.avatar || 'U') : 'AI';
         const name   = sender === 'user' ? (currentUser?.name  || 'You') : 'Cyanix AI';
+        // Use OAuth photo for user if available, else initials; always use gradient icon for AI
+        const avatarHTML = sender === 'user'
+            ? (currentUser?.avatarUrl
+                ? `<img src="${currentUser.avatarUrl}" alt="${currentUser.name}" onerror="this.parentElement.textContent='${currentUser?.avatar||'U'}';">`
+                : (currentUser?.avatar || 'U'))
+            : '<i class="fas fa-robot" style="font-size:13px;"></i>';
 
         let attachHTML = '';
         if (files && files.length) {
@@ -2399,7 +2472,7 @@
         div.innerHTML = `
             <div class="message-bubble">
                 <div class="message-header">
-                    <div class="message-avatar">${avatar}</div>
+                    <div class="message-avatar">${avatarHTML}</div>
                     <div class="message-sender">${name}</div>
                     <div class="message-time">${time}</div>
                 </div>
@@ -2442,45 +2515,116 @@
     }
 
     /* ================================================================
-       AI RESPONSE
+       AI RESPONSE — STREAMING
     ================================================================ */
-    async function getAIResponse(message, files = []) {
+
+    /** Creates the AI message bubble in the DOM and returns it ready for streaming */
+    function createStreamingMessageBubble() {
+        const wrapper = document.getElementById('messagesWrapper');
+        const div     = document.createElement('div');
+        div.className = 'message assistant';
+        div.id        = 'streamingMessage';
+        const time    = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML = `
+            <div class="message-bubble">
+                <div class="message-header">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot" style="font-size:13px;"></i>
+                    </div>
+                    <div class="message-sender">Cyanix AI</div>
+                    <div class="message-time">${time}</div>
+                </div>
+                <div class="message-content streaming" id="streamingContent"></div>
+            </div>`;
+        wrapper.appendChild(div);
+        scrollToBottom();
+        return div;
+    }
+
+    /** Streams tokens from the edge function into the message bubble */
+    async function streamAIResponse(message, files = [], bubbleDiv) {
+        const contentEl = bubbleDiv.querySelector('#streamingContent');
+        let fullContent = '';
+
         try {
+            // Build message history
             const messages = conversationHistory.slice(-10).map(m => ({
-                role: m.role === 'user' ? 'user' : 'assistant',
+                role:    m.role === 'user' ? 'user' : 'assistant',
                 content: m.content
             }));
 
-            let full = message;
+            let userContent = message;
             if (files.length) {
-                full += '\n\nAttached files:';
+                userContent += '\n\nAttached files:';
                 files.forEach(f => {
-                    full += `\n- ${f.name} (${f.type}, ${formatFileSize(f.size)})`;
-                    if (f.type.startsWith('image/') && currentModel === 'cyanix-vision') full += ` [Image URL: ${f.url}]`;
+                    userContent += `\n- ${f.name} (${f.type}, ${formatFileSize(f.size)})`;
+                    if (f.type.startsWith('image/') && currentModel === 'cyanix-vision')
+                        userContent += ` [Image URL: ${f.url}]`;
                 });
             }
-            messages.push({ role: 'user', content: full });
+            messages.push({ role: 'user', content: userContent });
 
             const response = await fetch(SUPABASE_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type':  'application/json',
                     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
                 },
-                body: JSON.stringify({ messages, model: MODEL_MAP[currentModel], temperature: 0.7, max_tokens: 1500 })
+                body: JSON.stringify({
+                    messages,
+                    model:       MODEL_MAP[currentModel],
+                    temperature: 0.7,
+                    max_tokens:  1500,
+                    stream:      true
+                })
             });
 
             if (!response.ok) {
                 const errText = await response.text();
                 throw new Error(`Edge function error (${response.status}): ${errText}`);
             }
-            const data = await response.json();
-            if (!data.choices?.[0]?.message?.content) throw new Error('Invalid response from AI function');
-            return data.choices[0].message.content;
+
+            // Read SSE stream
+            const reader  = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const data = line.slice(6).trim();
+                    if (data === '[DONE]') break;
+                    try {
+                        const parsed = JSON.parse(data);
+                        const delta  = parsed.choices?.[0]?.delta?.content ?? '';
+                        if (delta) {
+                            fullContent += delta;
+                            contentEl.innerHTML = formatMessage(fullContent);
+                            scrollToBottom();
+                        }
+                    } catch { /* partial chunk — skip */ }
+                }
+            }
+
         } catch (error) {
-            console.error('AI Response Error:', error);
-            return `I encountered an error while processing your request. Please try again later. (${error.message})`;
+            console.error('Stream error:', error);
+            fullContent = `I encountered an error while processing your request. Please try again. (${error.message})`;
         }
+
+        // Done streaming — remove cursor, render final markdown
+        contentEl.classList.remove('streaming');
+        contentEl.removeAttribute('id');
+        bubbleDiv.removeAttribute('id');
+        if (fullContent) {
+            contentEl.innerHTML = formatMessage(fullContent);
+        }
+        scrollToBottom();
+        return fullContent;
     }
 
     /* ================================================================
@@ -2520,6 +2664,114 @@
 
     function openFileModal()  { document.getElementById('fileModal').classList.add('active'); }
     function closeFileModal() { document.getElementById('fileModal').classList.remove('active'); }
+
+    /* ================================================================
+       CHAT HISTORY PERSISTENCE
+    ================================================================ */
+    async function loadChatHistory() {
+        if (!currentUser) return;
+        const historyEl = document.getElementById('chatHistory');
+        historyEl.innerHTML = '<div style="padding:12px 8px; text-align:center; color:var(--text-secondary); font-size:11px; font-family:'JetBrains Mono',monospace;">Loading...</div>';
+        try {
+            const { data: chats, error } = await supabaseClient
+                .from('chats')
+                .select('id, title, updated_at, last_message')
+                .eq('user_id', currentUser.id)
+                .order('updated_at', { ascending: false })
+                .limit(30);
+
+            if (error) throw error;
+
+            historyEl.innerHTML = '';
+            if (!chats || chats.length === 0) {
+                historyEl.innerHTML = '<div class="chat-history-empty">No chats yet.<br>Start a conversation!</div>';
+                return;
+            }
+
+            chats.forEach(chat => {
+                const isActive = chat.id === currentChatId;
+                const item = document.createElement('div');
+                item.className = `chat-history-item${isActive ? ' active' : ''}`;
+                item.dataset.chatId = chat.id;
+                const title = chat.title || 'Untitled Chat';
+                item.innerHTML = `
+                    <i class="fas fa-comment chat-history-icon"></i>
+                    <span class="chat-history-text" title="${title}">${title}</span>
+                    <button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChatRecord('${chat.id}')" title="Delete chat">
+                        <i class="fas fa-times"></i>
+                    </button>`;
+                item.addEventListener('click', () => openChat(chat.id, chat.title));
+                historyEl.appendChild(item);
+            });
+        } catch (e) {
+            console.error('loadChatHistory error:', e);
+            historyEl.innerHTML = '<div class="chat-history-empty">Could not load history.</div>';
+        }
+    }
+
+    async function openChat(chatId, title) {
+        if (chatId === currentChatId) return;
+        currentChatId = chatId;
+
+        // Highlight active item
+        document.querySelectorAll('.chat-history-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.chatId === chatId);
+        });
+
+        document.getElementById('chatTitle').textContent = (title || 'Chat').substring(0, 30);
+        conversationHistory = [];
+
+        // Clear messages, show loading
+        const wrapper = document.getElementById('messagesWrapper');
+        wrapper.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace; font-size:12px;">Loading messages...</div>';
+
+        try {
+            const { data: msgs, error } = await supabaseClient
+                .from('messages')
+                .select('id, content, sender, timestamp, files')
+                .eq('chat_id', chatId)
+                .order('timestamp', { ascending: true });
+
+            if (error) throw error;
+
+            wrapper.innerHTML = '';
+            if (!msgs || msgs.length === 0) {
+                renderWelcomeScreen();
+                return;
+            }
+
+            msgs.forEach(msg => {
+                addMessage(msg.content, msg.sender, msg.files || []);
+                conversationHistory.push({ role: msg.sender, content: msg.content });
+            });
+        } catch (e) {
+            console.error('openChat error:', e);
+            wrapper.innerHTML = '';
+            renderWelcomeScreen();
+            showToast('Could not load chat messages.', 'error');
+        }
+
+        if (window.innerWidth <= 768) toggleSidebar();
+    }
+
+    async function deleteChatRecord(chatId) {
+        if (!confirm('Delete this chat? This cannot be undone.')) return;
+        try {
+            await supabaseClient.from('messages').delete().eq('chat_id', chatId);
+            await supabaseClient.from('chats').delete().eq('id', chatId);
+            if (chatId === currentChatId) {
+                currentChatId = null;
+                conversationHistory = [];
+                renderWelcomeScreen();
+                document.getElementById('chatTitle').textContent = 'New Chat';
+            }
+            loadChatHistory();
+            showToast('Chat deleted.', 'info');
+        } catch (e) {
+            console.error('deleteChatRecord error:', e);
+            showToast('Could not delete chat.', 'error');
+        }
+    }
 
     /* ================================================================
        DATABASE
