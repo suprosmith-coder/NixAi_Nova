@@ -1363,7 +1363,7 @@
 
             <div class="auth-form">
                 <div class="form-header">
-                    <div class="form-header-title" id="formHeaderTitle">NEURAL ACCESS</div>
+                    <div class="form-header-title" id="formHeaderTitle">ENTRY ACCESS</div>
                     <div class="form-header-sub" id="formHeaderSub">// authenticate to continue_</div>
                 </div>
 
@@ -1729,7 +1729,13 @@
             });
         }
 
-        showAuth();
+        // NOTE: showAuth() is no longer called here unconditionally.
+        // initializeAuth() calls getSession() above — if there IS a session
+        // (e.g. returning from OAuth redirect) it calls showChat() directly.
+        // If there is NO session, we show the auth screen.
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            if (!session) showAuth();
+        });
     });
 
     /* -- Background particles -- */
@@ -1839,12 +1845,25 @@
        AUTH
     ================================================================ */
     function initializeAuth() {
+        // Listen for future auth state changes (email sign-in, sign-out, etc.)
         supabaseClient.auth.onAuthStateChange((event, session) => {
-            if (session) {
+            if (event === 'SIGNED_IN' && session) {
                 handleUserSignedIn(session.user);
-            } else {
+            } else if (event === 'SIGNED_OUT') {
                 handleUserSignedOut();
             }
+        });
+
+        // ── CRITICAL: Check for an existing session RIGHT NOW ──
+        // When Supabase redirects back from Google/GitHub/Discord/Microsoft,
+        // the access_token is in the URL hash. The client parses it on creation
+        // but the onAuthStateChange event may fire before the listener above is
+        // registered. getSession() is the reliable fallback that catches it.
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                handleUserSignedIn(session.user);
+            }
+            // If no session, showAuth() in DOMContentLoaded will handle it
         });
     }
 
@@ -1896,11 +1915,20 @@
     }
 
     function showAuth() {
+        // Strip OAuth tokens from the URL hash — they've already been consumed
+        // by the Supabase client. Leaving them visible is a security/UX issue.
+        if (window.location.hash.includes('access_token')) {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
         document.getElementById('chatContainer').classList.remove('active');
         document.getElementById('authContainer').style.display = 'flex';
     }
 
     function showChat() {
+        // Clean OAuth tokens from URL on successful login
+        if (window.location.hash.includes('access_token')) {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('chatContainer').classList.add('active');
     }
@@ -2021,7 +2049,7 @@
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
-                options: { redirectTo: window.location.origin }
+                options: { redirectTo: window.location.href.split('#')[0] }
             });
             if (error) throw error;
         } catch (error) { showToast(getAuthError(error), 'error'); }
@@ -2031,7 +2059,7 @@
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'azure',
-                options: { redirectTo: window.location.origin }
+                options: { redirectTo: window.location.href.split('#')[0] }
             });
             if (error) throw error;
         } catch (error) { showToast(getAuthError(error), 'error'); }
@@ -2041,7 +2069,7 @@
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'github',
-                options: { redirectTo: window.location.origin }
+                options: { redirectTo: window.location.href.split('#')[0] }
             });
             if (error) throw error;
         } catch (error) { showToast(getAuthError(error), 'error'); }
@@ -2051,7 +2079,7 @@
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'discord',
-                options: { redirectTo: window.location.origin }
+                options: { redirectTo: window.location.href.split('#')[0] }
             });
             if (error) throw error;
         } catch (error) { showToast(getAuthError(error), 'error'); }
@@ -2067,7 +2095,7 @@
         if (email && validateEmail(email)) {
             try {
                 const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                    redirectTo: window.location.origin
+                    redirectTo: window.location.href.split('#')[0]
                 });
                 if (error) throw error;
                 showToast('Password reset email sent! Check your inbox.', 'success');
