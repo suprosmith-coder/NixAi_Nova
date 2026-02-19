@@ -7,14 +7,16 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 
     <!-- ── SEO & Social Preview (Discord, Twitter, Slack, iMessage) ── -->
-    <meta name="description" content="High-Intelligence AI with Llama Llm Integrations. Powered by NixAi." />
-    <meta name="theme-color" content="#00ffff">
+    <meta name="description" content="High-Intelligence AI with High-Tech Design. Powered by NixAi." />
+    <meta name="theme-color" content="#00f0ff">
     <meta name="color-scheme" content="dark">
 
     <!-- Open Graph (Facebook, Discord, Slack, iMessage, etc.) -->
     <meta property="og:title" content="Cyanix AI" />
     <meta property="og:description" content="High-Intelligence AI with High-Tech Design." />
-    <meta property="og:image" content="https://suprosmith-coder.github.io/NixAi_Nov/cyanix-preview.png" />
+    <meta property="og:image" content="https://suprosmith-coder.github.io/NixAi_Nova/images/cyanix-preview.png" />
+    <meta property="og:image:width" content="1536" />
+    <meta property="og:image:height" content="1024" />
     <meta property="og:url" content="https://suprosmith-coder.github.io/NixAi_Nova/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Cyanix AI" />
@@ -23,7 +25,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Cyanix AI" />
     <meta name="twitter:description" content="High-Intelligence AI with High-Tech Design." />
-    <meta name="twitter:image" content="https://suprosmith-coder.github.io/NixAi_Nova/cyanix-preview.png" />
+    <meta name="twitter:image" content="https://suprosmith-coder.github.io/NixAi_Nova/images/cyanix-preview.png" />
 
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1728,11 +1730,10 @@
     const SUPABASE_ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
     const SUPABASE_FUNCTION_URL = 'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/chat';
 
-    // ── Supabase v2 CDN correct initialization ──
-    // window.supabase is the global object exposed by the CDN script.
-    // We destructure createClient from it, then create the named client.
-    const { createClient } = supabase;
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ── Supabase client ──
+    // Declared here so all functions can reference it.
+    // Assigned inside DOMContentLoaded so the CDN script is guaranteed loaded.
+    let supabaseClient = null;
 
     /* ================================================================
        MODEL MAPPING
@@ -1758,6 +1759,22 @@
        INITIALIZATION
     ================================================================ */
     document.addEventListener('DOMContentLoaded', () => {
+
+        // ── Safe Supabase v2 CDN init ──────────────────────────────────────
+        // CDN scripts loaded in <head> are guaranteed parsed before any
+        // DOMContentLoaded callback runs, so this is always safe here.
+        try {
+            const { createClient } = window.supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.error('[Cyanix] Supabase failed to initialize:', e);
+            // Show error banner so user knows to refresh, not silently break
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:12px;background:#ff4757;color:#fff;text-align:center;z-index:9999;font-family:monospace;font-size:13px;';
+            banner.textContent = '⚠ Connection error — please refresh the page.';
+            document.body.appendChild(banner);
+            return; // stop init — nothing will work without Supabase
+        }
 
         initializeBackground();
         initializeNeuralCanvas();
@@ -2049,6 +2066,7 @@
     }
 
     async function signInWithEmail() {
+        if (!supabaseClient) { showToast('Auth not ready — please refresh the page.', 'error'); return; }
         const email    = document.getElementById('signinEmail').value.trim();
         const password = document.getElementById('signinPassword').value;
 
@@ -2068,6 +2086,7 @@
     }
 
     async function signUpWithEmail() {
+        if (!supabaseClient) { showToast('Auth not ready — please refresh the page.', 'error'); return; }
         const name            = document.getElementById('signupName').value.trim();
         const email           = document.getElementById('signupEmail').value.trim();
         const password        = document.getElementById('signupPassword').value;
@@ -2109,6 +2128,7 @@
     }
 
     async function signInWithGoogle() {
+        if (!supabaseClient) { showToast('Auth not ready — please refresh the page.', 'error'); return; }
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
@@ -2119,6 +2139,7 @@
     }
 
     async function signInWithMicrosoft() {
+        if (!supabaseClient) { showToast('Auth not ready — please refresh the page.', 'error'); return; }
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'azure',
@@ -2129,6 +2150,7 @@
     }
 
     async function signInWithGithub() {
+        if (!supabaseClient) { showToast('Auth not ready — please refresh the page.', 'error'); return; }
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'github',
@@ -2139,6 +2161,7 @@
     }
 
     async function signInWithDiscord() {
+        if (!supabaseClient) { showToast('Auth not ready — please refresh the page.', 'error'); return; }
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'discord',
@@ -2869,6 +2892,4 @@
     }
     </script>
 </body>
-</html>
-
 </html>
