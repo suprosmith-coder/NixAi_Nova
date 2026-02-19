@@ -1363,7 +1363,7 @@
 
             <div class="auth-form">
                 <div class="form-header">
-                    <div class="form-header-title" id="formHeaderTitle">ENTRY ACCESS</div>
+                    <div class="form-header-title" id="formHeaderTitle">NEURAL ACCESS</div>
                     <div class="form-header-sub" id="formHeaderSub">// authenticate to continue_</div>
                 </div>
 
@@ -1678,8 +1678,11 @@
     const SUPABASE_ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
     const SUPABASE_FUNCTION_URL = 'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/chat';
 
-    // Declared here so all functions can reference it; assigned safely in init()
-    let supabase = null;
+    // ── Supabase v2 CDN correct initialization ──
+    // window.supabase is the global object exposed by the CDN script.
+    // We destructure createClient from it, then create the named client.
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     /* ================================================================
        MODEL MAPPING
@@ -1705,21 +1708,6 @@
        INITIALIZATION
     ================================================================ */
     document.addEventListener('DOMContentLoaded', () => {
-
-        // ── CRITICAL: Initialize Supabase here, not at top-level ──
-        // Top-level init causes a silent crash if the CDN hasn't loaded yet,
-        // killing ALL function definitions — making every button do nothing.
-        if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
-            console.error('[Cyanix] Supabase CDN failed to load.');
-            showToast('Connection error — please refresh the page.', 'error');
-        } else {
-            try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            } catch (e) {
-                console.error('[Cyanix] Supabase init error:', e);
-                showToast('Auth service failed to initialize. Please refresh.', 'error');
-            }
-        }
 
         initializeBackground();
         initializeNeuralCanvas();
@@ -1851,8 +1839,7 @@
        AUTH
     ================================================================ */
     function initializeAuth() {
-        if (!supabase) { console.warn('[Cyanix] Supabase not ready — skipping auth init'); return; }
-        supabase.auth.onAuthStateChange((event, session) => {
+        supabaseClient.auth.onAuthStateChange((event, session) => {
             if (session) {
                 handleUserSignedIn(session.user);
             } else {
@@ -1977,10 +1964,9 @@
         if (!validateEmail(email))  { showToast('Please enter a valid email address', 'error'); return; }
         if (!password)              { showToast('Please enter your password', 'error'); return; }
 
-        if (!supabase) { showToast('Auth service unavailable — please refresh.', 'error'); return; }
         setButtonLoading('signinBtn', true);
         try {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) throw error;
         } catch (error) {
             console.error('Sign in error:', error);
@@ -2003,17 +1989,16 @@
         if (password !== confirmPassword) { showToast('Passwords do not match', 'error'); return; }
         if (!acceptTerms)             { showToast('Please accept the terms and conditions', 'error'); return; }
 
-        if (!supabase) { showToast('Auth service unavailable — please refresh.', 'error'); return; }
         setButtonLoading('signupBtn', true);
         try {
-            const { data, error } = await supabase.auth.signUp({
+            const { data, error } = await supabaseClient.auth.signUp({
                 email, password,
                 options: { data: { full_name: name } }
             });
             if (error) throw error;
             if (data.user) {
                 try {
-                    await supabase.from('users').insert({
+                    await supabaseClient.from('users').insert({
                         id: data.user.id, name, email,
                         avatar: getAvatarInitials(name),
                         created_at: new Date().toISOString(),
@@ -2033,9 +2018,8 @@
     }
 
     async function signInWithGoogle() {
-        if (!supabase) { showToast('Auth service unavailable — please refresh.', 'error'); return; }
         try {
-            const { error } = await supabase.auth.signInWithOAuth({
+            const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: { redirectTo: window.location.origin }
             });
@@ -2045,7 +2029,7 @@
 
     async function signInWithMicrosoft() {
         try {
-            const { error } = await supabase.auth.signInWithOAuth({
+            const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'azure',
                 options: { redirectTo: window.location.origin }
             });
@@ -2055,7 +2039,7 @@
 
     async function signInWithGithub() {
         try {
-            const { error } = await supabase.auth.signInWithOAuth({
+            const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'github',
                 options: { redirectTo: window.location.origin }
             });
@@ -2065,7 +2049,7 @@
 
     async function signInWithDiscord() {
         try {
-            const { error } = await supabase.auth.signInWithOAuth({
+            const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'discord',
                 options: { redirectTo: window.location.origin }
             });
@@ -2082,7 +2066,7 @@
         const email = prompt('Enter your email address to reset password:');
         if (email && validateEmail(email)) {
             try {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
                     redirectTo: window.location.origin
                 });
                 if (error) throw error;
@@ -2209,9 +2193,9 @@
                 const ts     = Date.now();
                 const rand   = Math.random().toString(36).substring(2, 15);
                 const path   = `${currentUser.id}/${ts}_${rand}_${file.name}`;
-                const { error } = await supabase.storage.from('attachments').upload(path, file, { cacheControl:'3600', upsert:false });
+                const { error } = await supabaseClient.storage.from('attachments').upload(path, file, { cacheControl:'3600', upsert:false });
                 if (error) throw error;
-                const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path);
+                const { data: urlData } = supabaseClient.storage.from('attachments').getPublicUrl(path);
                 uploaded.push({ name: file.name, type: file.type, size: file.size, url: urlData.publicUrl, storagePath: path, uploadedAt: new Date().toISOString() });
                 const pct = ((i + 1) / selectedFiles.length) * 100;
                 progressBar.style.width = pct + '%';
@@ -2487,7 +2471,7 @@
     async function saveModelSelection() {
         if (currentUser) {
             try {
-                const { error } = await supabase.from('users')
+                const { error } = await supabaseClient.from('users')
                     .update({ settings: { aiModel: currentModel }, updated_at: new Date().toISOString() })
                     .eq('id', currentUser.id);
                 if (error) throw error;
@@ -2500,7 +2484,7 @@
     async function loadUserSettings() {
         if (!currentUser) return;
         try {
-            const { data, error } = await supabase.from('users').select('settings').eq('id', currentUser.id).single();
+            const { data, error } = await supabaseClient.from('users').select('settings').eq('id', currentUser.id).single();
             if (error && error.code !== 'PGRST116') throw error;
             if (data?.settings?.aiModel) { currentModel = data.settings.aiModel; selectModel(currentModel); }
         } catch (error) { console.error('Error loading user settings:', error); }
@@ -2513,7 +2497,7 @@
        DATABASE
     ================================================================ */
     async function createChat(firstMessage) {
-        const { data, error } = await supabase.from('chats').insert({
+        const { data, error } = await supabaseClient.from('chats').insert({
             user_id: currentUser.id,
             title: firstMessage.substring(0, 50) + (firstMessage.length > 50 ? '...' : ''),
             model: currentModel,
@@ -2537,8 +2521,8 @@
             if (files && files.length) {
                 msgData.files = files.map(f => ({ name: f.name, type: f.type, size: f.size, url: f.url, storagePath: f.storagePath }));
             }
-            await supabase.from('messages').insert(msgData);
-            await supabase.from('chats').update({
+            await supabaseClient.from('messages').insert(msgData);
+            await supabaseClient.from('chats').update({
                 updated_at: new Date().toISOString(),
                 last_message: content.substring(0, 100) + (content.length > 100 ? '...' : '')
             }).eq('id', currentChatId);
