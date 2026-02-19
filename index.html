@@ -497,7 +497,7 @@
 
         .social-buttons {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr); /* now 4 columns for Discord */
             gap: 10px;
             margin-bottom: 25px;
         }
@@ -2070,6 +2070,9 @@
                         <button class="social-button" onclick="signInWithGithub()">
                             <i class="fab fa-github"></i>
                         </button>
+                        <button class="social-button" onclick="signInWithDiscord()">
+                            <i class="fab fa-discord"></i>
+                        </button>
                     </div>
                     
                     <p class="auth-footer">
@@ -2134,6 +2137,9 @@
                         </button>
                         <button class="social-button" onclick="signUpWithGithub()">
                             <i class="fab fa-github"></i>
+                        </button>
+                        <button class="social-button" onclick="signUpWithDiscord()">
+                            <i class="fab fa-discord"></i>
                         </button>
                     </div>
                     
@@ -2311,7 +2317,7 @@
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ==================== MODEL MAPPING (for display and backend) ====================
+        // ==================== MODEL MAPPING ====================
         const MODEL_MAP = {
             'cyanix-pro': 'llama3-70b-8192',
             'cyanix-flash': 'llama3-8b-8192',
@@ -2335,7 +2341,6 @@
             setupEventListeners();
             initializeFileDropZone();
             
-            // Initialize marked for markdown rendering
             marked.setOptions({
                 highlight: function(code, lang) {
                     if (Prism.languages[lang]) {
@@ -2347,12 +2352,10 @@
                 gfm: true
             });
             
-            // Start with auth interface
             showAuth();
         });
 
         function initializeBackground() {
-            // Create floating particles
             const particlesContainer = document.getElementById('particles');
             for (let i = 0; i < 50; i++) {
                 const particle = document.createElement('div');
@@ -2364,7 +2367,6 @@
                 particlesContainer.appendChild(particle);
             }
             
-            // Create pulse rings
             createPulseRing();
             setInterval(createPulseRing, 2000);
         }
@@ -2375,10 +2377,7 @@
             ring.style.left = `${Math.random() * 100}%`;
             ring.style.top = `${Math.random() * 100}%`;
             document.body.appendChild(ring);
-            
-            setTimeout(() => {
-                ring.remove();
-            }, 8000);
+            setTimeout(() => ring.remove(), 8000);
         }
 
         function initializeAuth() {
@@ -2392,15 +2391,8 @@
         }
 
         function setupEventListeners() {
-            // File input
-            const fileInput = document.getElementById('fileInput');
-            fileInput.addEventListener('change', handleFileSelect);
-            
-            // Character count
-            const chatInput = document.getElementById('chatInput');
-            chatInput.addEventListener('input', updateCharacterCount);
-            
-            // Close modals on escape
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+            document.getElementById('chatInput').addEventListener('input', updateCharacterCount);
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     closeAllModals();
@@ -2413,28 +2405,20 @@
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
             
-            // Prevent default drag behaviors
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, preventDefaults, false);
                 document.body.addEventListener(eventName, preventDefaults, false);
             });
             
-            // Highlight drop zone when item is dragged over it
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropZone.addEventListener(eventName, highlight, false);
             });
-            
             ['dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, unhighlight, false);
             });
             
-            // Handle dropped files
             dropZone.addEventListener('drop', handleDrop, false);
-            
-            // Click to open file dialog
-            dropZone.addEventListener('click', () => {
-                fileInput.click();
-            });
+            dropZone.addEventListener('click', () => fileInput.click());
         }
 
         function preventDefaults(e) {
@@ -2454,8 +2438,7 @@
 
         function handleDrop(e) {
             const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFileSelect({ target: { files } });
+            handleFileSelect({ target: { files: dt.files } });
         }
 
         // ==================== AUTH FUNCTIONS ====================
@@ -2492,7 +2475,6 @@
 
         function updateUserUI() {
             if (!currentUser) return;
-            
             document.getElementById('userName').textContent = currentUser.name;
             document.getElementById('userEmail').textContent = currentUser.email;
             document.getElementById('userAvatar').textContent = currentUser.avatar;
@@ -2517,7 +2499,6 @@
         function togglePassword(inputId) {
             const input = document.getElementById(inputId);
             const icon = input.parentElement.querySelector('.password-toggle i');
-            
             if (input.type === 'password') {
                 input.type = 'text';
                 icon.classList.remove('fa-eye');
@@ -2537,20 +2518,14 @@
                 showToast('Please enter a valid email address', 'error');
                 return;
             }
-            
             if (!password) {
                 showToast('Please enter your password', 'error');
                 return;
             }
             
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-                
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
-                
                 showToast('Signed in successfully!', 'success');
             } catch (error) {
                 console.error('Sign in error:', error);
@@ -2569,22 +2544,18 @@
                 showToast('Please enter your name', 'error');
                 return;
             }
-            
             if (!validateEmail(email)) {
                 showToast('Please enter a valid email address', 'error');
                 return;
             }
-            
             if (password.length < 6) {
                 showToast('Password must be at least 6 characters', 'error');
                 return;
             }
-            
             if (password !== confirmPassword) {
                 showToast('Passwords do not match', 'error');
                 return;
             }
-            
             if (!acceptTerms) {
                 showToast('Please accept the terms and conditions', 'error');
                 return;
@@ -2594,20 +2565,15 @@
                 const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
-                    options: {
-                        data: {
-                            full_name: name
-                        }
-                    }
+                    options: { data: { full_name: name } }
                 });
                 
                 if (error) throw error;
                 
-                // Create user record in users table
+                // Try to create user record – ignore if table doesn't exist
                 if (data.user) {
-                    const { error: dbError } = await supabase
-                        .from('users')
-                        .insert({
+                    try {
+                        await supabase.from('users').insert({
                             id: data.user.id,
                             name: name,
                             email: email,
@@ -2615,12 +2581,12 @@
                             created_at: new Date().toISOString(),
                             settings: { aiModel: 'cyanix-pro' }
                         });
-                    
-                    if (dbError) console.error('Error creating user record:', dbError);
+                    } catch (dbErr) {
+                        console.warn('Could not create user record (table may not exist):', dbErr.message);
+                    }
                 }
                 
-                showToast('Account created successfully! Please check your email for confirmation.', 'success');
-                
+                showToast('Account created! Please check your email for confirmation.', 'success');
             } catch (error) {
                 console.error('Sign up error:', error);
                 showToast(getAuthError(error), 'error');
@@ -2631,9 +2597,7 @@
             try {
                 const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
-                    options: {
-                        redirectTo: window.location.origin
-                    }
+                    options: { redirectTo: window.location.origin }
                 });
                 if (error) throw error;
             } catch (error) {
@@ -2646,9 +2610,7 @@
             try {
                 const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'azure',
-                    options: {
-                        redirectTo: window.location.origin
-                    }
+                    options: { redirectTo: window.location.origin }
                 });
                 if (error) throw error;
             } catch (error) {
@@ -2661,9 +2623,7 @@
             try {
                 const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'github',
-                    options: {
-                        redirectTo: window.location.origin
-                    }
+                    options: { redirectTo: window.location.origin }
                 });
                 if (error) throw error;
             } catch (error) {
@@ -2672,17 +2632,23 @@
             }
         }
 
-        function signUpWithGoogle() {
-            signInWithGoogle();
+        async function signInWithDiscord() {
+            try {
+                const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'discord',
+                    options: { redirectTo: window.location.origin }
+                });
+                if (error) throw error;
+            } catch (error) {
+                console.error('Discord sign in error:', error);
+                showToast(getAuthError(error), 'error');
+            }
         }
 
-        function signUpWithMicrosoft() {
-            signInWithMicrosoft();
-        }
-
-        function signUpWithGithub() {
-            signInWithGithub();
-        }
+        function signUpWithGoogle() { signInWithGoogle(); }
+        function signUpWithMicrosoft() { signInWithMicrosoft(); }
+        function signUpWithGithub() { signInWithGithub(); }
+        function signUpWithDiscord() { signInWithDiscord(); }
 
         async function forgotPassword() {
             const email = prompt('Enter your email address to reset password:');
@@ -2700,32 +2666,22 @@
         }
 
         function validateEmail(email) {
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return re.test(email);
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         }
 
         function getAuthError(error) {
             switch (error.message) {
-                case 'Invalid login credentials':
-                    return 'Invalid email or password';
-                case 'Email not confirmed':
-                    return 'Please confirm your email address';
-                case 'User already registered':
-                    return 'Email already in use';
-                case 'Password should be at least 6 characters':
-                    return 'Password is too weak';
-                default:
-                    return error.message || 'Authentication failed';
+                case 'Invalid login credentials': return 'Invalid email or password';
+                case 'Email not confirmed': return 'Please confirm your email address';
+                case 'User already registered': return 'Email already in use';
+                case 'Password should be at least 6 characters': return 'Password is too weak';
+                default: return error.message || 'Authentication failed';
             }
         }
 
-        // ==================== FILE HANDLING FUNCTIONS ====================
+        // ==================== FILE HANDLING (unchanged) ====================
         function handleFileSelect(e) {
             const files = Array.from(e.target.files);
-            addFilesToSelection(files);
-        }
-
-        function addFilesToSelection(files) {
             files.forEach(file => {
                 if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
                     selectedFiles.push(file);
@@ -2737,30 +2693,17 @@
         function updateSelectedFilesDisplay() {
             const container = document.getElementById('selectedFiles');
             const previewContainer = document.getElementById('selectedFilesPreview');
-            
             container.innerHTML = '';
-            
             if (selectedFiles.length === 0) {
                 container.innerHTML = '<div style="color: var(--text-secondary); text-align: center; padding: 20px; font-size: 13px;">No files selected</div>';
                 previewContainer.style.display = 'none';
                 return;
             }
-            
             selectedFiles.forEach((file, index) => {
                 const fileElement = document.createElement('div');
-                fileElement.style.cssText = `
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 10px;
-                    background: rgba(0, 243, 255, 0.05);
-                    border-radius: 8px;
-                    margin-bottom: 8px;
-                `;
-                
+                fileElement.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(0, 243, 255, 0.05); border-radius: 8px; margin-bottom: 8px;';
                 const fileIcon = getFileIcon(file.type, file.name);
                 const fileSize = formatFileSize(file.size);
-                
                 fileElement.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
                         ${fileIcon}
@@ -2769,46 +2712,34 @@
                             <div style="color: var(--text-secondary); font-size: 11px;">${fileSize}</div>
                         </div>
                     </div>
-                    <button onclick="removeSelectedFile(${index})" style="background: none; border: none; color: var(--error); cursor: pointer; padding: 5px; margin-left: 10px;">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button onclick="removeSelectedFile(${index})" style="background: none; border: none; color: var(--error); cursor: pointer; padding: 5px; margin-left: 10px;"><i class="fas fa-times"></i></button>
                 `;
-                
                 container.appendChild(fileElement);
             });
-            
             updateSelectedFilesPreview();
         }
 
         function updateSelectedFilesPreview() {
             const previewContainer = document.getElementById('selectedFilesPreview');
             previewContainer.innerHTML = '';
-            
             if (selectedFiles.length === 0) {
                 previewContainer.style.display = 'none';
                 return;
             }
-            
             previewContainer.style.display = 'flex';
-            
             selectedFiles.forEach((file, index) => {
                 const fileElement = document.createElement('div');
                 fileElement.className = 'selected-file';
-                
                 const fileIcon = getFileIcon(file.type, file.name, true);
                 const fileSize = formatFileSize(file.size);
-                
                 fileElement.innerHTML = `
                     ${fileIcon}
                     <div class="selected-file-info">
                         <div class="selected-file-name">${file.name}</div>
                         <div class="selected-file-size">${fileSize}</div>
                     </div>
-                    <button class="selected-file-remove" onclick="removeSelectedFile(${index})">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button class="selected-file-remove" onclick="removeSelectedFile(${index})"><i class="fas fa-times"></i></button>
                 `;
-                
                 previewContainer.appendChild(fileElement);
             });
         }
@@ -2820,37 +2751,16 @@
 
         function getFileIcon(fileType, fileName, small = false) {
             const iconSize = small ? '14px' : '20px';
-            
-            if (fileType.startsWith('image/')) {
-                return `<i class="fas fa-image" style="color: var(--primary); font-size: ${iconSize};"></i>`;
-            }
-            if (fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) {
-                return `<i class="fas fa-file-pdf" style="color: #FF6B6B; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('word') || fileName.toLowerCase().endsWith('.doc') || fileName.toLowerCase().endsWith('.docx')) {
-                return `<i class="fas fa-file-word" style="color: #2B579A; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('excel') || fileName.toLowerCase().endsWith('.xls') || fileName.toLowerCase().endsWith('.xlsx')) {
-                return `<i class="fas fa-file-excel" style="color: #217346; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('powerpoint') || fileName.toLowerCase().endsWith('.ppt') || fileName.toLowerCase().endsWith('.pptx')) {
-                return `<i class="fas fa-file-powerpoint" style="color: #D24726; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('zip') || fileName.toLowerCase().endsWith('.zip') || fileName.toLowerCase().endsWith('.rar') || fileName.toLowerCase().endsWith('.7z')) {
-                return `<i class="fas fa-file-archive" style="color: #FFA500; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.includes('text') || fileName.toLowerCase().endsWith('.txt') || fileName.toLowerCase().endsWith('.md') || fileName.toLowerCase().endsWith('.rtf')) {
-                return `<i class="fas fa-file-alt" style="color: var(--primary); font-size: ${iconSize};"></i>`;
-            }
-            if (fileName.toLowerCase().endsWith('.js') || fileName.toLowerCase().endsWith('.py') || fileName.toLowerCase().endsWith('.html') || fileName.toLowerCase().endsWith('.css') || fileName.toLowerCase().endsWith('.json') || fileName.toLowerCase().endsWith('.xml')) {
-                return `<i class="fas fa-file-code" style="color: var(--accent); font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.startsWith('audio/')) {
-                return `<i class="fas fa-file-audio" style="color: #00ff88; font-size: ${iconSize};"></i>`;
-            }
-            if (fileType.startsWith('video/')) {
-                return `<i class="fas fa-file-video" style="color: #ff4757; font-size: ${iconSize};"></i>`;
-            }
+            if (fileType.startsWith('image/')) return `<i class="fas fa-image" style="color: var(--primary); font-size: ${iconSize};"></i>`;
+            if (fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) return `<i class="fas fa-file-pdf" style="color: #FF6B6B; font-size: ${iconSize};"></i>`;
+            if (fileType.includes('word') || fileName.toLowerCase().endsWith('.doc') || fileName.toLowerCase().endsWith('.docx')) return `<i class="fas fa-file-word" style="color: #2B579A; font-size: ${iconSize};"></i>`;
+            if (fileType.includes('excel') || fileName.toLowerCase().endsWith('.xls') || fileName.toLowerCase().endsWith('.xlsx')) return `<i class="fas fa-file-excel" style="color: #217346; font-size: ${iconSize};"></i>`;
+            if (fileType.includes('powerpoint') || fileName.toLowerCase().endsWith('.ppt') || fileName.toLowerCase().endsWith('.pptx')) return `<i class="fas fa-file-powerpoint" style="color: #D24726; font-size: ${iconSize};"></i>`;
+            if (fileType.includes('zip') || fileName.toLowerCase().endsWith('.zip') || fileName.toLowerCase().endsWith('.rar') || fileName.toLowerCase().endsWith('.7z')) return `<i class="fas fa-file-archive" style="color: #FFA500; font-size: ${iconSize};"></i>`;
+            if (fileType.includes('text') || fileName.toLowerCase().endsWith('.txt') || fileName.toLowerCase().endsWith('.md') || fileName.toLowerCase().endsWith('.rtf')) return `<i class="fas fa-file-alt" style="color: var(--primary); font-size: ${iconSize};"></i>`;
+            if (fileName.toLowerCase().endsWith('.js') || fileName.toLowerCase().endsWith('.py') || fileName.toLowerCase().endsWith('.html') || fileName.toLowerCase().endsWith('.css') || fileName.toLowerCase().endsWith('.json') || fileName.toLowerCase().endsWith('.xml')) return `<i class="fas fa-file-code" style="color: var(--accent); font-size: ${iconSize};"></i>`;
+            if (fileType.startsWith('audio/')) return `<i class="fas fa-file-audio" style="color: #00ff88; font-size: ${iconSize};"></i>`;
+            if (fileType.startsWith('video/')) return `<i class="fas fa-file-video" style="color: #ff4757; font-size: ${iconSize};"></i>`;
             return `<i class="fas fa-file" style="color: var(--text-secondary); font-size: ${iconSize};"></i>`;
         }
 
@@ -2863,20 +2773,12 @@
         }
 
         async function uploadFiles() {
-            if (selectedFiles.length === 0) {
-                showToast('No files selected', 'warning');
-                return;
-            }
-            
-            if (!currentUser) {
-                showToast('Please sign in to upload files', 'error');
-                return;
-            }
+            if (selectedFiles.length === 0) { showToast('No files selected', 'warning'); return; }
+            if (!currentUser) { showToast('Please sign in to upload files', 'error'); return; }
             
             const progressContainer = document.getElementById('uploadProgress');
             const progressBar = document.getElementById('uploadProgressBar');
             const progressPercentage = document.getElementById('uploadPercentage');
-            
             progressContainer.style.display = 'block';
             progressBar.style.width = '0%';
             progressPercentage.textContent = '0%';
@@ -2887,18 +2789,14 @@
             
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
-                
                 try {
                     const timestamp = Date.now();
                     const randomString = Math.random().toString(36).substring(2, 15);
                     const fileName = `${currentUser.id}/${timestamp}_${randomString}_${file.name}`;
                     
-                    const { data, error } = await supabase.storage
+                    const { error } = await supabase.storage
                         .from('attachments')
-                        .upload(fileName, file, {
-                            cacheControl: '3600',
-                            upsert: false
-                        });
+                        .upload(fileName, file, { cacheControl: '3600', upsert: false });
                     
                     if (error) throw error;
                     
@@ -2906,13 +2804,11 @@
                         .from('attachments')
                         .getPublicUrl(fileName);
                     
-                    const downloadURL = urlData.publicUrl;
-                    
                     uploadedFiles.push({
                         name: file.name,
                         type: file.type,
                         size: file.size,
-                        url: downloadURL,
+                        url: urlData.publicUrl,
                         storagePath: fileName,
                         uploadedAt: new Date().toISOString()
                     });
@@ -2921,7 +2817,6 @@
                     const progress = (uploadedCount / totalFiles) * 100;
                     progressBar.style.width = progress + '%';
                     progressPercentage.textContent = Math.round(progress) + '%';
-                    
                 } catch (error) {
                     console.error('Error uploading file:', error);
                     showToast(`Error uploading ${file.name}: ${error.message}`, 'error');
@@ -2930,17 +2825,13 @@
             
             selectedFiles = [];
             updateSelectedFilesDisplay();
-            
             progressContainer.style.display = 'none';
-            
             attachedFiles.push(...uploadedFiles);
-            
             closeFileModal();
-            
             showToast(`Successfully uploaded ${uploadedFiles.length} file(s)`, 'success');
         }
 
-        // ==================== FILE PREVIEW FUNCTIONS ====================
+        // ==================== FILE PREVIEW FUNCTIONS (unchanged) ====================
         function openFilePreview(file) {
             const modal = document.getElementById('filePreviewModal');
             const image = document.getElementById('previewImage');
@@ -2990,9 +2881,7 @@
         }
 
         function downloadPreviewFile() {
-            if (window.previewFile) {
-                downloadFile(window.previewFile);
-            }
+            if (window.previewFile) downloadFile(window.previewFile);
         }
 
         function downloadFile(file) {
@@ -3005,7 +2894,7 @@
             document.body.removeChild(link);
         }
 
-        // ==================== CHAT FUNCTIONS ====================
+        // ==================== CHAT FUNCTIONS (unchanged) ====================
         function newChat() {
             currentChatId = null;
             conversationHistory = [];
@@ -3014,17 +2903,13 @@
             
             const messagesWrapper = document.getElementById('messagesWrapper');
             messagesWrapper.innerHTML = '';
-            
             const welcomeScreen = document.getElementById('welcomeScreen').cloneNode(true);
             welcomeScreen.style.display = 'block';
             messagesWrapper.appendChild(welcomeScreen);
             
             document.getElementById('chatTitle').textContent = 'New Chat';
-            
             document.getElementById('selectedFilesPreview').style.display = 'none';
-            
             toggleSidebar();
-            
             showToast('New chat created', 'info');
         }
 
@@ -3035,7 +2920,6 @@
                 code: "Write a Python function to sort a list using quicksort algorithm. Include comments explaining each step and provide example usage.",
                 analyze: "Analyze the pros and cons of renewable energy sources (solar, wind, hydro) compared to fossil fuels. Consider factors like cost, efficiency, and environmental impact."
             };
-            
             document.getElementById('chatInput').value = examples[type];
             autoResize(document.getElementById('chatInput'));
             updateCharacterCount();
@@ -3049,16 +2933,13 @@
                 showToast('Please enter a message or attach files', 'warning');
                 return;
             }
-            
             if (message.length > 2000) {
                 showToast('Message too long (max 2000 characters)', 'error');
                 return;
             }
             
             const welcomeScreen = document.getElementById('welcomeScreen');
-            if (welcomeScreen) {
-                welcomeScreen.remove();
-            }
+            if (welcomeScreen) welcomeScreen.remove();
             
             if (selectedFiles.length > 0) {
                 showToast('Uploading files...', 'info');
@@ -3066,16 +2947,13 @@
             }
             
             addMessage(message, 'user', attachedFiles);
-            
             input.value = '';
             attachedFiles = [];
             selectedFiles = [];
             updateSelectedFilesDisplay();
             document.getElementById('selectedFilesPreview').style.display = 'none';
-            
             autoResize(input);
             updateCharacterCount();
-            
             showTypingIndicator();
             
             if (!currentChatId) {
@@ -3085,9 +2963,7 @@
             
             try {
                 const aiResponse = await getAIResponse(message, attachedFiles);
-                
                 hideTypingIndicator();
-                
                 addMessage(aiResponse, 'assistant');
                 
                 conversationHistory.push({ 
@@ -3099,19 +2975,16 @@
                 
                 await saveMessage(message, 'user', attachedFiles);
                 await saveMessage(aiResponse, 'assistant');
-                
             } catch (error) {
                 console.error('Error getting AI response:', error);
                 hideTypingIndicator();
                 showToast('Error getting response from AI', 'error');
-                
                 addMessage("I apologize, but I encountered an error processing your request. Please try again.", 'assistant');
             }
         }
 
         function addMessage(content, sender, files = []) {
             const messagesWrapper = document.getElementById('messagesWrapper');
-            
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}`;
             
@@ -3123,7 +2996,6 @@
             if (files && files.length > 0) {
                 attachmentsHTML = '<div class="attachments-container">';
                 files.forEach((file, index) => {
-                    // Escape file for onclick (simple stringify)
                     const fileStr = JSON.stringify(file).replace(/"/g, '&quot;');
                     attachmentsHTML += `
                         <div class="attachment-item" onclick='openFilePreview(${fileStr})'>
@@ -3168,17 +3040,14 @@
         }
 
         function formatMessage(content) {
-            if (!content) return '';
-            return marked.parse(content);
+            return content ? marked.parse(content) : '';
         }
 
         function showTypingIndicator() {
             const messagesWrapper = document.getElementById('messagesWrapper');
-            
             const typingDiv = document.createElement('div');
             typingDiv.className = 'typing-indicator';
             typingDiv.id = 'typingIndicator';
-            
             typingDiv.innerHTML = `
                 <div class="message-avatar">AI</div>
                 <div class="typing-dots">
@@ -3187,16 +3056,13 @@
                     <div class="typing-dot"></div>
                 </div>
             `;
-            
             messagesWrapper.appendChild(typingDiv);
             scrollToBottom();
         }
 
         function hideTypingIndicator() {
             const typingIndicator = document.getElementById('typingIndicator');
-            if (typingIndicator) {
-                typingIndicator.remove();
-            }
+            if (typingIndicator) typingIndicator.remove();
         }
 
         function scrollToBottom() {
@@ -3204,16 +3070,14 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // ==================== AI RESPONSE FUNCTIONS (via Supabase Edge Function) ====================
+        // ==================== AI RESPONSE via Edge Function ====================
         async function getAIResponse(message, files = []) {
             try {
-                // Build conversation history (last 10 messages)
                 const messages = conversationHistory.slice(-10).map(msg => ({
                     role: msg.role === 'user' ? 'user' : 'assistant',
                     content: msg.content
                 }));
 
-                // Append current user message with file info
                 let fullMessage = message;
                 if (files.length > 0) {
                     fullMessage += '\n\nAttached files:';
@@ -3225,20 +3089,15 @@
                     });
                 }
 
-                messages.push({
-                    role: 'user',
-                    content: fullMessage
-                });
+                messages.push({ role: 'user', content: fullMessage });
 
-                // Determine Groq model name from current client model
                 const groqModel = MODEL_MAP[currentModel];
 
-                // Call Supabase Edge Function
                 const response = await fetch(SUPABASE_FUNCTION_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}` // or use supabase auth session if needed
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
                     },
                     body: JSON.stringify({
                         messages: messages,
@@ -3254,48 +3113,31 @@
                 }
 
                 const data = await response.json();
-                
                 if (!data.choices?.[0]?.message?.content) {
                     throw new Error('Invalid response from AI function');
                 }
-
                 return data.choices[0].message.content;
-
             } catch (error) {
                 console.error('AI Response Error:', error);
-                // Fallback response
                 return `I encountered an error while processing your request. Please try again later. (${error.message})`;
             }
         }
 
         // ==================== MODEL MANAGEMENT ====================
-        function openModelModal() {
-            document.getElementById('modelModal').classList.add('active');
-        }
-
-        function closeModelModal() {
-            document.getElementById('modelModal').classList.remove('active');
-        }
+        function openModelModal() { document.getElementById('modelModal').classList.add('active'); }
+        function closeModelModal() { document.getElementById('modelModal').classList.remove('active'); }
 
         function selectModel(model) {
             currentModel = model;
-            
-            const modelCards = document.querySelectorAll('.model-card');
-            modelCards.forEach(card => {
-                if (card.dataset.model === model) {
-                    card.classList.add('active');
-                } else {
-                    card.classList.remove('active');
-                }
+            document.querySelectorAll('.model-card').forEach(card => {
+                card.classList.toggle('active', card.dataset.model === model);
             });
-            
             const modelNames = {
                 'cyanix-pro': 'Axion',
                 'cyanix-flash': 'Cyanix',
                 'cyanix-vision': 'Synix',
                 'cyanix-advanced': 'Nebula'
             };
-            
             document.getElementById('currentModel').textContent = modelNames[model];
         }
 
@@ -3304,36 +3146,27 @@
                 try {
                     const { error } = await supabase
                         .from('users')
-                        .update({
-                            settings: { aiModel: currentModel },
-                            updated_at: new Date().toISOString()
-                        })
+                        .update({ settings: { aiModel: currentModel }, updated_at: new Date().toISOString() })
                         .eq('id', currentUser.id);
-                    
                     if (error) throw error;
-                    
                     showToast('AI model updated successfully!', 'success');
                 } catch (error) {
                     console.error('Error saving model:', error);
                     showToast('Error saving model selection', 'error');
                 }
             }
-            
             closeModelModal();
         }
 
         async function loadUserSettings() {
             if (!currentUser) return;
-            
             try {
                 const { data, error } = await supabase
                     .from('users')
                     .select('settings')
                     .eq('id', currentUser.id)
                     .single();
-                
-                if (error) throw error;
-                
+                if (error && error.code !== 'PGRST116') throw error;
                 if (data?.settings?.aiModel) {
                     currentModel = data.settings.aiModel;
                     selectModel(currentModel);
@@ -3343,14 +3176,8 @@
             }
         }
 
-        // ==================== FILE MODAL FUNCTIONS ====================
-        function openFileModal() {
-            document.getElementById('fileModal').classList.add('active');
-        }
-
-        function closeFileModal() {
-            document.getElementById('fileModal').classList.remove('active');
-        }
+        function openFileModal() { document.getElementById('fileModal').classList.add('active'); }
+        function closeFileModal() { document.getElementById('fileModal').classList.remove('active'); }
 
         // ==================== SUPABASE DATABASE FUNCTIONS ====================
         async function createChat(firstMessage) {
@@ -3367,11 +3194,8 @@
                     })
                     .select('id')
                     .single();
-                
                 if (error) throw error;
-                
                 return data.id;
-                
             } catch (error) {
                 console.error('Error creating chat:', error);
                 throw error;
@@ -3380,7 +3204,6 @@
 
         async function saveMessage(content, sender, files = []) {
             if (!currentChatId) return;
-            
             try {
                 const messageData = {
                     chat_id: currentChatId,
@@ -3389,7 +3212,6 @@
                     sender: sender,
                     timestamp: new Date().toISOString()
                 };
-                
                 if (files && files.length > 0) {
                     messageData.files = files.map(f => ({
                         name: f.name,
@@ -3399,11 +3221,7 @@
                         storagePath: f.storagePath
                     }));
                 }
-                
-                const { error } = await supabase
-                    .from('messages')
-                    .insert(messageData);
-                
+                const { error } = await supabase.from('messages').insert(messageData);
                 if (error) throw error;
                 
                 await supabase
@@ -3413,7 +3231,6 @@
                         last_message: content.substring(0, 100) + (content.length > 100 ? '...' : '')
                     })
                     .eq('id', currentChatId);
-                
             } catch (error) {
                 console.error('Error saving message:', error);
             }
@@ -3423,40 +3240,22 @@
         function getAvatarInitials(name) {
             if (!name) return 'U';
             const parts = name.split(' ');
-            if (parts.length > 1) {
-                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-            }
+            if (parts.length > 1) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
             return name.substring(0, 2).toUpperCase();
         }
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
-            
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-            
-            const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-exclamation-circle',
-                warning: 'fa-exclamation-triangle',
-                info: 'fa-info-circle'
-            };
-            
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
             toast.innerHTML = `
                 <i class="fas ${icons[type] || icons.info} toast-icon"></i>
-                <div class="toast-content">
-                    <div class="toast-message">${message}</div>
-                </div>
+                <div class="toast-content"><div class="toast-message">${message}</div></div>
                 <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
             `;
-            
             container.appendChild(toast);
-            
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.remove();
-                }
-            }, 5000);
+            setTimeout(() => toast.remove(), 5000);
         }
 
         function autoResize(textarea) {
@@ -3469,14 +3268,9 @@
             const count = document.getElementById('charCount');
             const length = input.value.length;
             count.textContent = `${length}/2000`;
-            
-            if (length > 1800) {
-                count.style.color = 'var(--error)';
-            } else if (length > 1500) {
-                count.style.color = 'var(--warning)';
-            } else {
-                count.style.color = 'var(--text-secondary)';
-            }
+            if (length > 1800) count.style.color = 'var(--error)';
+            else if (length > 1500) count.style.color = 'var(--warning)';
+            else count.style.color = 'var(--text-secondary)';
         }
 
         function handleKeyDown(event) {
@@ -3487,13 +3281,10 @@
         }
 
         function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('active');
+            document.getElementById('sidebar').classList.toggle('active');
         }
 
-        function toggleUserMenu() {
-            showToast('User menu coming soon!', 'info');
-        }
+        function toggleUserMenu() { showToast('User menu coming soon!', 'info'); }
 
         function clearChat() {
             if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
@@ -3502,13 +3293,10 @@
                 selectedFiles = [];
                 const messagesWrapper = document.getElementById('messagesWrapper');
                 messagesWrapper.innerHTML = '';
-                
                 const welcomeScreen = document.getElementById('welcomeScreen').cloneNode(true);
                 welcomeScreen.style.display = 'block';
                 messagesWrapper.appendChild(welcomeScreen);
-                
                 document.getElementById('selectedFilesPreview').style.display = 'none';
-                
                 showToast('Chat cleared', 'info');
             }
         }
