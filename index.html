@@ -2694,7 +2694,7 @@
     async function loadChatHistory() {
         if (!currentUser) return;
         const historyEl = document.getElementById('chatHistory');
-        historyEl.innerHTML = '<div style="padding:12px 8px; text-align:center; color:var(--text-secondary); font-size:11px; font-family:'JetBrains Mono',monospace;">Loading...</div>';
+        historyEl.innerHTML = '<div style="padding:12px 8px; text-align:center; color:var(--text-secondary); font-size:11px; font-family:monospace;">Loading...</div>';
         try {
             const { data: chats, error } = await supabaseClient
                 .from('chats')
@@ -2746,7 +2746,7 @@
 
         // Clear messages, show loading
         const wrapper = document.getElementById('messagesWrapper');
-        wrapper.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace; font-size:12px;">Loading messages...</div>';
+        wrapper.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary); font-family:monospace; font-size:12px;">Loading messages...</div>';
 
         try {
             const { data: msgs, error } = await supabaseClient
