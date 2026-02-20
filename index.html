@@ -7,14 +7,14 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 
     <!-- ── SEO & Social Preview (Discord, Twitter, Slack, iMessage) ── -->
-    <meta name="description" content="High-Intelligence AI with Llama Ai Models. Powered by NixAi." />
+    <meta name="description" content="High-Intelligence AI with High-Tech Design. Powered by NixAi." />
     <meta name="theme-color" content="#00f0ff">
     <meta name="color-scheme" content="dark">
 
     <!-- Open Graph (Facebook, Discord, Slack, iMessage, etc.) -->
     <meta property="og:title" content="Cyanix AI" />
     <meta property="og:description" content="High-Intelligence AI with High-Tech Design." />
-    <meta property="og:image" content="https://suprosmith-coder.github.io/NixAi_Nova/cyanix-preview.png" />
+    <meta property="og:image" content="https://suprosmith-coder.github.io/NixAi_Nova/images/cyanix-preview.png" />
     <meta property="og:image:width" content="1536" />
     <meta property="og:image:height" content="1024" />
     <meta property="og:url" content="https://suprosmith-coder.github.io/NixAi_Nova/" />
@@ -24,8 +24,8 @@
     <!-- Twitter / X Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Cyanix AI" />
-    <meta name="twitter:description" content="High-Intelligence AI." />
-    <meta name="twitter:image" content="https://suprosmith-coder.github.io/NixAi_Nova/cyanix-preview.png" />
+    <meta name="twitter:description" content="High-Intelligence AI with High-Tech Design." />
+    <meta name="twitter:image" content="https://suprosmith-coder.github.io/NixAi_Nova/images/cyanix-preview.png" />
 
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -758,6 +758,137 @@
             object-fit: cover; border-radius: 50%;
         }
         .user-info { flex: 1; min-width: 0; }
+
+        /* ── User Dropdown Menu ── */
+        .user-menu {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 0; right: 0;
+            background: rgba(10,15,28,0.98);
+            border: 1px solid rgba(0,243,255,0.15);
+            border-radius: 14px;
+            overflow: hidden;
+            z-index: 500;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 -8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,243,255,0.05);
+        }
+        .user-menu.open { display: block; animation: menuSlideUp 0.2s ease-out both; }
+        @keyframes menuSlideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .user-menu-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 13px 18px;
+            color: var(--text-secondary);
+            font-size: 13px; font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .user-menu-item:last-child { border-bottom: none; }
+        .user-menu-item:hover { background: rgba(0,243,255,0.06); color: var(--text); }
+        .user-menu-item.danger:hover { background: rgba(255,71,87,0.08); color: var(--error); }
+        .user-menu-item i { width: 16px; text-align: center; font-size: 13px; opacity: 0.7; }
+        .user-menu-item:hover i { opacity: 1; }
+        .user-menu-item.danger i { color: var(--error); }
+        .user-menu-divider { height: 1px; background: rgba(0,243,255,0.08); margin: 4px 0; }
+
+        /* ── Settings Modal ── */
+        .settings-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 10000; backdrop-filter: blur(10px);
+            align-items: center; justify-content: center;
+        }
+        .settings-modal.active { display: flex; }
+        .settings-panel {
+            background: rgba(10,15,28,0.98);
+            border: 1px solid rgba(0,243,255,0.12);
+            border-radius: 20px;
+            width: 560px; max-width: 95vw;
+            max-height: 90vh; overflow-y: auto;
+            padding: 36px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,243,255,0.06);
+            animation: slideInRight 0.3s ease-out both;
+        }
+        .settings-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 32px;
+        }
+        .settings-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px; font-weight: 800;
+            color: var(--text); letter-spacing: 1px;
+        }
+        .settings-title span { color: var(--primary); }
+        .settings-close {
+            background: none; border: none;
+            color: var(--text-secondary); font-size: 20px;
+            cursor: pointer; transition: color 0.2s;
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .settings-close:hover { color: var(--primary); background: rgba(0,243,255,0.08); }
+        .settings-section {
+            margin-bottom: 30px;
+        }
+        .settings-section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; font-weight: 700;
+            color: var(--primary); letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .settings-section-label::after {
+            content: ''; flex: 1;
+            height: 1px; background: rgba(0,243,255,0.1);
+        }
+        .settings-chips {
+            display: flex; flex-wrap: wrap; gap: 10px;
+        }
+        .settings-chip {
+            padding: 10px 18px;
+            border: 1px solid rgba(0,243,255,0.12);
+            border-radius: 40px;
+            background: rgba(0,243,255,0.03);
+            color: var(--text-secondary);
+            font-size: 13px; font-family: 'Inter', sans-serif;
+            cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .settings-chip:hover {
+            border-color: rgba(0,243,255,0.35);
+            color: var(--text);
+            background: rgba(0,243,255,0.07);
+        }
+        .settings-chip.active {
+            border-color: var(--primary);
+            background: rgba(0,243,255,0.12);
+            color: var(--primary);
+            box-shadow: 0 0 12px rgba(0,243,255,0.15);
+        }
+        .settings-chip i { font-size: 12px; }
+        .settings-save-btn {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none; border-radius: 12px;
+            color: var(--background); font-family: 'Orbitron', sans-serif;
+            font-size: 13px; font-weight: 700; letter-spacing: 2px;
+            cursor: pointer; margin-top: 10px;
+            transition: all 0.3s;
+        }
+        .settings-save-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: var(--primary-glow); }
+        .settings-current-badge {
+            font-size: 10px; color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 24px; padding: 10px 14px;
+            background: rgba(0,243,255,0.04);
+            border: 1px solid rgba(0,243,255,0.08);
+            border-radius: 8px; line-height: 1.8;
+        }
         .user-name {
             font-size: 13px; font-weight: 600; color: var(--text);
             margin-bottom: 2px;
@@ -1017,6 +1148,76 @@
             font-size: 14px; transition: all 0.3s;
         }
         .input-button:hover { background: rgba(0,243,255,0.18); transform: scale(1.1); }
+        /* RAG web search toggle */
+        .rag-toggle {
+            display: flex; align-items: center; gap: 7px;
+            padding: 6px 12px;
+            border: 1px solid rgba(0,243,255,0.15);
+            border-radius: 20px;
+            background: rgba(0,243,255,0.04);
+            color: var(--text-secondary);
+            font-size: 11px; font-family: 'JetBrains Mono', monospace;
+            cursor: pointer; transition: all 0.25s;
+            white-space: nowrap;
+        }
+        .rag-toggle:hover { border-color: rgba(0,243,255,0.35); color: var(--text); }
+        .rag-toggle.active {
+            border-color: var(--primary);
+            background: rgba(0,243,255,0.12);
+            color: var(--primary);
+            box-shadow: 0 0 10px rgba(0,243,255,0.12);
+        }
+        .rag-toggle i { font-size: 11px; }
+        .rag-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(0,243,255,0.3);
+            flex-shrink: 0; transition: background 0.25s;
+        }
+        .rag-toggle.active .rag-dot { background: var(--primary); animation: ragPulse 1.5s ease-in-out infinite; }
+        @keyframes ragPulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+        /* RAG search-in-progress indicator */
+        .rag-indicator {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px; margin: 0 0 6px 0;
+            background: rgba(0,243,255,0.06);
+            border: 1px solid rgba(0,243,255,0.15);
+            border-radius: 10px;
+            font-size: 12px; font-family: 'JetBrains Mono', monospace;
+            color: var(--primary); animation: fadeIn 0.3s ease;
+        }
+        .rag-indicator i { animation: spin 1.2s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+        /* RAG sources panel — shown below AI response */
+        .rag-sources {
+            margin-top: 12px; padding: 12px 14px;
+            background: rgba(0,243,255,0.04);
+            border: 1px solid rgba(0,243,255,0.1);
+            border-radius: 10px;
+            font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        }
+        .rag-sources-label {
+            color: var(--primary); font-weight: 700;
+            letter-spacing: 1px; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .rag-source-item {
+            display: flex; align-items: flex-start; gap: 8px;
+            color: var(--text-secondary); margin-bottom: 5px;
+            line-height: 1.4;
+        }
+        .rag-source-item a {
+            color: var(--primary); text-decoration: none;
+            opacity: 0.8; transition: opacity 0.2s;
+            word-break: break-all;
+        }
+        .rag-source-item a:hover { opacity: 1; text-decoration: underline; }
+        .rag-source-num {
+            color: rgba(0,243,255,0.4); flex-shrink: 0; margin-top: 1px;
+        }
+
         .input-button.send {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: var(--background); box-shadow: var(--primary-glow);
@@ -1272,25 +1473,25 @@
                     Choose the AI model that best suits your needs.
                 </p>
                 <div class="model-grid" id="modelGrid">
-                    <div class="model-card active" data-model="cyanix-pro" onclick="selectModel('cyanix-pro')">
-                        <div class="model-icon"><i class="fas fa-brain"></i></div>
-                        <div class="model-name">Axion</div>
-                        <div class="model-desc">Most capable for complex reasoning</div>
+                    <div class="model-card active" data-model="cyanix-maverick" onclick="selectModel('cyanix-maverick')">
+                        <div class="model-icon"><i class="fas fa-rocket"></i></div>
+                        <div class="model-name">Maverick</div>
+                        <div class="model-desc">Llama 4 · 128k ctx · Vision · Best reasoning</div>
+                    </div>
+                    <div class="model-card" data-model="cyanix-scout" onclick="selectModel('cyanix-scout')">
+                        <div class="model-icon"><i class="fas fa-satellite-dish"></i></div>
+                        <div class="model-name">Scout</div>
+                        <div class="model-desc">Llama 4 · 128k ctx · Vision · Fast &amp; efficient</div>
                     </div>
                     <div class="model-card" data-model="cyanix-flash" onclick="selectModel('cyanix-flash')">
                         <div class="model-icon"><i class="fas fa-bolt"></i></div>
-                        <div class="model-name">Cyanix</div>
-                        <div class="model-desc">Fast responses for everyday tasks</div>
+                        <div class="model-name">Flash</div>
+                        <div class="model-desc">Llama 3.1 8B · Fastest · Everyday tasks</div>
                     </div>
-                    <div class="model-card" data-model="cyanix-vision" onclick="selectModel('cyanix-vision')">
-                        <div class="model-icon"><i class="fas fa-eye"></i></div>
-                        <div class="model-name">Synix</div>
-                        <div class="model-desc">Image analysis and description</div>
-                    </div>
-                    <div class="model-card" data-model="cyanix-advanced" onclick="selectModel('cyanix-advanced')">
-                        <div class="model-icon"><i class="fas fa-robot"></i></div>
-                        <div class="model-name">Nebula</div>
-                        <div class="model-desc">Expert model for specialized tasks</div>
+                    <div class="model-card" data-model="cyanix-pro" onclick="selectModel('cyanix-pro')">
+                        <div class="model-icon"><i class="fas fa-brain"></i></div>
+                        <div class="model-name">Pro</div>
+                        <div class="model-desc">Llama 3.3 70B · Reliable · Complex tasks</div>
                     </div>
                 </div>
                 <div style="background:rgba(0,243,255,0.04); padding:14px; border-radius:10px; border:1px solid rgba(0,243,255,0.1);">
@@ -1298,8 +1499,8 @@
                         <i class="fas fa-info-circle" style="color:var(--primary);"></i>
                         <span style="color:var(--text); font-weight:600; font-size:13px;">Model Information</span>
                     </div>
-                    <div style="color:var(--text-secondary); font-size:12px; line-height:1.5; font-family:'JetBrains Mono',monospace;">
-                        All models are powered by Llama.
+                    <div id="modelInfoText" style="color:var(--text-secondary); font-size:12px; line-height:1.8; font-family:'JetBrains Mono',monospace;">
+                        Maverick — Meta Llama 4 · 17B · 128k context · Up to 5 images per request · Multilingual
                     </div>
                 </div>
             </div>
@@ -1611,13 +1812,35 @@
                 </div>
             </div>
 
-            <div class="sidebar-footer">
+            <div class="sidebar-footer" style="position:relative;">
+                <!-- Dropdown menu — appears above the user card -->
+                <div class="user-menu" id="userMenu">
+                    <div class="user-menu-item" onclick="openProfileModal()">
+                        <i class="fas fa-user"></i> My Profile
+                    </div>
+                    <div class="user-menu-item" onclick="openSettingsModal()">
+                        <i class="fas fa-paint-brush"></i> Customize Cyanix
+                    </div>
+                    <div class="user-menu-divider"></div>
+                    <div class="user-menu-item" onclick="openLink('https://suprosmith-coder.github.io/NixAi_Nova/terms')">
+                        <i class="fas fa-file-alt"></i> Terms of Service
+                    </div>
+                    <div class="user-menu-item" onclick="openLink('https://suprosmith-coder.github.io/NixAi_Nova/privacy')">
+                        <i class="fas fa-lock"></i> Privacy Policy
+                    </div>
+                    <div class="user-menu-divider"></div>
+                    <div class="user-menu-item danger" onclick="signOut()">
+                        <i class="fas fa-sign-out-alt"></i> Sign Out
+                    </div>
+                </div>
+
                 <div class="user-profile" onclick="toggleUserMenu()" id="userProfile">
                     <div class="user-avatar" id="userAvatar">U</div>
                     <div class="user-info">
                         <div class="user-name" id="userName">User</div>
                         <div class="user-email" id="userEmail">user@example.com</div>
                     </div>
+                    <i class="fas fa-chevron-up" id="userMenuChevron" style="color:var(--text-secondary); font-size:10px; transition:transform 0.3s; margin-left:auto;"></i>
                 </div>
             </div>
         </div>
@@ -1628,7 +1851,7 @@
                     <div class="chat-title" id="chatTitle">New Chat</div>
                     <div class="model-badge" onclick="openModelModal()">
                         <i class="fas fa-brain"></i>
-                        <span id="currentModel">Axion</span>
+                        <span id="currentModel">Maverick</span>
                     </div>
                 </div>
                 <div class="chat-actions">
@@ -1647,6 +1870,12 @@
             <div class="input-container">
                 <div class="input-wrapper">
                     <div id="selectedFilesPreview" class="selected-files-preview" style="display:none;"></div>
+                    <!-- RAG search indicator (shown while searching) -->
+                    <div id="ragSearchIndicator" class="rag-indicator" style="display:none;">
+                        <i class="fas fa-circle-notch"></i>
+                        <span id="ragIndicatorText">Searching the web for live data...</span>
+                    </div>
+
                     <div style="position:relative;">
                         <textarea
                             id="chatInput"
@@ -1665,6 +1894,15 @@
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
+                    </div>
+                    <!-- RAG Web Search toggle — sits below the textarea -->
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 4px 2px;">
+                        <button class="rag-toggle" id="ragToggle" onclick="toggleRag()" title="Toggle live web search">
+                            <span class="rag-dot"></span>
+                            <i class="fas fa-globe"></i>
+                            <span id="ragToggleLabel">Web Search</span>
+                        </button>
+                        <span style="font-size:10px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace;" id="ragStatusText"></span>
                     </div>
                 </div>
             </div>
@@ -1717,6 +1955,112 @@
         </div>
     </template>
 
+    <!-- ================================================================
+         SETTINGS MODAL
+    ================================================================ -->
+    <div id="settingsModal" class="settings-modal">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <div class="settings-title">CYANIX <span>SETTINGS</span></div>
+                <button class="settings-close" onclick="closeSettingsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Current config badge -->
+            <div class="settings-current-badge" id="settingsCurrentBadge">
+                Loading your preferences...
+            </div>
+
+            <!-- TONE -->
+            <div class="settings-section">
+                <div class="settings-section-label"><i class="fas fa-comment-dots"></i> Tone</div>
+                <div class="settings-chips" id="toneChips">
+                    <div class="settings-chip active" data-value="professional" onclick="selectChip('tone', this)">
+                        <i class="fas fa-briefcase"></i> Professional
+                    </div>
+                    <div class="settings-chip" data-value="friendly" onclick="selectChip('tone', this)">
+                        <i class="fas fa-smile"></i> Friendly
+                    </div>
+                    <div class="settings-chip" data-value="casual" onclick="selectChip('tone', this)">
+                        <i class="fas fa-coffee"></i> Casual
+                    </div>
+                    <div class="settings-chip" data-value="strict_teacher" onclick="selectChip('tone', this)">
+                        <i class="fas fa-chalkboard-teacher"></i> Strict Teacher
+                    </div>
+                    <div class="settings-chip" data-value="motivational" onclick="selectChip('tone', this)">
+                        <i class="fas fa-fire"></i> Motivational
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESPONSE LENGTH -->
+            <div class="settings-section">
+                <div class="settings-section-label"><i class="fas fa-align-left"></i> Response Length</div>
+                <div class="settings-chips" id="lengthChips">
+                    <div class="settings-chip" data-value="short" onclick="selectChip('length', this)">
+                        <i class="fas fa-compress-alt"></i> Short
+                    </div>
+                    <div class="settings-chip active" data-value="balanced" onclick="selectChip('length', this)">
+                        <i class="fas fa-balance-scale"></i> Balanced
+                    </div>
+                    <div class="settings-chip" data-value="detailed" onclick="selectChip('length', this)">
+                        <i class="fas fa-expand-alt"></i> Detailed
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE -->
+            <div class="settings-section">
+                <div class="settings-section-label"><i class="fas fa-sliders-h"></i> Mode</div>
+                <div class="settings-chips" id="modeChips">
+                    <div class="settings-chip" data-value="study" onclick="selectChip('mode', this)">
+                        <i class="fas fa-graduation-cap"></i> Study
+                    </div>
+                    <div class="settings-chip active" data-value="general" onclick="selectChip('mode', this)">
+                        <i class="fas fa-robot"></i> General
+                    </div>
+                    <div class="settings-chip" data-value="coding" onclick="selectChip('mode', this)">
+                        <i class="fas fa-code"></i> Coding
+                    </div>
+                    <div class="settings-chip" data-value="creative" onclick="selectChip('mode', this)">
+                        <i class="fas fa-paint-brush"></i> Creative
+                    </div>
+                    <div class="settings-chip" data-value="reasoning" onclick="selectChip('mode', this)">
+                        <i class="fas fa-brain"></i> Reasoning
+                    </div>
+                </div>
+            </div>
+
+            <button class="settings-save-btn" onclick="saveSettings()">
+                <i class="fas fa-save" style="margin-right:8px;"></i> SAVE PREFERENCES
+            </button>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         PROFILE MODAL
+    ================================================================ -->
+    <div id="profileModal" class="settings-modal">
+        <div class="settings-panel" style="max-width:420px;">
+            <div class="settings-header">
+                <div class="settings-title">MY <span>PROFILE</span></div>
+                <button class="settings-close" onclick="closeProfileModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="text-align:center; padding:10px 0 28px;">
+                <div id="profileAvatarLarge" style="width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--secondary)); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:800; color:var(--background); margin:0 auto 16px; overflow:hidden; box-shadow:var(--primary-glow);"></div>
+                <div id="profileName" style="font-size:20px; font-weight:700; color:var(--text); font-family:'Orbitron',sans-serif; margin-bottom:6px;"></div>
+                <div id="profileEmail" style="font-size:13px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace;"></div>
+            </div>
+            <div style="background:rgba(0,243,255,0.04); border:1px solid rgba(0,243,255,0.08); border-radius:12px; padding:16px 20px; font-size:12px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace; line-height:2;">
+                <div>Model: <span id="profileModel" style="color:var(--primary);"></span></div>
+                <div>Member since: <span id="profileJoined" style="color:var(--text);"></span></div>
+            </div>
+        </div>
+    </div>
+
     <script>
     /* ================================================================
        SUPABASE CONFIGURATION
@@ -1729,6 +2073,7 @@
     const SUPABASE_URL          = 'https://tdbgpvscwaysndrloltl.supabase.co';
     const SUPABASE_ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
     const SUPABASE_FUNCTION_URL = 'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/chat';
+    const RAG_FUNCTION_URL      = 'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/rag-search';
 
     // ── Supabase client ──
     // Declared here so all functions can reference it.
@@ -1739,10 +2084,10 @@
        MODEL MAPPING
     ================================================================ */
     const MODEL_MAP = {
-        'cyanix-pro':      'llama-3.3-70b-versatile',
+        'cyanix-maverick': 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'cyanix-scout':    'meta-llama/llama-4-scout-17b-16e-instruct',
         'cyanix-flash':    'llama-3.1-8b-instant',
-        'cyanix-vision':   'llama-3.2-11b-vision-preview',
-        'cyanix-advanced': 'llama-3.1-70b-versatile'
+        'cyanix-pro':      'llama-3.3-70b-versatile'
     };
 
     /* ================================================================
@@ -1750,10 +2095,11 @@
     ================================================================ */
     let currentUser        = null;
     let currentChatId      = null;
-    let currentModel       = 'cyanix-pro';
+    let currentModel       = 'cyanix-maverick';
     let conversationHistory = [];
     let attachedFiles      = [];
     let selectedFiles      = [];
+    let ragEnabled         = false;   // live web search toggle
 
     /* ================================================================
        INITIALIZATION
@@ -2112,7 +2458,7 @@
                         id: data.user.id, name, email,
                         avatar: getAvatarInitials(name),
                         created_at: new Date().toISOString(),
-                        settings: { aiModel: 'cyanix-pro' }
+                        settings: { aiModel: 'cyanix-maverick' }
                     });
                 } catch (dbErr) {
                     console.warn('Could not create user record:', dbErr.message);
@@ -2434,11 +2780,27 @@
             } catch (e) { console.warn('Could not create chat record:', e.message); }
         }
 
+        // ── RAG: fetch live web context before streaming ─────────────
+        let webContext = null;
+        if (ragEnabled && message) {
+            showRagIndicator('Searching the web for live data...');
+            try {
+                webContext = await fetchWebContext(message);
+            } catch (e) {
+                console.warn('[RAG] Search failed, continuing without context:', e.message);
+            }
+            hideRagIndicator();
+        }
+
         try {
             // Create the AI message bubble immediately, stream tokens into it
             hideTypingIndicator();
             const assistantDiv = createStreamingMessageBubble();
-            const aiResponse   = await streamAIResponse(message, filesToSend, assistantDiv);
+            const aiResponse   = await streamAIResponse(message, filesToSend, assistantDiv, webContext);
+            // Render sources panel below the response if RAG returned results
+            if (webContext?.sources?.length) {
+                renderSources(assistantDiv, webContext.sources);
+            }
             conversationHistory.push({ role: 'user', content: message, files: filesToSend.map(f => ({ name: f.name, type: f.type, url: f.url })) });
             conversationHistory.push({ role: 'assistant', content: aiResponse });
             await saveMessage(message, 'user', filesToSend);
@@ -2565,7 +2927,7 @@
     }
 
     /** Streams tokens from the edge function into the message bubble */
-    async function streamAIResponse(message, files = [], bubbleDiv) {
+    async function streamAIResponse(message, files = [], bubbleDiv, webContext = null) {
         const contentEl = bubbleDiv.querySelector('#streamingContent');
         let fullContent = '';
 
@@ -2576,12 +2938,52 @@
                 content: m.content
             }));
 
+            // ── Inject dynamic system prompt based on user settings ──
+            const toneMap = {
+                professional:  'Respond in a professional, formal, and precise tone.',
+                friendly:      'Respond in a warm, friendly, and approachable tone as if talking to a friend.',
+                casual:        'Respond casually and conversationally — relaxed, informal, natural.',
+                strict_teacher:'Respond as a strict but fair teacher. Correct mistakes directly, explain reasoning.',
+                motivational:  'Respond with energy and encouragement. Be motivating and uplifting.'
+            };
+            const lengthMap = {
+                short:    'Keep responses brief and to the point — 1 to 3 sentences unless more is truly needed.',
+                balanced: 'Use a balanced response length — thorough but not excessive.',
+                detailed: 'Give detailed, comprehensive responses. Explain fully, include examples and context.'
+            };
+            const modeMap = {
+                study:     'The user is in study mode. Use pedagogical techniques, explain concepts clearly, use analogies.',
+                general:   '',
+                coding:    'The user is in coding mode. Prioritize code examples, explain technical details, use markdown code blocks.',
+                creative:  'The user is in creative mode. Be imaginative, expressive, and think outside the box.',
+                reasoning: 'The user is in reasoning mode. Think step-by-step, show your logic, explore multiple angles.'
+            };
+            const s = cyanixSettings;
+            const dynamicSystem = [
+                'You are Cyanix AI, an advanced intelligent assistant created by NixAi.',
+                toneMap[s.tone]  || toneMap.professional,
+                lengthMap[s.length] || lengthMap.balanced,
+                modeMap[s.mode]  || '',
+                'Format code in markdown code blocks with the language specified.',
+                'Never reveal your underlying model name or that you are powered by Llama or Groq.'
+            ].filter(Boolean).join(' ');
+
+            // ── Inject live web context if RAG returned results ──────────
+            let finalSystem = dynamicSystem;
+            if (webContext && webContext.context) {
+                finalSystem += `\n\n[LIVE WEB DATA — retrieved ${new Date().toUTCString()}]\n` +
+                    `Use the following real-time information to answer the user's question accurately. ` +
+                    `Always cite sources when using this data.\n\n` +
+                    webContext.context;
+            }
+            messages.unshift({ role: 'system', content: finalSystem });
+
             let userContent = message;
             if (files.length) {
                 userContent += '\n\nAttached files:';
                 files.forEach(f => {
                     userContent += `\n- ${f.name} (${f.type}, ${formatFileSize(f.size)})`;
-                    if (f.type.startsWith('image/') && currentModel === 'cyanix-vision')
+                    if (f.type.startsWith('image/') && ['cyanix-maverick','cyanix-scout'].includes(currentModel))
                         userContent += ` [Image URL: ${f.url}]`;
                 });
             }
@@ -2658,16 +3060,38 @@
 
     function selectModel(model) {
         currentModel = model;
-        document.querySelectorAll('.model-card').forEach(c => c.classList.toggle('active', c.dataset.model === model));
-        const names = { 'cyanix-pro':'Axion', 'cyanix-flash':'Cyanix', 'cyanix-vision':'Synix', 'cyanix-advanced':'Nebula' };
-        document.getElementById('currentModel').textContent = names[model];
+        // Update active card highlight
+        document.querySelectorAll('.model-card').forEach(c => {
+            c.classList.toggle('active', c.dataset.model === model);
+        });
+        // Update header badge label
+        const names = {
+            'cyanix-maverick': 'Maverick',
+            'cyanix-scout':    'Scout',
+            'cyanix-flash':    'Flash',
+            'cyanix-pro':      'Pro'
+        };
+        const el = document.getElementById('currentModel');
+        if (el) el.textContent = names[model] || model;
+        // Update info panel inside model modal
+        const infoDescriptions = {
+            'cyanix-maverick': 'Maverick — Meta Llama 4 · 17B · 128k context · Up to 5 images per request · Best reasoning &amp; multilingual',
+            'cyanix-scout':    'Scout — Meta Llama 4 · 17B · 128k context · Up to 5 images per request · Fast, efficient &amp; multilingual',
+            'cyanix-flash':    'Flash — Meta Llama 3.1 · 8B · Ultra-fast · Perfect for rapid-fire responses &amp; real-time agents',
+            'cyanix-pro':      'Pro — Meta Llama 3.3 · 70B · Versatile · Deep reasoning, complex analysis &amp; long-form writing'
+        };
+        const infoEl = document.getElementById('modelInfoText');
+        if (infoEl) infoEl.innerHTML = infoDescriptions[model] || '';
     }
 
     async function saveModelSelection() {
         if (currentUser) {
             try {
+                // Preserve existing settings, just update aiModel
+                const { data } = await supabaseClient.from('users').select('settings').eq('id', currentUser.id).single();
+                const merged = { ...(data?.settings || {}), ...cyanixSettings, aiModel: currentModel };
                 const { error } = await supabaseClient.from('users')
-                    .update({ settings: { aiModel: currentModel }, updated_at: new Date().toISOString() })
+                    .update({ settings: merged, updated_at: new Date().toISOString() })
                     .eq('id', currentUser.id);
                 if (error) throw error;
                 showToast('AI model updated!', 'success');
@@ -2681,7 +3105,13 @@
         try {
             const { data, error } = await supabaseClient.from('users').select('settings').eq('id', currentUser.id).single();
             if (error && error.code !== 'PGRST116') throw error;
-            if (data?.settings?.aiModel) { currentModel = data.settings.aiModel; selectModel(currentModel); }
+            if (data?.settings) {
+                const s = data.settings;
+                if (s.aiModel)  { currentModel = s.aiModel; selectModel(currentModel); }
+                if (s.tone)     cyanixSettings.tone   = s.tone;
+                if (s.length)   cyanixSettings.length = s.length;
+                if (s.mode)     cyanixSettings.mode   = s.mode;
+            }
         } catch (error) { console.error('Error loading user settings:', error); }
     }
 
@@ -2875,7 +3305,214 @@
     }
 
     function toggleSidebar()  { document.getElementById('sidebar').classList.toggle('active'); }
-    function toggleUserMenu() { showToast('User menu coming soon!', 'info'); }
+    /* ── User Dropdown ── */
+    function toggleUserMenu() {
+        const menu    = document.getElementById('userMenu');
+        const chevron = document.getElementById('userMenuChevron');
+        const isOpen  = menu.classList.contains('open');
+        menu.classList.toggle('open', !isOpen);
+        if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        // Close when clicking outside
+        if (!isOpen) {
+            setTimeout(() => {
+                document.addEventListener('click', closeMenuOnOutsideClick, { once: true });
+            }, 0);
+        }
+    }
+    function closeMenuOnOutsideClick(e) {
+        const menu    = document.getElementById('userMenu');
+        const profile = document.getElementById('userProfile');
+        if (!menu.contains(e.target) && !profile.contains(e.target)) {
+            menu.classList.remove('open');
+            const chevron = document.getElementById('userMenuChevron');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    function openLink(url) { window.open(url, '_blank'); }
+
+    async function signOut() {
+        closeUserMenu();
+        try {
+            await supabaseClient.auth.signOut();
+            currentUser = null; currentChatId = null;
+            conversationHistory = []; attachedFiles = []; selectedFiles = [];
+            document.getElementById('chatHistory').innerHTML = '<div class="chat-history-empty">Sign in to see<br>your chat history</div>';
+            showAuth();
+            showToast('Signed out successfully.', 'info');
+        } catch (e) { showToast('Error signing out.', 'error'); }
+    }
+    function closeUserMenu() {
+        document.getElementById('userMenu').classList.remove('open');
+        const chevron = document.getElementById('userMenuChevron');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+
+    /* ── Settings Modal ── */
+    // Runtime settings state (applied to system prompt on each message)
+    let cyanixSettings = { tone: 'professional', length: 'balanced', mode: 'general' };
+
+    function openSettingsModal() {
+        closeUserMenu();
+        // Sync chips to current state
+        syncChips('tone',   'toneChips',   cyanixSettings.tone);
+        syncChips('length', 'lengthChips', cyanixSettings.length);
+        syncChips('mode',   'modeChips',   cyanixSettings.mode);
+        updateSettingsBadge();
+        document.getElementById('settingsModal').classList.add('active');
+    }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
+
+    function syncChips(group, containerId, value) {
+        document.querySelectorAll(`#${containerId} .settings-chip`).forEach(chip => {
+            chip.classList.toggle('active', chip.dataset.value === value);
+        });
+    }
+
+    function selectChip(group, el) {
+        const container = el.parentElement;
+        container.querySelectorAll('.settings-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        cyanixSettings[group] = el.dataset.value;
+        updateSettingsBadge();
+    }
+
+    function updateSettingsBadge() {
+        const labels = {
+            tone:   { professional:'Professional', friendly:'Friendly', casual:'Casual', strict_teacher:'Strict Teacher', motivational:'Motivational' },
+            length: { short:'Short', balanced:'Balanced', detailed:'Detailed' },
+            mode:   { study:'Study', general:'General', coding:'Coding', creative:'Creative', reasoning:'Reasoning' }
+        };
+        const badge = document.getElementById('settingsCurrentBadge');
+        if (badge) badge.innerHTML =
+            `Tone: <strong style="color:var(--primary)">${labels.tone[cyanixSettings.tone]||cyanixSettings.tone}</strong> &nbsp;·&nbsp; ` +
+            `Length: <strong style="color:var(--primary)">${labels.length[cyanixSettings.length]||cyanixSettings.length}</strong> &nbsp;·&nbsp; ` +
+            `Mode: <strong style="color:var(--primary)">${labels.mode[cyanixSettings.mode]||cyanixSettings.mode}</strong>`;
+    }
+
+    async function saveSettings() {
+        if (currentUser) {
+            try {
+                const { data, error: fetchErr } = await supabaseClient.from('users').select('settings').eq('id', currentUser.id).single();
+                const merged = { ...(data?.settings || {}), ...cyanixSettings, aiModel: currentModel };
+                const { error } = await supabaseClient.from('users').update({ settings: merged, updated_at: new Date().toISOString() }).eq('id', currentUser.id);
+                if (error) throw error;
+            } catch (e) { console.warn('Could not persist settings:', e.message); }
+        }
+        closeSettingsModal();
+        showToast('Preferences saved! Cyanix will apply them on your next message.', 'success');
+    }
+
+    /* ── Profile Modal ── */
+    function openProfileModal() {
+        closeUserMenu();
+        if (!currentUser) return;
+        // Avatar
+        const avatarEl = document.getElementById('profileAvatarLarge');
+        avatarEl.innerHTML = currentUser.avatarUrl
+            ? `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent='${currentUser.avatar}'">`
+            : currentUser.avatar;
+        document.getElementById('profileName').textContent  = currentUser.name;
+        document.getElementById('profileEmail').textContent = currentUser.email;
+        const modelNames = { 'cyanix-maverick':'Maverick (Llama 4)', 'cyanix-scout':'Scout (Llama 4)', 'cyanix-flash':'Flash (Llama 3.1 8B)', 'cyanix-pro':'Pro (Llama 3.3 70B)' };
+        document.getElementById('profileModel').textContent = modelNames[currentModel] || currentModel;
+        document.getElementById('profileJoined').textContent = new Date().toLocaleDateString('en-US', { month:'long', year:'numeric' });
+        document.getElementById('profileModal').classList.add('active');
+    }
+    function closeProfileModal() { document.getElementById('profileModal').classList.remove('active'); }
+
+    /* ================================================================
+       RAG — LIVE WEB SEARCH
+    ================================================================ */
+
+    /** Toggle web search on/off */
+    function toggleRag() {
+        ragEnabled = !ragEnabled;
+        const btn   = document.getElementById('ragToggle');
+        const label = document.getElementById('ragToggleLabel');
+        const status = document.getElementById('ragStatusText');
+        if (ragEnabled) {
+            btn.classList.add('active');
+            label.textContent = 'Web Search ON';
+            status.textContent = 'Live data active';
+        } else {
+            btn.classList.remove('active');
+            label.textContent = 'Web Search';
+            status.textContent = '';
+        }
+    }
+
+    /** Show the animated RAG search indicator above the textarea */
+    function showRagIndicator(text) {
+        const el = document.getElementById('ragSearchIndicator');
+        const tx = document.getElementById('ragIndicatorText');
+        if (el) { tx.textContent = text || 'Searching the web...'; el.style.display = 'flex'; }
+    }
+
+    /** Hide the RAG search indicator */
+    function hideRagIndicator() {
+        const el = document.getElementById('ragSearchIndicator');
+        if (el) el.style.display = 'none';
+    }
+
+    /**
+     * Fetch live web context for a query via the RAG edge function.
+     * Returns { context: string, sources: [{title, url, snippet}] }
+     */
+    async function fetchWebContext(query) {
+        const resp = await fetch(RAG_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ query, max_results: 5 })
+        });
+
+        if (!resp.ok) {
+            const errText = await resp.text();
+            console.warn('[RAG] Edge function error:', resp.status, errText);
+            // Gracefully degrade — don't block the message
+            return null;
+        }
+        const data = await resp.json();
+        return data; // { context, sources }
+    }
+
+    /**
+     * Render a sources panel below an AI message bubble.
+     * sources = [{ title, url, snippet }]
+     */
+    function renderSources(bubbleDiv, sources) {
+        if (!sources || !sources.length) return;
+        const bubble = bubbleDiv.querySelector('.message-bubble');
+        if (!bubble) return;
+
+        const panel = document.createElement('div');
+        panel.className = 'rag-sources';
+        panel.innerHTML = `
+            <div class="rag-sources-label">
+                <i class="fas fa-globe"></i> WEB SOURCES
+            </div>
+            ${sources.map((s, i) => `
+                <div class="rag-source-item">
+                    <span class="rag-source-num">[${i + 1}]</span>
+                    <div>
+                        <a href="${s.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title || s.url)}</a>
+                        ${s.snippet ? `<div style="color:var(--text-secondary);margin-top:2px;font-size:10px;">${escapeHtml(s.snippet.substring(0, 120))}...</div>` : ''}
+                    </div>
+                </div>`).join('')}`;
+
+        bubble.appendChild(panel);
+        scrollToBottom();
+    }
+
+    /** Escape HTML for safe rendering */
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
 
     function clearChat() {
         if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
@@ -2889,6 +3526,9 @@
     function closeAllModals() {
         document.getElementById('modelModal').classList.remove('active');
         document.getElementById('fileModal').classList.remove('active');
+        document.getElementById('settingsModal').classList.remove('active');
+        document.getElementById('profileModal').classList.remove('active');
+        closeUserMenu();
     }
     </script>
 </body>
