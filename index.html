@@ -1800,6 +1800,85 @@
         .ob-thinking-emblem { width:72px; height:72px; border-radius:50%; object-fit:cover; animation: emblemPulse 0.9s ease-in-out infinite; }
         .ob-thinking-text { font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--primary); letter-spacing:2px; }
 
+
+        /* ================================================================
+           TUTORIX & ENHANCED ONBOARDING STYLING
+        ================================================================ */
+        #tutorixModal .form-group {
+            margin-bottom: 20px;
+        }
+
+        #tutorixModal .form-label {
+            display: block;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        #tutorixModal .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 243, 255, 0.04);
+            border: 1px solid rgba(0, 243, 255, 0.15);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+        }
+
+        #tutorixModal .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0, 243, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(0, 243, 255, 0.1);
+        }
+
+        #tutorixModal textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        #tutorixModal select.form-input {
+            cursor: pointer;
+            appearance: none;
+            padding-right: 36px;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-button:hover .tooltip {
+            opacity: 1;
+        }
+
+        .onboarding-overlay.active {
+            display: flex !important;
+        }
+
+        .fa-graduation-cap {
+            font-size: 18px;
+        }
+
     </style>
 </head>
 <body>
@@ -1813,6 +1892,13 @@
 
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
+    <!-- Onboarding Overlay -->
+    <div id="onboardingOverlay" class="onboarding-overlay">
+        <div class="onboarding-panel" id="onboarding-panel">
+            <!-- Onboarding steps are in the chat container - they'll be shown here via display control -->
+        </div>
+    </div>
+
 
     <!-- File Preview Modal -->
     <div id="filePreviewModal" class="file-preview-modal">
@@ -2243,7 +2329,7 @@
                     <div class="user-avatar" id="userAvatar">U</div>
                     <div class="user-info">
                         <div class="user-name" id="userName">User</div>
-                        <div class="user-email" id="userEmail">user@example.com</div>
+                        <div class="user-email" id="userEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8ffafceafdcfeaf7eee2ffe3eaa1ece0e2">[email&#160;protected]</a></div>
                     </div>
                     <i class="fas fa-chevron-up" id="userMenuChevron" style="color:var(--text-secondary); font-size:10px; transition:transform 0.3s; margin-left:auto;"></i>
                 </div>
@@ -2366,6 +2452,80 @@
             </div>
         </div>
     </template>
+
+
+    <!-- ================================================================
+         TUTORIX MODAL - Educational Slideshow Creator
+    ================================================================ -->
+    <div id="tutorixModal" class="modal-overlay">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-graduation-cap" style="color: var(--primary); margin-right: 10px;"></i>
+                    Tutorix - Educational Slideshow Creator
+                </h3>
+                <button class="modal-close" onclick="closeTutorixModal()">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">
+                    Create professional educational presentations for any school subject. Perfect for teachers and students!
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">Subject/Topic</label>
+                    <input type="text" id="tutorixSubject" class="form-input" 
+                           placeholder="e.g., Photosynthesis, World War II, Algebra">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Grade Level</label>
+                    <select id="tutorixGrade" class="form-input">
+                        <option value="">Select grade level...</option>
+                        <option value="elementary">Elementary (K-5)</option>
+                        <option value="middle">Middle School (6-8)</option>
+                        <option value="high">High School (9-12)</option>
+                        <option value="college">College/University</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Number of Slides</label>
+                    <select id="tutorixSlides" class="form-input">
+                        <option value="5">5 slides</option>
+                        <option value="10" selected>10 slides</option>
+                        <option value="15">15 slides</option>
+                        <option value="20">20 slides</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Additional Details (Optional)</label>
+                    <textarea id="tutorixDetails" class="form-input" rows="3" 
+                              placeholder="Any specific topics to cover, learning objectives, or style preferences..."></textarea>
+                </div>
+
+                <div style="background: rgba(0,243,255,0.06); padding: 16px; border-radius: 12px; border: 1px solid rgba(0,243,255,0.12); margin-top: 20px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <i class="fas fa-magic" style="color: var(--primary);"></i>
+                        <span style="color: var(--text); font-weight: 600; font-size: 13px;">AI-Powered Features</span>
+                    </div>
+                    <ul style="color: var(--text-secondary); font-size: 12px; line-height: 1.8; margin-left: 20px;">
+                        <li>Automatically researched content</li>
+                        <li>Age-appropriate explanations</li>
+                        <li>Visual diagrams and examples</li>
+                        <li>Key takeaways and summaries</li>
+                        <li>Quiz questions (optional)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" onclick="closeTutorixModal()">Cancel</button>
+                <button class="modal-button primary" onclick="generateTutorixSlides()" id="tutorixGenerateBtn">
+                    <i class="fas fa-magic"></i> Generate Presentation
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ================================================================
          SETTINGS MODAL
@@ -2499,7 +2659,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     /* ================================================================
        SUPABASE CONFIGURATION
        NOTE: supabase client is initialized INSIDE DOMContentLoaded so
@@ -2732,8 +2892,17 @@
         supabaseClient.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 handleUserSignedIn(session.user);
+            } else {
+                // Check if user has completed onboarding questions
+                const obCompleted = sessionStorage.getItem('ob_completed');
+                if (!obCompleted) {
+                    // Show onboarding first
+                    setTimeout(() => showOnboarding(), 300);
+                } else {
+                    // Show auth directly
+                    showAuth();
+                }
             }
-            // If no session, showAuth() in DOMContentLoaded will handle it
         });
     }
 
@@ -2951,6 +3120,8 @@
                 } catch (dbErr) {
                     console.warn('Could not create user record:', dbErr.message);
                 }
+                // Save onboarding answers
+                await saveOnboardingAnswers(data.user.id);
             }
             showToast('Account created! Please check your email for confirmation.', 'success');
             // Store name for onboarding pre-fill
@@ -4019,6 +4190,191 @@
         if (chevron) chevron.style.transform = 'rotate(0deg)';
     }
 
+        /* ================================================================
+           ONBOARDING SYSTEM - QUESTIONS BEFORE SIGNUP
+        ================================================================ */
+        let ob_currentStep = 0;
+        let ob_answers = [];
+
+        function showOnboarding() {
+            const overlay = document.getElementById('onboardingOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+            document.getElementById('authContainer').style.display = 'none';
+            showObStep(0);
+        }
+
+        function showObStep(index) {
+            const steps = document.querySelectorAll('.ob-step');
+            steps.forEach((step, i) => {
+                step.style.display = i === index ? 'block' : 'none';
+            });
+            ob_currentStep = index;
+        }
+
+        function obSelect(stepIndex, element) {
+            element.parentElement.querySelectorAll('.ob-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            element.classList.add('active');
+            ob_answers[stepIndex] = element.textContent.trim();
+        }
+
+        function obNext() {
+            if (ob_currentStep === 3) {
+                const textarea = document.getElementById('ob-suggestions');
+                if (textarea) {
+                    ob_answers[3] = textarea.value.trim();
+                }
+            }
+            if (ob_currentStep < 7) {
+                showObStep(ob_currentStep + 1);
+            }
+        }
+
+        function obBack() {
+            if (ob_currentStep > 0) {
+                showObStep(ob_currentStep - 1);
+            }
+        }
+
+        function skipOnboarding() {
+            sessionStorage.setItem('ob_completed', 'skipped');
+            closeOnboarding();
+            showAuth();
+        }
+
+        function obFinish() {
+            showObStep(8);
+            sessionStorage.setItem('ob_answers', JSON.stringify(ob_answers));
+            sessionStorage.setItem('ob_completed', 'true');
+            const emblem = document.getElementById('obDoneEmblem');
+            if (emblem) {
+                emblem.src = 'cyanix_logo.png';
+            }
+            setTimeout(() => {
+                closeOnboarding();
+                showAuthWithSignup();
+            }, 2500);
+        }
+
+        function closeOnboarding() {
+            const overlay = document.getElementById('onboardingOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        }
+
+        function showAuthWithSignup() {
+            document.getElementById('authContainer').style.display = 'flex';
+            switchAuthTab('signup');
+            const discovery = ob_answers[0];
+            if (discovery && discovery.length > 0 && discovery.length < 50) {
+                const isOption = ['Friend / Referral', 'Search Engine', 'YouTube', 'Social Media', 
+                                 'Article / Blog', 'Discord / Community', 'Other'].some(opt => 
+                                 discovery.includes(opt));
+                if (!isOption) {
+                    const nameInput = document.getElementById('signupName');
+                    if (nameInput) {
+                        nameInput.value = discovery;
+                    }
+                }
+            }
+        }
+
+        async function saveOnboardingAnswers(userId) {
+            const answersJson = sessionStorage.getItem('ob_answers');
+            if (!answersJson) return;
+            try {
+                const answers = JSON.parse(answersJson);
+                const obData = {
+                    discovery: answers[0] || '',
+                    useCase: answers[1] || '',
+                    satisfaction: answers[2] || '',
+                    suggestions: answers[3] || '',
+                    recommend: answers[4] || '',
+                    age: answers[5] || '',
+                    occupation: answers[6] || '',
+                    tone: answers[7] || ''
+                };
+                await supabaseClient.from('users').update({
+                    onboarding: obData,
+                    updated_at: new Date().toISOString()
+                }).eq('id', userId);
+                sessionStorage.removeItem('ob_answers');
+                await supabaseClient.auth.updateUser({
+                    data: { ob_done: true }
+                });
+            } catch (error) {
+                console.error('Failed to save onboarding answers:', error);
+            }
+        }
+
+        /* ================================================================
+           TUTORIX - EDUCATIONAL SLIDESHOW CREATOR
+        ================================================================ */
+        function openTutorix() {
+            document.getElementById('tutorixModal').classList.add('active');
+        }
+
+        function closeTutorixModal() {
+            document.getElementById('tutorixModal').classList.remove('active');
+        }
+
+        async function generateTutorixSlides() {
+            const subject = document.getElementById('tutorixSubject').value.trim();
+            const grade = document.getElementById('tutorixGrade').value;
+            const slideCount = document.getElementById('tutorixSlides').value;
+            const details = document.getElementById('tutorixDetails').value.trim();
+            
+            if (!subject) {
+                showToast('Please enter a subject or topic', 'error');
+                return;
+            }
+            if (!grade) {
+                showToast('Please select a grade level', 'error');
+                return;
+            }
+            
+            closeTutorixModal();
+            
+            const gradeLevels = {
+                elementary: 'Elementary School (K-5)',
+                middle: 'Middle School (6-8)',
+                high: 'High School (9-12)',
+                college: 'College/University'
+            };
+            
+            const prompt = `Create an educational PowerPoint presentation on the topic: "${subject}"
+
+Grade Level: ${gradeLevels[grade]}
+Number of Slides: ${slideCount}
+${details ? `Additional Requirements: ${details}` : ''}
+
+Please create a professional, visually engaging educational presentation that:
+1. Uses age-appropriate language and concepts
+2. Includes clear explanations with examples
+3. Has a logical flow (introduction → main content → conclusion)
+4. Uses visual elements (suggest diagrams, images, icons where helpful)
+5. Includes key takeaways on the final slide
+
+For each slide, provide:
+- Slide title
+- Main content points (bullet points or paragraphs)
+- Suggested visuals or diagrams
+- Speaker notes for teachers
+
+Make it engaging and educational!`;
+
+            document.getElementById('chatInput').value = prompt;
+            await sendMessage();
+            
+            showToast('Generating Tutorix presentation... Check the chat!', 'info', 4000);
+        }
+
+
+
     /* ── Settings Modal ── */
     // Runtime settings state (applied to system prompt on each message)
     let cyanixSettings = { tone: 'professional', length: 'balanced', mode: 'general' };
@@ -4559,14 +4915,4 @@
                     <div class="ob-thinking-wrap">
                         <div class="ob-thinking-ring2"></div>
                         <div class="ob-thinking-ring"></div>
-                        <img class="ob-thinking-emblem" id="obDoneEmblem" src="" alt="Cyanix">
-                    </div>
-                    <div class="ob-thinking-text">PERSONALIZING YOUR EXPERIENCE...</div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-</body>
-</html>
+                        <img class="ob-thinking-emblem" id="obDoneEmbl
