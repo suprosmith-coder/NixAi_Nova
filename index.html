@@ -1590,12 +1590,12 @@
                     <div class="model-card" data-model="cyanix-flash" onclick="selectModel('cyanix-flash')">
                         <div class="model-icon"><i class="fas fa-bolt"></i></div>
                         <div class="model-name">Flash</div>
-                        <div class="model-desc">Llama 3.1 8B · Fastest · Everyday tasks</div>
+                        <div class="model-desc">Llama 4 Scout · Ultra-fast · Quick answers</div>
                     </div>
                     <div class="model-card" data-model="cyanix-pro" onclick="selectModel('cyanix-pro')">
                         <div class="model-icon"><i class="fas fa-brain"></i></div>
                         <div class="model-name">Pro</div>
-                        <div class="model-desc">Llama 3.3 70B · Reliable · Complex tasks</div>
+                        <div class="model-desc">Llama 4 Maverick · Max tokens · Deep reasoning</div>
                     </div>
                 </div>
                 <div style="background:rgba(0,243,255,0.04); padding:14px; border-radius:10px; border:1px solid rgba(0,243,255,0.1);">
@@ -1629,13 +1629,12 @@
                     <div style="color:var(--text); font-weight:600; margin-bottom:8px;">Drag & Drop Files Here</div>
                     <div style="color:var(--text-secondary); font-size:12px; margin-bottom:20px;">or click to browse files</div>
                     <div style="font-size:11px; color:var(--text-secondary); margin-bottom:14px; font-family:'JetBrains Mono',monospace;">
-                        Images, PDF, DOC, DOCX, XLS, TXT, ZIP, and more
+                        Any file type accepted — no restrictions
                     </div>
                     <button class="modal-button primary" onclick="document.getElementById('fileInput').click()">
                         <i class="fas fa-folder-open"></i> Browse Files
                     </button>
-                    <input type="file" id="fileInput" multiple style="display:none;"
-                           accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.js,.py,.html,.css,.json,.xml,.csv,.mp3,.mp4,.wav,.mov,.avi,.mkv">
+                    <input type="file" id="fileInput" multiple style="display:none;" accept="*">
                 </div>
                 <div id="selectedFiles"></div>
                 <div id="uploadProgress" style="display:none;">
@@ -2214,11 +2213,19 @@
     /* ================================================================
        MODEL MAPPING
     ================================================================ */
+    // ── All 4 Cyanix models run on Meta Llama 4 via Groq ──────────────
     const MODEL_MAP = {
-        'cyanix-maverick': 'meta-llama/llama-4-maverick-17b-128e-instruct',
-        'cyanix-scout':    'meta-llama/llama-4-scout-17b-16e-instruct',
-        'cyanix-flash':    'llama-3.1-8b-instant',
-        'cyanix-pro':      'llama-3.3-70b-versatile'
+        'cyanix-maverick': 'meta-llama/llama-4-maverick-17b-128e-instruct', // 128k ctx, vision
+        'cyanix-scout':    'meta-llama/llama-4-scout-17b-16e-instruct',     // 16k ctx, vision, fastest
+        'cyanix-flash':    'meta-llama/llama-4-scout-17b-16e-instruct',     // Scout under Flash branding
+        'cyanix-pro':      'meta-llama/llama-4-maverick-17b-128e-instruct'  // Maverick at max tokens
+    };
+    // Max tokens per model (Pro gets bigger budget)
+    const MODEL_MAX_TOKENS = {
+        'cyanix-maverick': 2048,
+        'cyanix-scout':    1024,
+        'cyanix-flash':    512,
+        'cyanix-pro':      4096
     };
 
     /* ================================================================
@@ -2552,10 +2559,32 @@
 
         setButtonLoading('signinBtn', true);
         try {
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) throw error;
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                // ── Supabase v2 returns "Invalid login credentials" when the account
+                //    exists but the email is not yet confirmed. Detect this by trying
+                //    to resend the OTP — if it succeeds, the account is unconfirmed.
+                const errMsg = (error.message || '').toLowerCase();
+                if (errMsg.includes('invalid login credentials')) {
+                    // Try to detect unconfirmed account
+                    try {
+                        const { error: resendErr } = await supabaseClient.auth.resend({
+                            type: 'signup', email,
+                            options: { emailRedirectTo: window.location.href.split('#')[0] }
+                        });
+                        if (!resendErr) {
+                            // Resend succeeded → account exists but not confirmed
+                            showToast('📧 Email not confirmed yet — we sent you a new confirmation link. Check your inbox!', 'warning', 7000);
+                            setButtonLoading('signinBtn', false);
+                            return;
+                        }
+                    } catch (_) { /* resend not available — fall through to normal error */ }
+                }
+                throw error;
+            }
+            // Sign-in success — onAuthStateChange handles the rest
         } catch (error) {
-            console.error('Sign in error:', error);
+            console.error('[Auth] Sign in error:', error);
             showToast(getAuthError(error), 'error');
         } finally {
             setButtonLoading('signinBtn', false);
@@ -2671,13 +2700,41 @@
     }
 
     function getAuthError(error) {
-        const map = {
-            'Invalid login credentials':               'Invalid email or password',
-            'Email not confirmed':                     'Please confirm your email address',
-            'User already registered':                 'Email already in use',
-            'Password should be at least 6 characters':'Password is too weak'
-        };
-        return map[error.message] || error.message || 'Authentication failed';
+        // Supabase v2 changed to return 'Invalid login credentials' even for
+        // unconfirmed emails — so we check the status code AND message
+        const code = error.code || error.status || '';
+        const msg  = (error.message || '').toLowerCase();
+
+        // Unconfirmed email — Supabase v2 returns this as "Invalid login credentials"
+        // when email confirmation is enabled, so we surface a resend option
+        if (code === 'email_not_confirmed' || msg.includes('not confirmed') || msg.includes('email_not_confirmed')) {
+            return 'Email not confirmed — check your inbox or click "Forgot Password" to resend.';
+        }
+        // Wrong credentials
+        if (msg.includes('invalid login credentials') || msg.includes('invalid email or password')) {
+            return 'Incorrect email or password. Double-check and try again.';
+        }
+        // Signup — user exists
+        if (msg.includes('user already registered') || msg.includes('already been registered') || code === 'user_already_exists') {
+            return 'An account with this email already exists. Try signing in instead.';
+        }
+        // Weak password
+        if (msg.includes('password should be') || msg.includes('password is too weak') || code === 'weak_password') {
+            return 'Password is too weak — use at least 6 characters.';
+        }
+        // Rate limiting
+        if (msg.includes('too many') || msg.includes('rate limit') || code === 'over_request_rate_limit') {
+            return 'Too many attempts — please wait a minute and try again.';
+        }
+        // Network / server
+        if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
+            return 'Connection error — check your internet and try again.';
+        }
+        // Email link expired
+        if (msg.includes('token has expired') || code === 'otp_expired') {
+            return 'Link has expired — please request a new one.';
+        }
+        return error.message || 'Authentication failed — please try again.';
     }
 
     /* ================================================================
@@ -2685,10 +2742,8 @@
     ================================================================ */
     function handleFileSelect(e) {
         const files = Array.from(e.target.files);
-        files.forEach(file => {
-            if (!selectedFiles.some(f => f.name === file.name && f.size === file.size))
-                selectedFiles.push(file);
-        });
+        // Low-security: no type or size checks — accept everything
+        files.forEach(file => selectedFiles.push(file));
         updateSelectedFilesDisplay();
     }
 
@@ -2745,18 +2800,42 @@
     }
 
     function getFileIcon(type, name, small = false) {
-        const sz = small ? '12px' : '18px';
-        if (type.startsWith('image/')) return `<i class="fas fa-image" style="color:var(--primary); font-size:${sz};"></i>`;
-        if (type === 'application/pdf' || name.endsWith('.pdf')) return `<i class="fas fa-file-pdf" style="color:#FF6B6B; font-size:${sz};"></i>`;
-        if (type.includes('word') || name.endsWith('.doc') || name.endsWith('.docx')) return `<i class="fas fa-file-word" style="color:#2B579A; font-size:${sz};"></i>`;
-        if (type.includes('excel') || name.endsWith('.xls') || name.endsWith('.xlsx')) return `<i class="fas fa-file-excel" style="color:#217346; font-size:${sz};"></i>`;
-        if (type.includes('powerpoint') || name.endsWith('.ppt') || name.endsWith('.pptx')) return `<i class="fas fa-file-powerpoint" style="color:#D24726; font-size:${sz};"></i>`;
-        if (type.includes('zip') || name.endsWith('.zip') || name.endsWith('.rar') || name.endsWith('.7z')) return `<i class="fas fa-file-archive" style="color:#FFA500; font-size:${sz};"></i>`;
-        if (type.includes('text') || ['.txt','.md','.rtf'].some(e => name.endsWith(e))) return `<i class="fas fa-file-alt" style="color:var(--primary); font-size:${sz};"></i>`;
-        if (['.js','.py','.html','.css','.json','.xml'].some(e => name.endsWith(e))) return `<i class="fas fa-file-code" style="color:var(--accent); font-size:${sz};"></i>`;
-        if (type.startsWith('audio/')) return `<i class="fas fa-file-audio" style="color:#00ff88; font-size:${sz};"></i>`;
-        if (type.startsWith('video/')) return `<i class="fas fa-file-video" style="color:#ff4757; font-size:${sz};"></i>`;
-        return `<i class="fas fa-file" style="color:var(--text-secondary); font-size:${sz};"></i>`;
+        const sz  = small ? '12px' : '18px';
+        const ext = (name || '').split('.').pop().toLowerCase();
+        // Images
+        if (type.startsWith('image/')) return `<i class="fas fa-image" style="color:var(--primary);font-size:${sz};"></i>`;
+        // PDF
+        if (type === 'application/pdf' || ext === 'pdf') return `<i class="fas fa-file-pdf" style="color:#FF6B6B;font-size:${sz};"></i>`;
+        // Word / docs
+        if (type.includes('word') || ['doc','docx','odt','rtf','pages'].includes(ext)) return `<i class="fas fa-file-word" style="color:#2B579A;font-size:${sz};"></i>`;
+        // Excel / spreadsheets
+        if (type.includes('excel') || type.includes('spreadsheet') || ['xls','xlsx','ods','csv','numbers'].includes(ext)) return `<i class="fas fa-file-excel" style="color:#217346;font-size:${sz};"></i>`;
+        // PowerPoint / presentations
+        if (type.includes('powerpoint') || type.includes('presentation') || ['ppt','pptx','odp','key'].includes(ext)) return `<i class="fas fa-file-powerpoint" style="color:#D24726;font-size:${sz};"></i>`;
+        // Archives
+        if (type.includes('zip') || type.includes('x-rar') || type.includes('x-7z') || ['zip','rar','7z','tar','gz','bz2','xz'].includes(ext)) return `<i class="fas fa-file-archive" style="color:#FFA500;font-size:${sz};"></i>`;
+        // Code
+        if (['js','ts','jsx','tsx','py','rb','java','c','cpp','cs','go','rs','php','swift','kt','html','css','scss','sass','json','xml','yaml','yml','toml','ini','sh','bash','zsh','ps1','sql','r','matlab','dart'].includes(ext)) return `<i class="fas fa-file-code" style="color:var(--accent);font-size:${sz};"></i>`;
+        // Text / markdown / logs
+        if (type.includes('text') || ['txt','md','mdx','rst','log','nfo','cfg','conf','env'].includes(ext)) return `<i class="fas fa-file-alt" style="color:var(--primary);font-size:${sz};"></i>`;
+        // Audio
+        if (type.startsWith('audio/') || ['mp3','wav','flac','aac','ogg','wma','m4a','opus','aiff'].includes(ext)) return `<i class="fas fa-file-audio" style="color:#00ff88;font-size:${sz};"></i>`;
+        // Video
+        if (type.startsWith('video/') || ['mp4','mkv','mov','avi','wmv','flv','webm','m4v','3gp','ts'].includes(ext)) return `<i class="fas fa-file-video" style="color:#ff4757;font-size:${sz};"></i>`;
+        // Fonts
+        if (['ttf','otf','woff','woff2','eot'].includes(ext)) return `<i class="fas fa-font" style="color:#9b59b6;font-size:${sz};"></i>`;
+        // 3D / design
+        if (['blend','obj','fbx','stl','gltf','glb','dae'].includes(ext)) return `<i class="fas fa-cube" style="color:#1abc9c;font-size:${sz};"></i>`;
+        // Database
+        if (['db','sqlite','sqlite3','sql','mdb','accdb'].includes(ext)) return `<i class="fas fa-database" style="color:#e67e22;font-size:${sz};"></i>`;
+        // Executables / binaries
+        if (['exe','msi','dmg','pkg','deb','rpm','apk','ipa','app'].includes(ext)) return `<i class="fas fa-terminal" style="color:#e74c3c;font-size:${sz};"></i>`;
+        // ISO / disk
+        if (['iso','img','vhd','vmdk'].includes(ext)) return `<i class="fas fa-compact-disc" style="color:#7f8c8d;font-size:${sz};"></i>`;
+        // Ebooks
+        if (['epub','mobi','azw','djvu'].includes(ext)) return `<i class="fas fa-book" style="color:#8e44ad;font-size:${sz};"></i>`;
+        // Fallback
+        return `<i class="fas fa-file" style="color:var(--text-secondary);font-size:${sz};"></i>`;
     }
 
     function formatFileSize(bytes) {
@@ -2769,6 +2848,7 @@
     async function uploadFiles() {
         if (!selectedFiles.length) { showToast('No files selected', 'warning'); return; }
         if (!currentUser)          { showToast('Please sign in to upload files', 'error'); return; }
+        // Low-security mode: no file type or size restrictions applied
 
         const progressContainer = document.getElementById('uploadProgress');
         const progressBar       = document.getElementById('uploadProgressBar');
@@ -3130,7 +3210,7 @@
                     messages,
                     model:       MODEL_MAP[currentModel],
                     temperature: 0.7,
-                    max_tokens:  1500,
+                    max_tokens:  MODEL_MAX_TOKENS[currentModel] || 2048,
                     stream:      true
                 })
             });
@@ -3204,31 +3284,30 @@
         };
         const el = document.getElementById('currentModel');
         if (el) el.textContent = names[model] || model;
-        // Update info panel inside model modal
+        // Update info panel inside model modal — all on Llama 4
         const infoDescriptions = {
-            'cyanix-maverick': 'Maverick — Meta Llama 4 · 17B · 128k context · Up to 5 images per request · Best reasoning &amp; multilingual',
-            'cyanix-scout':    'Scout — Meta Llama 4 · 17B · 128k context · Up to 5 images per request · Fast, efficient &amp; multilingual',
-            'cyanix-flash':    'Flash — Meta Llama 3.1 · 8B · Ultra-fast · Perfect for rapid-fire responses &amp; real-time agents',
-            'cyanix-pro':      'Pro — Meta Llama 3.3 · 70B · Versatile · Deep reasoning, complex analysis &amp; long-form writing'
+            'cyanix-maverick': 'Maverick — Meta Llama 4 · 17B · 128k context · Vision (up to 5 images) · Best reasoning &amp; multilingual · 2048 max tokens',
+            'cyanix-scout':    'Scout — Meta Llama 4 · 17B · 16k context · Vision (up to 5 images) · Fastest responses &amp; efficient · 1024 max tokens',
+            'cyanix-flash':    'Flash — Meta Llama 4 Scout · Ultra-fast mode · Ideal for quick Q&amp;A, summaries &amp; rapid tasks · 512 max tokens',
+            'cyanix-pro':      'Pro — Meta Llama 4 Maverick · Extended output mode · Deep analysis, long-form writing &amp; complex reasoning · 4096 max tokens'
         };
         const infoEl = document.getElementById('modelInfoText');
         if (infoEl) infoEl.innerHTML = infoDescriptions[model] || '';
     }
 
     async function saveModelSelection() {
-        if (currentUser) {
-            try {
-                // Preserve existing settings, just update aiModel
-                const { data } = await supabaseClient.from('users').select('settings').eq('id', currentUser.id).single();
-                const merged = { ...(data?.settings || {}), ...cyanixSettings, aiModel: currentModel };
-                const { error } = await supabaseClient.from('users')
-                    .update({ settings: merged, updated_at: new Date().toISOString() })
-                    .eq('id', currentUser.id);
-                if (error) throw error;
-                showToast('AI model updated!', 'success');
-            } catch (error) { showToast('Error saving model selection', 'error'); }
-        }
         closeModelModal();
+        showToast(`Switched to ${currentModel.replace('cyanix-','')} — Llama 4`, 'success');
+        if (!currentUser || !supabaseClient) return;
+        try {
+            // Preserve existing settings, just update aiModel
+            const { data } = await supabaseClient.from('users').select('settings').eq('id', currentUser.id).single();
+            const merged = { ...(data?.settings || {}), ...cyanixSettings, aiModel: currentModel };
+            const { error } = await supabaseClient.from('users')
+                .update({ settings: merged, updated_at: new Date().toISOString() })
+                .eq('id', currentUser.id);
+            if (error) throw error;
+        } catch (e) { console.warn('Could not persist model selection:', e.message); }
     }
 
     async function loadUserSettings() {
@@ -3402,7 +3481,7 @@
         return parts.length > 1 ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase() : name.substring(0,2).toUpperCase();
     }
 
-    function showToast(message, type = 'info') {
+    function showToast(message, type = 'info', duration = 3500) {
         const container = document.getElementById('toastContainer');
         const toast     = document.createElement('div');
         toast.className = `toast ${type}`;
@@ -3412,7 +3491,7 @@
             <div class="toast-content"><div class="toast-message">${message}</div></div>
             <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
         container.appendChild(toast);
-        setTimeout(() => { if (toast.parentElement) toast.style.animation = 'toastSlide 0.3s reverse forwards'; setTimeout(() => toast.remove(), 300); }, 5000);
+        setTimeout(() => { if (toast.parentElement) toast.style.animation = 'toastSlide 0.3s reverse forwards'; setTimeout(() => toast.remove(), 300); }, duration);
     }
 
     function autoResize(textarea) {
@@ -3549,7 +3628,7 @@
         document.getElementById('profileNameInput').value        = currentUser.name  || '';
         document.getElementById('profileAvatarUrlInput').value  = currentUser.avatarUrl || '';
         document.getElementById('profileEmail').textContent     = currentUser.email || '';
-        const modelNames = { 'cyanix-maverick':'Maverick (Llama 4)', 'cyanix-scout':'Scout (Llama 4)', 'cyanix-flash':'Flash (Llama 3.1 8B)', 'cyanix-pro':'Pro (Llama 3.3 70B)' };
+        const modelNames = { 'cyanix-maverick':'Maverick (Llama 4)', 'cyanix-scout':'Scout (Llama 4)', 'cyanix-flash':'Flash (Llama 4 Scout)', 'cyanix-pro':'Pro (Llama 4 Maverick)' };
         document.getElementById('profileModel').textContent   = modelNames[currentModel] || currentModel;
         document.getElementById('profileJoined').textContent  = new Date(currentUser.createdAt || Date.now()).toLocaleDateString('en-US', { month:'long', year:'numeric' });
         document.getElementById('profileModal').classList.add('active');
