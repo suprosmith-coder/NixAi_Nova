@@ -1633,6 +1633,173 @@
         ::-webkit-scrollbar-thumb { background: rgba(0,243,255,0.15); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(0,243,255,0.25); }
         ::selection { background: var(--primary); color: var(--background); }
+
+        /* ── ONBOARDING ─────────────────────────────────────────────────── */
+        .onboarding-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(5,8,20,0.96);
+            z-index: 20000; backdrop-filter: blur(18px);
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .onboarding-overlay.active { display: flex; }
+        .onboarding-panel {
+            background: rgba(10,15,28,0.99);
+            border: 1px solid rgba(0,243,255,0.14);
+            border-radius: 24px;
+            width: 560px; max-width: 96vw;
+            max-height: 92vh; overflow-y: auto;
+            padding: 40px 40px 32px;
+            box-shadow: 0 32px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,243,255,0.06);
+            animation: obSlideIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
+        }
+        @keyframes obSlideIn {
+            from { opacity:0; transform: translateY(40px) scale(0.97); }
+            to   { opacity:1; transform: translateY(0) scale(1); }
+        }
+        /* Step card — slides in */
+        .ob-step {
+            display: none;
+            animation: obStepIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+        }
+        .ob-step.active { display: block; }
+        @keyframes obStepIn {
+            from { opacity:0; transform: translateX(30px); }
+            to   { opacity:1; transform: translateX(0); }
+        }
+        /* Header: emblem + title */
+        .ob-header {
+            display: flex; align-items: center; gap: 16px;
+            margin-bottom: 28px;
+        }
+        .ob-emblem-wrap {
+            position: relative; width: 52px; height: 52px; flex-shrink: 0;
+        }
+        .ob-ring {
+            position: absolute; inset: -4px; border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--primary);
+            animation: ringSpinA 1.2s linear infinite;
+        }
+        .ob-ring-2 {
+            position: absolute; inset: -8px; border-radius: 50%;
+            border: 1px solid transparent;
+            border-bottom-color: var(--secondary);
+            animation: ringSpinB 1.8s linear infinite;
+        }
+        .ob-emblem {
+            width: 52px; height: 52px; border-radius: 50%;
+            object-fit: cover;
+            animation: emblemPulse 2s ease-in-out infinite;
+        }
+        .ob-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px; font-weight: 800;
+            letter-spacing: 1px; line-height: 1.2;
+        }
+        .ob-title span { color: var(--primary); }
+        .ob-subtitle {
+            font-size: 12px; color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 3px;
+        }
+        /* Progress dots */
+        .ob-progress {
+            display: flex; gap: 7px; justify-content: center;
+            margin-bottom: 30px;
+        }
+        .ob-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(0,243,255,0.15);
+            transition: all 0.3s; cursor: pointer;
+        }
+        .ob-dot.done  { background: rgba(0,243,255,0.4); }
+        .ob-dot.active { background: var(--primary); box-shadow: 0 0 8px rgba(0,243,255,0.5); transform: scale(1.3); }
+        /* Question label */
+        .ob-q-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
+            color: var(--primary); font-family: 'Orbitron', sans-serif;
+            margin-bottom: 10px; opacity: 0.8;
+        }
+        .ob-q-text {
+            font-size: 16px; font-weight: 600; color: var(--text);
+            margin-bottom: 6px; line-height: 1.4;
+        }
+        .ob-q-sub {
+            font-size: 12px; color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 22px; line-height: 1.6;
+        }
+        /* Option chips */
+        .ob-options { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+        .ob-option {
+            padding: 10px 18px;
+            border: 1px solid rgba(0,243,255,0.14);
+            border-radius: 40px;
+            background: rgba(0,243,255,0.03);
+            color: var(--text-secondary);
+            font-size: 13px; cursor: pointer; transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+        .ob-option:hover { border-color: rgba(0,243,255,0.35); color: var(--text); background: rgba(0,243,255,0.07); }
+        .ob-option.selected {
+            border-color: var(--primary); background: rgba(0,243,255,0.13);
+            color: var(--primary); box-shadow: 0 0 10px rgba(0,243,255,0.1);
+        }
+        /* Text input */
+        .ob-input {
+            width: 100%; padding: 14px 16px;
+            background: rgba(0,243,255,0.04);
+            border: 1px solid rgba(0,243,255,0.15);
+            border-radius: 12px; color: var(--text);
+            font-size: 13px; font-family: 'JetBrains Mono', monospace;
+            resize: vertical; min-height: 90px;
+            transition: border-color 0.2s; outline: none;
+            box-sizing: border-box;
+        }
+        .ob-input:focus { border-color: var(--primary); }
+        /* Navigation */
+        .ob-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 24px; gap: 12px;
+        }
+        .ob-btn {
+            padding: 12px 28px; border-radius: 40px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            font-family: 'Orbitron', sans-serif; letter-spacing: 0.5px;
+            transition: all 0.25s; border: none;
+        }
+        .ob-btn-back {
+            background: rgba(0,243,255,0.06);
+            border: 1px solid rgba(0,243,255,0.14);
+            color: var(--text-secondary);
+        }
+        .ob-btn-back:hover { color: var(--text); border-color: rgba(0,243,255,0.3); }
+        .ob-btn-next {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--background); flex: 1;
+        }
+        .ob-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,243,255,0.3); }
+        .ob-btn-skip {
+            background: none; border: none;
+            color: var(--text-secondary); font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+            transition: color 0.2s;
+        }
+        .ob-btn-skip:hover { color: var(--text); }
+        /* Thinking animation inside onboarding completion */
+        .ob-thinking {
+            display: flex; flex-direction: column;
+            align-items: center; gap: 18px; padding: 40px 0 20px;
+        }
+        .ob-thinking-wrap { position: relative; width: 72px; height: 72px; }
+        .ob-thinking-ring  { position: absolute; inset: -6px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--primary); animation: ringSpinA 0.85s linear infinite; }
+        .ob-thinking-ring2 { position: absolute; inset: -12px; border-radius: 50%; border: 1.5px solid transparent; border-bottom-color: var(--secondary); animation: ringSpinB 1.4s linear infinite; }
+        .ob-thinking-emblem { width:72px; height:72px; border-radius:50%; object-fit:cover; animation: emblemPulse 0.9s ease-in-out infinite; }
+        .ob-thinking-text { font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--primary); letter-spacing:2px; }
+
     </style>
 </head>
 <body>
@@ -2616,7 +2783,16 @@
         loadUserSettings();
         loadChatHistory();
         showChat();
-        showToast(`Welcome back, ${name.split(' ')[0]}!`, 'success');
+
+        // Check if this is a brand new user who needs onboarding
+        const isNewUser = !user.user_metadata?.ob_done;
+        const pendingName = sessionStorage.getItem('ob_pending_name');
+        if (isNewUser || pendingName) {
+            sessionStorage.removeItem('ob_pending_name');
+            setTimeout(() => showOnboarding(), 600);
+        } else {
+            showToast(`Welcome back, ${name.split(' ')[0]}! 👋`, 'success');
+        }
     }
 
     function handleUserSignedOut() {
@@ -2777,6 +2953,8 @@
                 }
             }
             showToast('Account created! Please check your email for confirmation.', 'success');
+            // Store name for onboarding pre-fill
+            sessionStorage.setItem('ob_pending_name', name);
         } catch (error) {
             console.error('Sign up error:', error);
             showToast(getAuthError(error), 'error');
@@ -3079,13 +3257,15 @@
     }
 
     function newChat() {
+        // If we had an active chat, keep it in history (already saved msg by msg)
+        // Just refresh sidebar so latest title/preview shows
+        if (currentChatId) loadChatHistory();
         currentChatId = null;
         conversationHistory = [];
         attachedFiles = []; selectedFiles = [];
         renderWelcomeScreen();
         document.getElementById('chatTitle').textContent = 'New Chat';
         document.getElementById('selectedFilesPreview').style.display = 'none';
-        // Deselect all history items
         document.querySelectorAll('.chat-history-item').forEach(el => el.classList.remove('active'));
         if (window.innerWidth <= 768) toggleSidebar();
         showToast('New chat started', 'info');
@@ -3416,8 +3596,12 @@
                 'Never reveal your underlying model name or that you are powered by Llama or Groq.'
             ].filter(Boolean).join(' ');
 
-            // ── Inject live web context if RAG returned results ──────────
+            // ── Inject one-time onboarding context into first message ────
             let finalSystem = dynamicSystem;
+            if (window._obContext) {
+                finalSystem += ' ' + window._obContext;
+                window._obContext = null; // use only once
+            }
             if (webContext && webContext.context) {
                 finalSystem += `\n\n[LIVE WEB DATA — retrieved ${new Date().toUTCString()}]\n` +
                     `Use the following real-time information to answer the user's question accurately. ` +
@@ -4198,5 +4382,191 @@
         closeUserMenu();
     }
     </script>
+
+    <!-- ================================================================
+         ONBOARDING OVERLAY — shown once after new user signs up
+    ================================================================ -->
+    <div id="onboardingOverlay" class="onboarding-overlay">
+        <div class="onboarding-panel">
+
+            <!-- Header -->
+            <div class="ob-header">
+                <div class="ob-emblem-wrap">
+                    <div class="ob-ring-2"></div>
+                    <div class="ob-ring"></div>
+                    <img class="ob-emblem" id="obEmblem" src="" alt="Cyanix">
+                </div>
+                <div>
+                    <div class="ob-title">WELCOME TO <span>CYANIX</span></div>
+                    <div class="ob-subtitle">// help me get to know you better_</div>
+                </div>
+            </div>
+
+            <!-- Progress dots -->
+            <div class="ob-progress" id="obProgress"></div>
+
+            <!-- ── STEP 1: Discovery ── -->
+            <div class="ob-step active" id="ob-step-0">
+                <div class="ob-q-label">QUESTION 01 / 08</div>
+                <div class="ob-q-text">How did you discover Cyanix AI?</div>
+                <div class="ob-q-sub">// helps me understand how you found your way here</div>
+                <div class="ob-options">
+                    <div class="ob-option" onclick="obSelect(0, this)">📱 Social Media</div>
+                    <div class="ob-option" onclick="obSelect(0, this)">🔍 Search Engine</div>
+                    <div class="ob-option" onclick="obSelect(0, this)">🗣️ Word of Mouth</div>
+                    <div class="ob-option" onclick="obSelect(0, this)">👥 Friend / Colleague</div>
+                    <div class="ob-option" onclick="obSelect(0, this)">📰 Article / Blog</div>
+                    <div class="ob-option" onclick="obSelect(0, this)">🎮 Discord / Community</div>
+                    <div class="ob-option" onclick="obSelect(0, this)">✨ Other</div>
+                </div>
+                <div class="ob-nav">
+                    <button class="ob-btn-skip" onclick="skipOnboarding()">Skip setup</button>
+                    <button class="ob-btn ob-btn-next" onclick="obNext()">Continue →</button>
+                </div>
+            </div>
+
+            <!-- ── STEP 2: Primary Use Case ── -->
+            <div class="ob-step" id="ob-step-1">
+                <div class="ob-q-label">QUESTION 02 / 08</div>
+                <div class="ob-q-text">What's your primary use case?</div>
+                <div class="ob-q-sub">// I'll tailor my responses to what matters most to you</div>
+                <div class="ob-options">
+                    <div class="ob-option" onclick="obSelect(1, this)">📚 Information Retrieval</div>
+                    <div class="ob-option" onclick="obSelect(1, this)">⚡ Task Automation</div>
+                    <div class="ob-option" onclick="obSelect(1, this)">✍️ Content Generation</div>
+                    <div class="ob-option" onclick="obSelect(1, this)">🔬 Research Assistance</div>
+                    <div class="ob-option" onclick="obSelect(1, this)">💻 Coding Help</div>
+                    <div class="ob-option" onclick="obSelect(1, this)">🎨 Creative Projects</div>
+                    <div class="ob-option" onclick="obSelect(1, this)">📊 Data Analysis</div>
+                    <div class="ob-option" onclick="obSelect(1, this)">🎓 Learning & Study</div>
+                </div>
+                <div class="ob-nav">
+                    <button class="ob-btn ob-btn-back" onclick="obBack()">← Back</button>
+                    <button class="ob-btn ob-btn-next" onclick="obNext()">Continue →</button>
+                </div>
+            </div>
+
+            <!-- ── STEP 3: Satisfaction Rating ── -->
+            <div class="ob-step" id="ob-step-2">
+                <div class="ob-q-label">QUESTION 03 / 08</div>
+                <div class="ob-q-text">First impressions — how are you feeling?</div>
+                <div class="ob-q-sub">// be honest, I can handle it 😭</div>
+                <div class="ob-options">
+                    <div class="ob-option" onclick="obSelect(2, this)">🤩 Very Excited</div>
+                    <div class="ob-option" onclick="obSelect(2, this)">😊 Satisfied</div>
+                    <div class="ob-option" onclick="obSelect(2, this)">😐 Neutral</div>
+                    <div class="ob-option" onclick="obSelect(2, this)">😕 Unsure</div>
+                    <div class="ob-option" onclick="obSelect(2, this)">😤 Disappointed</div>
+                </div>
+                <div class="ob-nav">
+                    <button class="ob-btn ob-btn-back" onclick="obBack()">← Back</button>
+                    <button class="ob-btn ob-btn-next" onclick="obNext()">Continue →</button>
+                </div>
+            </div>
+
+            <!-- ── STEP 4: Feature Suggestions ── -->
+            <div class="ob-step" id="ob-step-3">
+                <div class="ob-q-label">QUESTION 04 / 08</div>
+                <div class="ob-q-text">What features would you love to see?</div>
+                <div class="ob-q-sub">// your ideas shape Cyanix's future — no cap</div>
+                <textarea class="ob-input" id="ob-suggestions" placeholder="e.g. Voice input, image generation, custom personas..."></textarea>
+                <div class="ob-nav">
+                    <button class="ob-btn ob-btn-back" onclick="obBack()">← Back</button>
+                    <button class="ob-btn ob-btn-next" onclick="obNext()">Continue →</button>
+                </div>
+            </div>
+
+            <!-- ── STEP 5: Recommend Likelihood ── -->
+            <div class="ob-step" id="ob-step-4">
+                <div class="ob-q-label">QUESTION 05 / 08</div>
+                <div class="ob-q-text">How likely are you to recommend Cyanix?</div>
+                <div class="ob-q-sub">// NPS — Net Promoter Score</div>
+                <div class="ob-options">
+                    <div class="ob-option" onclick="obSelect(4, this)">🔥 Definitely recommending</div>
+                    <div class="ob-option" onclick="obSelect(4, this)">👍 Probably will</div>
+                    <div class="ob-option" onclick="obSelect(4, this)">🤷 Not sure yet</div>
+                    <div class="ob-option" onclick="obSelect(4, this)">👎 Unlikely</div>
+                    <div class="ob-option" onclick="obSelect(4, this)">❌ Very unlikely</div>
+                </div>
+                <div class="ob-nav">
+                    <button class="ob-btn ob-btn-back" onclick="obBack()">← Back</button>
+                    <button class="ob-btn ob-btn-next" onclick="obNext()">Continue →</button>
+                </div>
+            </div>
+
+            <!-- ── STEP 6: Age (Optional) ── -->
+            <div class="ob-step" id="ob-step-5">
+                <div class="ob-q-label">QUESTION 06 / 08 — OPTIONAL</div>
+                <div class="ob-q-text">Age range?</div>
+                <div class="ob-q-sub">// totally optional — helps with personalisation</div>
+                <div class="ob-options">
+                    <div class="ob-option" onclick="obSelect(5, this)">Under 18</div>
+                    <div class="ob-option" onclick="obSelect(5, this)">18 – 24</div>
+                    <div class="ob-option" onclick="obSelect(5, this)">25 – 34</div>
+                    <div class="ob-option" onclick="obSelect(5, this)">35 – 44</div>
+                    <div class="ob-option" onclick="obSelect(5, this)">45 – 54</div>
+                    <div class="ob-option" onclick="obSelect(5, this)">55 or older</div>
+                    <div class="ob-option" onclick="obSelect(5, this)">Prefer not to say</div>
+                </div>
+                <div class="ob-nav">
+                    <button class="ob-btn ob-btn-back" onclick="obBack()">← Back</button>
+                    <button class="ob-btn ob-btn-next" onclick="obNext()">Continue →</button>
+                </div>
+            </div>
+
+            <!-- ── STEP 7: Occupation (Optional) ── -->
+            <div class="ob-step" id="ob-step-6">
+                <div class="ob-q-label">QUESTION 07 / 08 — OPTIONAL</div>
+                <div class="ob-q-text">What's your occupation / role?</div>
+                <div class="ob-q-sub">// helps me speak your language</div>
+                <div class="ob-options">
+                    <div class="ob-option" onclick="obSelect(6, this)">🎓 Student</div>
+                    <div class="ob-option" onclick="obSelect(6, this)">💼 Professional</div>
+                    <div class="ob-option" onclick="obSelect(6, this)">🔬 Researcher</div>
+                    <div class="ob-option" onclick="obSelect(6, this)">🚀 Entrepreneur</div>
+                    <div class="ob-option" onclick="obSelect(6, this)">💻 Developer</div>
+                    <div class="ob-option" onclick="obSelect(6, this)">🎨 Creative</div>
+                    <div class="ob-option" onclick="obSelect(6, this)">📚 Educator</div>
+                    <div class="ob-option" onclick="obSelect(6, this)">🤷 Prefer not to say</div>
+                </div>
+                <div class="ob-nav">
+                    <button class="ob-btn ob-btn-back" onclick="obBack()">← Back</button>
+                    <button class="ob-btn ob-btn-next" onclick="obNext()">Continue →</button>
+                </div>
+            </div>
+
+            <!-- ── STEP 8: Preferred AI Tone ── -->
+            <div class="ob-step" id="ob-step-7">
+                <div class="ob-q-label">QUESTION 08 / 08</div>
+                <div class="ob-q-text">How should I talk to you?</div>
+                <div class="ob-q-sub">// sets your default AI personality — can be changed later</div>
+                <div class="ob-options">
+                    <div class="ob-option" onclick="obSelect(7, this)">💼 Professional</div>
+                    <div class="ob-option" onclick="obSelect(7, this)">😊 Friendly</div>
+                    <div class="ob-option" onclick="obSelect(7, this)">☕ Casual</div>
+                    <div class="ob-option" onclick="obSelect(7, this)">📐 Strict Teacher</div>
+                    <div class="ob-option" onclick="obSelect(7, this)">🔥 Motivational</div>
+                </div>
+                <div class="ob-nav">
+                    <button class="ob-btn ob-btn-back" onclick="obBack()">← Back</button>
+                    <button class="ob-btn ob-btn-next" onclick="obFinish()">Let's go 🚀</button>
+                </div>
+            </div>
+
+            <!-- ── COMPLETION: thinking animation ── -->
+            <div class="ob-step" id="ob-step-done">
+                <div class="ob-thinking">
+                    <div class="ob-thinking-wrap">
+                        <div class="ob-thinking-ring2"></div>
+                        <div class="ob-thinking-ring"></div>
+                        <img class="ob-thinking-emblem" id="obDoneEmblem" src="" alt="Cyanix">
+                    </div>
+                    <div class="ob-thinking-text">PERSONALIZING YOUR EXPERIENCE...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
 </body>
 </html>
