@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyanix AI - Maintenance</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family: "Orbitron", Arial, sans-serif;
+}
+
+body{
+background:#000;
+color:#00ffff;
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+}
+
+/* Grid background */
+
+body::before{
+content:"";
+position:absolute;
+width:200%;
+height:200%;
+background:
+linear-gradient(rgba(0,255,255,0.08) 1px, transparent 1px),
+linear-gradient(90deg, rgba(0,255,255,0.08) 1px, transparent 1px);
+background-size:50px 50px;
+animation:gridMove 15s linear infinite;
+}
+
+@keyframes gridMove{
+0%{transform:translate(0,0)}
+100%{transform:translate(-50px,-50px)}
+}
+
+/* Main container */
+
+.container{
+position:relative;
+text-align:center;
+padding:60px;
+border:1px solid #00ffff;
+border-radius:10px;
+box-shadow:0 0 30px #00ffff;
+background:rgba(0,0,0,0.8);
+}
+
+/* Title */
+
+h1{
+font-size:3rem;
+letter-spacing:4px;
+text-shadow:0 0 10px #00ffff,
+0 0 20px #00ffff,
+0 0 40px #00ffff;
+margin-bottom:20px;
+}
+
+/* Maintenance text */
+
+p{
+font-size:1.3rem;
+color:#7dfcff;
+margin-bottom:30px;
+}
+
+/* Status */
+
+.status{
+font-size:1rem;
+opacity:0.8;
+}
+
+/* Scan line */
+
+.scan{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:4px;
+background:#00ffff;
+box-shadow:0 0 15px #00ffff;
+animation:scan 4s linear infinite;
+}
+
+@keyframes scan{
+0%{top:0}
+100%{top:100%}
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="scan"></div>
+
+<h1>CYANIX AI</h1>
+
+<p>System Currently Under Maintenance</p>
+
+<div class="status">
+Please check back soon.
+</div>
+
+</div>
+
+</body>
+  </html>
