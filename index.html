@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cysearch — Find Anything on the Internet</title>
+  <title>Cysearch + Cyanix AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -11,215 +11,292 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════
-     SCREEN 1 — LANDING / GALAXY
-═══════════════════════════════════ -->
-<div id="screen-galaxy">
-  <canvas id="galaxy-canvas"></canvas>
-  <div class="scanlines"></div>
+<!-- ═══════════════════════════════════════════
+     GLOBAL NAV — always visible
+═══════════════════════════════════════════ -->
+<div class="app-nav" id="app-nav">
+  <button class="app-tab active" data-app="cysearch" id="tab-cysearch">
+    <span class="logo-cy">Cy</span><span class="logo-rest">search</span>
+  </button>
+  <div class="app-tab-divider"></div>
+  <button class="app-tab" data-app="cyanix" id="tab-cyanix">
+    <span class="brand-cy">Cyan</span><span class="brand-ix">ix</span>
+    <span class="brand-tag">AI</span>
+  </button>
+</div>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="logo">
-      <span class="logo-cy">Cy</span><span class="logo-rest">search</span>
+
+<!-- ═══════════════════════════════════════════
+     APP A — CYSEARCH
+═══════════════════════════════════════════ -->
+<div id="app-cysearch" class="app-root">
+
+  <!-- SCREEN 1: Galaxy landing -->
+  <div id="screen-galaxy" class="screen">
+    <canvas id="galaxy-canvas"></canvas>
+    <div class="scanlines"></div>
+
+    <div class="hero" id="hero">
+      <p class="hero-eyebrow">👋 Welcome to Cysearch</p>
+      <h1 class="hero-title">Search the Internet<br/><span class="hero-accent">as a Galaxy</span></h1>
+      <p class="hero-desc">
+        Every website is a star. Every category is a cluster.<br/>
+        <span id="counter">0</span> nodes mapped — and growing.
+      </p>
+      <button class="btn-primary" id="enter-btn">🚀 Explore the Map</button>
+      <p class="hero-hint">Sign in to unlock search &amp; AI answers</p>
     </div>
-    <a href="../cyanix/index.html" class="header-link" id="cyanix-link">Try Cyanix AI →</a>
+
+    <!-- Depth filter -->
+    <div class="depth-bar">
+      <span class="depth-label">Show depth</span>
+      <button class="layer-btn active" data-layer="1">Tier 1</button>
+      <button class="layer-btn" data-layer="2">Tier 2</button>
+      <button class="layer-btn" data-layer="3">Tier 3</button>
+      <button class="layer-btn" data-layer="4">All</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <p class="legend-title">Categories</p>
+      <div id="legend-items"></div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip" style="display:none;">
+      <span id="tt-cluster" class="tt-cluster"></span>
+      <strong id="tt-name" class="tt-name"></strong>
+      <span id="tt-url" class="tt-url"></span>
+    </div>
+
+    <!-- Lock-on panel -->
+    <div id="lockon-panel" class="lockon" style="display:none;">
+      <div class="lo-corners">
+        <span class="lc tl"></span><span class="lc tr"></span>
+        <span class="lc bl"></span><span class="lc br"></span>
+      </div>
+      <div id="lo-ring" class="lo-ring"></div>
+      <div id="lo-dot" class="lo-dot"></div>
+      <div class="lo-body">
+        <div id="lo-cluster" class="lo-cluster-label"></div>
+        <div id="lo-name" class="lo-site-name"></div>
+        <div id="lo-url" class="lo-site-url"></div>
+        <div id="lo-desc" class="lo-site-desc"></div>
+        <button id="lo-launch" class="btn-launch" style="display:none;">Open Site →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Search cobweb -->
+  <div id="screen-cobweb" class="screen" style="display:none;">
+    <canvas id="bg-canvas"></canvas>
+
+    <svg id="cobweb-svg" style="position:absolute;inset:0;overflow:visible;">
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g id="links-g"></g>
+      <g id="nodes-g"></g>
+    </svg>
+
+    <!-- Cobweb header -->
+    <header class="cw-header">
+      <div class="logo">
+        <span class="logo-cy">Cy</span><span class="logo-rest">search</span>
+      </div>
+      <div class="header-right">
+        <span id="user-label" class="user-pill">Guest</span>
+        <button id="signout-btn" class="btn-ghost">Sign out</button>
+      </div>
+    </header>
+
+    <!-- Search bar -->
+    <div class="search-bar" id="search-wrap">
+      <div class="search-row">
+        <input id="search-input" class="search-input" type="text"
+               placeholder="Search the internet galaxy..." autocomplete="off" spellcheck="false"/>
+        <button id="search-btn" class="btn-search">Search</button>
+        <button id="reset-btn" class="btn-reset">✕</button>
+      </div>
+      <div class="quick-tags">
+        <button class="qtag" data-q="AI tools">AI Tools</button>
+        <button class="qtag" data-q="web development">Web Dev</button>
+        <button class="qtag" data-q="design resources">Design</button>
+        <button class="qtag" data-q="startup tools">Startups</button>
+        <button class="qtag" data-q="learn coding">Coding</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading-wrap" class="loading" style="display:none;">
+      <div class="spinner"></div>
+      <p class="loading-text">Searching the galaxy...</p>
+    </div>
+
+    <!-- AI answer -->
+    <div id="ai-bar" class="ai-answer" style="display:none;">
+      <span class="ai-icon">✦</span>
+      <p id="ai-text" class="ai-text"></p>
+    </div>
+
+    <!-- Node info card -->
+    <div id="node-info" class="node-info-card" style="display:none;">
+      <button id="ni-close" class="card-close">✕</button>
+      <span id="ni-cat" class="node-cat"></span>
+      <h3 id="ni-name" class="node-name"></h3>
+      <p id="ni-desc" class="node-desc"></p>
+      <a id="ni-link" class="btn-visit" target="_blank" rel="noopener" style="display:none;">Visit Site →</a>
+    </div>
+  </div>
+
+  <!-- AUTH MODAL -->
+  <div id="auth-overlay" class="auth-overlay" style="display:none;">
+    <div class="auth-box">
+      <button id="auth-close" class="auth-close-btn">✕</button>
+      <div class="auth-logo">
+        <span class="logo-cy">Cy</span><span class="logo-rest">search</span>
+      </div>
+      <p class="auth-sub">Sign in to search &amp; explore</p>
+
+      <div class="oauth-btns">
+        <button id="ob-google" class="oauth-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+        <button id="ob-github" class="oauth-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          Continue with GitHub
+        </button>
+        <button id="ob-discord" class="oauth-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#5865F2">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.082.11 18.105.128 18.12a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127c-.598.349-1.22.645-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+          </svg>
+          Continue with Discord
+        </button>
+      </div>
+
+      <div class="divider"><span>or</span></div>
+
+      <div class="tabs">
+        <button class="atab active" data-tab="signin">Sign In</button>
+        <button class="atab" data-tab="signup">Sign Up</button>
+      </div>
+
+      <div id="tab-signin" class="aform active">
+        <input id="si-email" class="form-input" type="email" placeholder="Email address"/>
+        <input id="si-pass" class="form-input" type="password" placeholder="Password"/>
+        <div id="si-err" class="form-err" style="display:none;"></div>
+        <button id="si-btn" class="btn-primary full">Sign In</button>
+      </div>
+
+      <div id="tab-signup" class="aform" style="display:none;">
+        <input id="su-email" class="form-input" type="email" placeholder="Email address"/>
+        <input id="su-pass" class="form-input" type="password" placeholder="Password (min 6 chars)"/>
+        <input id="su-conf" class="form-input" type="password" placeholder="Confirm password"/>
+        <div id="su-err" class="form-err" style="display:none;"></div>
+        <div id="su-ok" class="form-ok" style="display:none;"></div>
+        <button id="su-btn" class="btn-primary full">Create Account</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #app-cysearch -->
+
+
+<!-- ═══════════════════════════════════════════
+     APP B — CYANIX AI
+═══════════════════════════════════════════ -->
+<div id="app-cyanix" class="app-root" style="display:none;">
+
+  <div class="bg-grid"></div>
+
+  <!-- Cyanix header -->
+  <header class="cx-topbar">
+    <div class="cx-topbar-left">
+      <div class="brand">
+        <span class="brand-cy">Cyan</span><span class="brand-ix">ix</span>
+        <span class="brand-tag">AI</span>
+      </div>
+      <span class="status-chip">
+        <span class="status-dot"></span>Online
+      </span>
+    </div>
+    <div class="cx-topbar-right">
+      <button class="btn-clear" id="clear-btn">Clear chat</button>
+    </div>
   </header>
 
-  <!-- Hero -->
-  <div class="hero" id="hero">
-    <p class="hero-eyebrow">👋 Welcome to Cysearch</p>
-    <h1 class="hero-title">Search the Internet<br/><span class="hero-accent">as a Galaxy</span></h1>
-    <p class="hero-desc">
-      Every website is a star. Every category is a cluster.<br/>
-      <span id="counter">0</span> nodes mapped — and growing.
-    </p>
-    <button class="btn-primary" id="enter-btn">🚀 Explore the Map</button>
-    <p class="hero-hint">Sign in to unlock search &amp; AI answers</p>
-  </div>
+  <!-- Chat layout -->
+  <main class="cx-layout">
 
-  <!-- Depth filter -->
-  <div class="depth-bar">
-    <span class="depth-label">Show depth</span>
-    <button class="layer-btn active" data-layer="1">Tier 1</button>
-    <button class="layer-btn" data-layer="2">Tier 2</button>
-    <button class="layer-btn" data-layer="3">Tier 3</button>
-    <button class="layer-btn" data-layer="4">All</button>
-  </div>
+    <section class="chat-section">
+      <div class="messages" id="messages"></div>
 
-  <!-- Cluster legend -->
-  <div class="legend">
-    <p class="legend-title">Categories</p>
-    <div id="legend-items"></div>
-  </div>
+      <div class="typing-row hidden" id="typing">
+        <div class="avatar ai-avatar">✦</div>
+        <div class="typing-bubbles">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="typing-label" id="typing-label">Thinking...</span>
+      </div>
 
-  <!-- Hover tooltip -->
-  <div id="tooltip" class="tooltip" style="display:none;">
-    <span id="tt-cluster" class="tt-cluster"></span>
-    <strong id="tt-name" class="tt-name"></strong>
-    <span id="tt-url" class="tt-url"></span>
-  </div>
+      <div class="input-area">
+        <div class="input-box" id="input-box">
+          <textarea id="chat-input" class="chat-input" rows="1"
+                    placeholder="Ask me anything..."
+                    autocomplete="off" spellcheck="false"></textarea>
+          <button class="send-btn" id="send-btn" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-meta">
+          <span class="input-hint">Enter to send · Shift+Enter for new line</span>
+          <span class="cs-status" id="cysearch-indicator">
+            <span class="cs-dot"></span> Cysearch connected
+          </span>
+        </div>
+      </div>
+    </section>
 
-  <!-- Click panel (lock-on) -->
-  <div id="lockon-panel" class="lockon" style="display:none;">
-    <div class="lo-corners">
-      <span class="lc tl"></span><span class="lc tr"></span>
-      <span class="lc bl"></span><span class="lc br"></span>
-    </div>
-    <div id="lo-ring" class="lo-ring"></div>
-    <div id="lo-dot"  class="lo-dot"></div>
-    <div class="lo-body">
-      <div id="lo-cluster" class="lo-cluster-label"></div>
-      <div id="lo-name"    class="lo-site-name"></div>
-      <div id="lo-url"     class="lo-site-url"></div>
-      <div id="lo-desc"    class="lo-site-desc"></div>
-      <button id="lo-launch" class="btn-launch" style="display:none;">Open Site →</button>
-    </div>
-  </div>
-</div>
+    <!-- Sidebar -->
+    <aside class="cx-sidebar">
+      <div class="sidebar-head">
+        <span class="sidebar-title">Search Results</span>
+        <span class="sidebar-sub">Powered by Cysearch</span>
+      </div>
+      <div class="nodes-list" id="nodes-list">
+        <div class="nodes-empty">
+          <div class="empty-icon">◉</div>
+          <p class="empty-text">Search results appear here as clickable cards.</p>
+        </div>
+      </div>
+      <div class="sidebar-foot">
+        <button class="btn-galaxy" id="goto-cysearch-btn">Open Galaxy Map →</button>
+      </div>
+    </aside>
 
-
-<!-- ═══════════════════════════════════
-     SCREEN 2 — SEARCH / COBWEB
-═══════════════════════════════════ -->
-<div id="screen-cobweb" style="display:none;">
-  <canvas id="bg-canvas"></canvas>
-
-  <svg id="cobweb-svg" style="position:absolute;inset:0;overflow:visible;">
-    <defs>
-      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3.5" result="b"/>
-        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
-    </defs>
-    <g id="links-g"></g>
-    <g id="nodes-g"></g>
-  </svg>
-
-  <!-- Header -->
-  <header class="header header-cobweb">
-    <div class="logo">
-      <span class="logo-cy">Cy</span><span class="logo-rest">search</span>
-    </div>
-    <div class="header-right">
-      <span id="user-label" class="user-pill">Guest</span>
-      <button id="signout-btn" class="btn-ghost">Sign out</button>
-    </div>
-  </header>
-
-  <!-- Search bar -->
-  <div class="search-bar" id="search-wrap">
-    <div class="search-row">
-      <input id="search-input" class="search-input" type="text"
-             placeholder="Search the internet galaxy..." autocomplete="off" spellcheck="false" />
-      <button id="search-btn" class="btn-search">Search</button>
-      <button id="reset-btn"  class="btn-reset">✕</button>
-    </div>
-    <div class="quick-tags">
-      <button class="qtag" data-q="AI tools">AI Tools</button>
-      <button class="qtag" data-q="web development">Web Dev</button>
-      <button class="qtag" data-q="design resources">Design</button>
-      <button class="qtag" data-q="startup tools">Startups</button>
-      <button class="qtag" data-q="learn coding">Coding</button>
-    </div>
-  </div>
-
-  <!-- Loading spinner -->
-  <div id="loading-wrap" class="loading" style="display:none;">
-    <div class="spinner"></div>
-    <p class="loading-text">Searching the galaxy...</p>
-  </div>
-
-  <!-- AI answer -->
-  <div id="ai-bar" class="ai-answer" style="display:none;">
-    <span class="ai-icon">✦</span>
-    <p id="ai-text" class="ai-text"></p>
-  </div>
-
-  <!-- Node info card -->
-  <div id="node-info" class="node-card" style="display:none;">
-    <button id="ni-close" class="card-close">✕</button>
-    <span id="ni-cat"  class="node-cat"></span>
-    <h3   id="ni-name" class="node-name"></h3>
-    <p    id="ni-desc" class="node-desc"></p>
-    <a    id="ni-link" class="btn-visit" target="_blank" rel="noopener" style="display:none;">Visit Site →</a>
-  </div>
-
-  <!-- Ask AI shortcut -->
-  <a href="../cyanix/index.html" class="ask-ai-btn">✦ Ask Cyanix AI</a>
-</div>
+  </main>
+</div><!-- end #app-cyanix -->
 
 
-<!-- ═══════════════════════════════════
-     AUTH MODAL
-═══════════════════════════════════ -->
-<div id="auth-overlay" class="auth-overlay" style="display:none;">
-  <div class="auth-box">
-    <button id="auth-close" class="auth-close-btn">✕</button>
-
-    <div class="auth-logo">
-      <span class="logo-cy">Cy</span><span class="logo-rest">search</span>
-    </div>
-    <p class="auth-sub">Sign in to search & explore</p>
-
-    <!-- OAuth -->
-    <div class="oauth-btns">
-      <button id="ob-google"  class="oauth-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-        Continue with Google
-      </button>
-      <button id="ob-github"  class="oauth-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-        </svg>
-        Continue with GitHub
-      </button>
-      <button id="ob-discord" class="oauth-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#5865F2">
-          <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.082.11 18.105.128 18.12a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
-        </svg>
-        Continue with Discord
-      </button>
-    </div>
-
-    <div class="divider"><span>or</span></div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="atab active" data-tab="signin">Sign In</button>
-      <button class="atab"        data-tab="signup">Sign Up</button>
-    </div>
-
-    <!-- Sign In form -->
-    <div id="tab-signin" class="aform active">
-      <input  id="si-email" class="form-input" type="email"    placeholder="Email address" />
-      <input  id="si-pass"  class="form-input" type="password" placeholder="Password" />
-      <div    id="si-err"   class="form-err"   style="display:none;"></div>
-      <button id="si-btn"   class="btn-primary full">Sign In</button>
-    </div>
-
-    <!-- Sign Up form -->
-    <div id="tab-signup" class="aform" style="display:none;">
-      <input  id="su-email" class="form-input" type="email"    placeholder="Email address" />
-      <input  id="su-pass"  class="form-input" type="password" placeholder="Password (min 6 chars)" />
-      <input  id="su-conf"  class="form-input" type="password" placeholder="Confirm password" />
-      <div    id="su-err"   class="form-err"   style="display:none;"></div>
-      <div    id="su-ok"    class="form-ok"    style="display:none;"></div>
-      <button id="su-btn"   class="btn-primary full">Create Account</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- Scripts — order matters: Three.js → D3 → Supabase → our code -->
+<!-- Scripts: Three.js → D3 → Supabase → our app -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="JavaScript.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
