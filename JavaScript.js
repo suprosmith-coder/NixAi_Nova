@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
   initSupabase();
   initHUD();
+  bindMapDoubleTap();
   animCounter('counter', 1_847_293, 2200);
   buildModelDropdown();
   buildSidebar();
@@ -147,6 +148,34 @@ function toggleTheme() {
 /* ═══════════════════════════════════════════════════════════════
    VIEW TRANSITIONS
 ═══════════════════════════════════════════════════════════════ */
+let _hudUIHidden = false;
+
+function setHudUI(visible) {
+  _hudUIHidden = !visible;
+  const elems = document.querySelectorAll('.hud-panel, .hero, .topbar, .node-tip, .scanline-wrap, .frame');
+  elems.forEach(el => {
+    el.style.transition = 'opacity 0.4s ease';
+    el.style.opacity    = visible ? '' : '0';
+    el.style.pointerEvents = visible ? '' : 'none';
+  });
+}
+
+function toggleHudUI() { setHudUI(_hudUIHidden); }
+
+// Double-tap anywhere on the map canvas restores the UI
+function bindMapDoubleTap() {
+  const canvas = $('hud-canvas');
+  if (!canvas) return;
+  canvas.addEventListener('dblclick', () => { if (_hudUIHidden) setHudUI(true); });
+  canvas.addEventListener('touchend', (() => {
+    let last = 0;
+    return () => {
+      const now = Date.now();
+      if (now - last < 350 && _hudUIHidden) setHudUI(true);
+      last = now;
+    };
+  })());
+}
 function goToChat() {
   $('view-map').style.display = 'none';
   show('view-chat');
@@ -180,8 +209,8 @@ function toggleSidebar() { setSidebarState(!_sidebarOpen); }
 ═══════════════════════════════════════════════════════════════ */
 function bindUI() {
   /* Navigation */
-  on('enter-chat-btn', 'click', goToChat);
-  on('explore-btn',    'click', () => {});
+  on('enter-chat-btn', 'click', () => { if (!_session) { openAuth(); toast('Sign in to start chatting.'); } else { goToChat(); } });
+  on('explore-btn',    'click', () => setHudUI(false));
   on('map-signin-btn', 'click', openAuth);
   on('map-theme-btn',  'click', toggleTheme);
   on('back-btn',       'click', goToMap);
@@ -424,10 +453,20 @@ function onSignedIn(user) {
   const sbLabel = $('sb-user-label');
   if (sbLabel) { sbLabel.textContent = label; sbLabel.style.display = 'block'; }
   hide('map-signin-btn'); hide('ct-signin-btn'); hide('sb-sign-btn');
+  // Unlock composer
+  const input = $('chat-input');
+  if (input) { input.disabled = false; input.placeholder = 'Ask Cyanix AI anything…'; }
+  const sendBtn = $('send-btn');
+  if (sendBtn) sendBtn.disabled = false;
   loadChats(); buildSidebar();
 }
 function onSignedOut() {
   hide('ct-user-chip'); show('map-signin-btn'); show('ct-signin-btn'); show('sb-sign-btn');
+  // Lock composer
+  const input = $('chat-input');
+  if (input) { input.disabled = true; input.placeholder = 'Sign in to chat with Cyanix AI…'; }
+  const sendBtn = $('send-btn');
+  if (sendBtn) sendBtn.disabled = true;
   loadChats(); buildSidebar();
 }
 function openAuth()  { show('auth-overlay','flex'); }
@@ -628,6 +667,14 @@ function handleSend() {
 
 async function sendMessage(text, isRetry = false) {
   if (_responding) return;
+
+  // ── Auth gate: require sign-in to chat ──────────────────────
+  if (!_session) {
+    openAuth();
+    toast('Please sign in to chat with Cyanix AI.');
+    return;
+  }
+
   _responding = true;
   hide('continue-row');
 
@@ -637,6 +684,7 @@ async function sendMessage(text, isRetry = false) {
   if (sendBtn) { sendBtn.classList.add('stop'); sendBtn.title = 'Stop (Esc)'; }
 
   if (!isRetry) appendMsg('user', text);
+  clearWelcome();
   scrollBottom();
 
   try {
@@ -1049,6 +1097,12 @@ function enhanceCodeBlocks(container) {
 }
 
 /* ─── Welcome & Templates ────────────────────────────────────── */
+function clearWelcome() {
+  const wrap = $('messages');
+  if (!wrap) return;
+  wrap.querySelectorAll('.welcome-hero, .templates-grid').forEach(el => el.remove());
+}
+
 function renderWelcome() {
   const wrap = $('messages');
   if (!wrap) return;
@@ -1085,7 +1139,11 @@ function renderWelcome() {
 
 function bindChips() {
   document.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => { goToChat(); setTimeout(() => sendMessage(chip.dataset.q), 80); });
+    chip.addEventListener('click', () => {
+      if (!_session) { openAuth(); toast('Please sign in to chat with Cyanix AI.'); return; }
+      goToChat();
+      setTimeout(() => sendMessage(chip.dataset.q), 80);
+    });
   });
 }
 
@@ -1335,4 +1393,48 @@ function drawGrid(ctx,W,H,t){const step=46,off=(t*.65)%step;ctx.strokeStyle='rgb
 function drawConstellations(ctx,nodes){const cls=nodes.filter(n=>n.isCluster);ctx.strokeStyle='rgba(255,255,255,0.022)';ctx.lineWidth=.5;ctx.setLineDash([2,14]);for(let i=0;i<cls.length;i++)for(let j=i+1;j<cls.length;j++)if(Math.hypot(cls[i].x-cls[j].x,cls[i].y-cls[j].y)<280){ctx.beginPath();ctx.moveTo(cls[i].x,cls[i].y);ctx.lineTo(cls[j].x,cls[j].y);ctx.stroke();}ctx.setLineDash([]);}
 function drawLink(ctx,from,to,color,t,layer=1){const alpha=layer===1?.38:layer===2?.20:.10;ctx.save();ctx.setLineDash([4,9]);ctx.lineDashOffset=-(t*14);ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.strokeStyle=color+Math.round(alpha*255).toString(16).padStart(2,'0');ctx.lineWidth=layer===1?.9:.55;ctx.stroke();ctx.restore();}
 function drawPacket(ctx,x,y,color){const g=ctx.createRadialGradient(x,y,0,x,y,6);g.addColorStop(0,color+'cc');g.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();}
-function drawNode(ctx,n,t){const pulse=Math.sin(t*1.2+n.pulse)*.12+.88,r=n.r*pulse*(n===_hud.hovered?1.3:1);const gr=r+(n.isCenter?22:n.isCluster?16:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+function drawNode(ctx,n,t){const pulse=Math.sin(t*1.2+n.pulse)*.12+.88,r=n.r*pulse*(n===_hud.hovered?1.3:1);const gr=r+(n.isCenter?22:n.isCluster?16:10);const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,gr);g.addColorStop(0,n.color+(n.isCenter?'55':n.isCluster?'44':'33'));g.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(n.x,n.y,gr,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);ctx.fillStyle=n.color+(n.isCenter?'dd':n.isCluster?'bb':'88');ctx.strokeStyle=n.color;ctx.lineWidth=n.isCenter?1.5:n.isCluster?1.2:.7;ctx.fill();ctx.stroke();if(n.isCenter||n.isCluster){ctx.font=n.isCenter?'bold 10px Orbitron,monospace':'700 7.5px Space Mono,monospace';ctx.textAlign='center';const ly=n.y+r+14,tw=ctx.measureText(n.label).width;ctx.fillStyle='rgba(1,8,18,.82)';ctx.fillRect(n.x-tw/2-5,ly-10,tw+10,13);ctx.fillStyle=n.isCenter?'#00e8ff':n.color;ctx.fillText(n.label,n.x,ly);}if(n.isSite&&n===_hud.hovered){ctx.font='600 6.5px Space Mono,monospace';ctx.textAlign='center';const ly=n.y+n.r+12,tw=ctx.measureText(n.label).width;ctx.fillStyle='rgba(1,8,18,.85)';ctx.fillRect(n.x-tw/2-4,ly-9,tw+8,12);ctx.fillStyle=n.color;ctx.fillText(n.label,n.x,ly);}if(n.isCenter){ctx.strokeStyle='rgba(0,232,255,.22)';ctx.lineWidth=.8;const cl=26;ctx.beginPath();ctx.moveTo(n.x-cl,n.y);ctx.lineTo(n.x+cl,n.y);ctx.stroke();ctx.beginPath();ctx.moveTo(n.x,n.y-cl);ctx.lineTo(n.x,n.y+cl);ctx.stroke();}}
+function drawCenterPulse(ctx,c,t){for(let i=0;i<3;i++){const rp=((t*.75+i/3)%1)*90+16,op=Math.max(0,1-rp/106)*.35;ctx.beginPath();ctx.arc(c.x,c.y,rp,0,Math.PI*2);ctx.strokeStyle=`rgba(0,232,255,${op})`;ctx.lineWidth=.9;ctx.stroke();}}
+function drawHoverRing(ctx,n,t){ctx.save();ctx.translate(n.x,n.y);ctx.rotate(t*1.2);ctx.setLineDash([4,5]);ctx.beginPath();ctx.arc(0,0,n.r+8,0,Math.PI*2);ctx.strokeStyle=n.color+'99';ctx.lineWidth=1;ctx.stroke();ctx.restore();}
+function drawSelectionRing(ctx,n,t){ctx.save();ctx.translate(n.x,n.y);ctx.rotate(-t*1.8);ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(0,0,n.r+16,0,Math.PI*2);ctx.strokeStyle=n.color;ctx.lineWidth=1.4;ctx.stroke();ctx.restore();const br=n.r+22,bs=8;ctx.setLineDash([]);ctx.strokeStyle=n.color;ctx.lineWidth=1.5;[[1,1],[-1,1],[-1,-1],[1,-1]].forEach(([sx,sy])=>{ctx.beginPath();ctx.moveTo(n.x+sx*br,n.y+sy*(br-bs));ctx.lineTo(n.x+sx*br,n.y+sy*br);ctx.lineTo(n.x+sx*(br-bs),n.y+sy*br);ctx.stroke();});}
+
+function bindHUDEvents() {
+  const canvas=_hud.canvas;
+  canvas.addEventListener('mousemove',e=>{ const{x,y}=toCanvas(e.clientX,e.clientY); setText('hud-coords',`X:${pad(x)} Y:${pad(y)}`); const hit=hitTest(x,y); _hud.hovered=hit; canvas.classList.toggle('clickable',!!hit); if(hit) setText('hud-sector',hit.clusterId.toUpperCase()); });
+  canvas.addEventListener('click',e=>{ const{x,y}=toCanvas(e.clientX,e.clientY); const hit=hitTest(x,y); if(hit){_hud.selected=hit;showNodeTip(hit,e.clientX,e.clientY);}else{_hud.selected=null;hideNodeTip();} });
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();const touch=e.touches[0];const{x,y}=toCanvas(touch.clientX,touch.clientY);const hit=hitTest(x,y);_hud.hovered=hit;_hud.selected=hit||null;hit?showNodeTip(hit,touch.clientX,touch.clientY):hideNodeTip();},{passive:false});
+  canvas.addEventListener('mouseleave',()=>{ _hud.hovered=null; canvas.classList.remove('clickable'); });
+}
+
+function toCanvas(cx,cy){const r=_hud.canvas.getBoundingClientRect();return{x:cx-r.left,y:cy-r.top};}
+function pad(v){return Math.round(v).toString().padStart(3,'0');}
+function hitTest(x,y){const candidates=_hud.nodes.filter(n=>n.isCenter||n.isCluster||(n.layer||1)<=_activeLayer);return[...candidates].sort((a,b)=>b.r-a.r).find(n=>Math.hypot(n.x-x,n.y-y)<n.r+8)||null;}
+
+function showNodeTip(node,cx,cy){
+  const tt=$('node-tip'); if(!tt) return;
+  $('ntip-cat').textContent=(node.clusterId||'HUB').toUpperCase(); $('ntip-cat').style.color=node.color;
+  $('ntip-tier').textContent=node.layer?`TIER ${node.layer}`:''; $('ntip-name').textContent=node.label;
+  $('ntip-url').textContent=(node.url&&node.url!=='#')?node.url.replace('https://',''):'';
+  $('ntip-desc').textContent=SITE_DESCS[node.label]||(node.isCluster?`${node.label} cluster.`:'');
+  const ob=$('ntip-open');
+  if(ob){if(node.url&&node.url!=='#'){ob.style.display='inline-block';ob.style.color=node.color;ob.style.borderColor=node.color+'55';ob.onclick=()=>window.open(node.url,'_blank','noopener');}else ob.style.display='none';}
+  tt.style.borderColor=node.color+'55';
+  const pad=14,ttW=240,ttH=150;
+  let tx=cx+20,ty=cy-16;
+  if(tx+ttW>window.innerWidth-pad) tx=cx-ttW-20;
+  if(ty+ttH>window.innerHeight-pad) ty=window.innerHeight-ttH-pad;
+  if(ty<pad) ty=pad;
+  tt.style.left=tx+'px'; tt.style.top=ty+'px'; tt.style.display='block';
+  tt.style.pointerEvents=(node.url&&node.url!=='#')?'all':'none';
+}
+function hideNodeTip(){const tt=$('node-tip');if(tt&&!_hud.selected)tt.style.display='none';}
+
+function buildLegend(){
+  const wrap=$('legend-items'); if(!wrap) return; wrap.innerHTML='';
+  CLUSTERS.forEach(cl=>{
+    const div=mkEl('div','leg-item');
+    div.innerHTML=`${cl.label}<span class="leg-dot" style="background:${cl.color};box-shadow:0 0 4px ${cl.color}88"></span>`;
+    div.addEventListener('click',()=>{ const node=_hud.nodes.find(n=>n.clusterId===cl.id&&n.isCluster); if(node){_hud.selected=node;showNodeTip(node,node.x+20,node.y-20);}});
+    wrap.appendChild(div);
+  });
+}
