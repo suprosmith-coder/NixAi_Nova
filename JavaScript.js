@@ -97,18 +97,18 @@ let _settings = {
    BOOT
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-  loadSettings();
-  applyTheme();
-  initSupabase();
-  initHUD();
-  bindMapDoubleTap();
-  animCounter('counter', 1_847_293, 2200);
-  buildModelDropdown();
-  buildSidebar();
-  renderWelcome();
-  bindUI();
-  bindKeyboard();
-  setSidebarState(window.innerWidth > 900);
+  try { loadSettings(); } catch(e) { console.warn('[CX] loadSettings:', e); }
+  try { applyTheme(); } catch(e) { console.warn('[CX] applyTheme:', e); }
+  try { initSupabase(); } catch(e) { console.warn('[CX] initSupabase:', e); loadChats(); buildSidebar(); }
+  try { initHUD(); } catch(e) { console.warn('[CX] initHUD:', e); }
+  try { bindMapDoubleTap(); } catch(e) {}
+  try { animCounter('counter', 1_847_293, 2200); } catch(e) {}
+  try { buildModelDropdown(); } catch(e) { console.warn('[CX] buildModelDropdown:', e); }
+  try { buildSidebar(); } catch(e) { console.warn('[CX] buildSidebar:', e); }
+  try { renderWelcome(); } catch(e) { console.warn('[CX] renderWelcome:', e); }
+  try { bindUI(); } catch(e) { console.warn('[CX] bindUI FAILED:', e); }
+  try { bindKeyboard(); } catch(e) {}
+  try { setSidebarState(window.innerWidth > 900); } catch(e) {}
 });
 
 /* ═══════════════════════════════════════════════════════════════
@@ -178,7 +178,7 @@ function bindMapDoubleTap() {
 }
 function goToChat() {
   $('view-map').style.display = 'none';
-  show('view-chat');
+  show('view-chat','flex');
   _hud.paused = true;
   updateUsageBar();
   setTimeout(() => $('chat-input')?.focus(), 80);
@@ -453,20 +453,14 @@ function onSignedIn(user) {
   const sbLabel = $('sb-user-label');
   if (sbLabel) { sbLabel.textContent = label; sbLabel.style.display = 'block'; }
   hide('map-signin-btn'); hide('ct-signin-btn'); hide('sb-sign-btn');
-  // Unlock composer
   const input = $('chat-input');
-  if (input) { input.disabled = false; input.placeholder = 'Ask Cyanix AI anything…'; }
-  const sendBtn = $('send-btn');
-  if (sendBtn) sendBtn.disabled = false;
+  if (input) input.placeholder = 'Ask Cyanix AI anything…';
   loadChats(); buildSidebar();
 }
 function onSignedOut() {
   hide('ct-user-chip'); show('map-signin-btn'); show('ct-signin-btn'); show('sb-sign-btn');
-  // Lock composer
   const input = $('chat-input');
-  if (input) { input.disabled = true; input.placeholder = 'Sign in to chat with Cyanix AI…'; }
-  const sendBtn = $('send-btn');
-  if (sendBtn) sendBtn.disabled = true;
+  if (input) input.placeholder = 'Sign in to start chatting…';
   loadChats(); buildSidebar();
 }
 function openAuth()  { show('auth-overlay','flex'); }
@@ -1402,7 +1396,7 @@ function bindHUDEvents() {
   const canvas=_hud.canvas;
   canvas.addEventListener('mousemove',e=>{ const{x,y}=toCanvas(e.clientX,e.clientY); setText('hud-coords',`X:${pad(x)} Y:${pad(y)}`); const hit=hitTest(x,y); _hud.hovered=hit; canvas.classList.toggle('clickable',!!hit); if(hit) setText('hud-sector',hit.clusterId.toUpperCase()); });
   canvas.addEventListener('click',e=>{ const{x,y}=toCanvas(e.clientX,e.clientY); const hit=hitTest(x,y); if(hit){_hud.selected=hit;showNodeTip(hit,e.clientX,e.clientY);}else{_hud.selected=null;hideNodeTip();} });
-  canvas.addEventListener('touchstart',e=>{e.preventDefault();const touch=e.touches[0];const{x,y}=toCanvas(touch.clientX,touch.clientY);const hit=hitTest(x,y);_hud.hovered=hit;_hud.selected=hit||null;hit?showNodeTip(hit,touch.clientX,touch.clientY):hideNodeTip();},{passive:false});
+  canvas.addEventListener('touchstart',e=>{const touch=e.touches[0];const{x,y}=toCanvas(touch.clientX,touch.clientY);const hit=hitTest(x,y);_hud.hovered=hit;_hud.selected=hit||null;hit?showNodeTip(hit,touch.clientX,touch.clientY):hideNodeTip();},{passive:true});
   canvas.addEventListener('mouseleave',()=>{ _hud.hovered=null; canvas.classList.remove('clickable'); });
 }
 
