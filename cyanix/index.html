@@ -3,117 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cyanix AI — Powered by Cysearch</title>
+  <title>Cyanix AI — Your AI Assistant</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Inter:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- Background grid -->
+<!-- Background -->
 <div class="bg-grid"></div>
-<div class="bg-vignette"></div>
 
-<!-- ── Top bar ─────────────────────────────────── -->
+<!-- ── Header ─────────────────────────────────── -->
 <header class="topbar">
   <div class="topbar-left">
-    <div class="logo">
-      <span class="logo-cy">CYAN</span><span class="logo-ix">IX</span>
-      <span class="logo-badge">AI</span>
+    <div class="brand">
+      <span class="brand-cy">Cyan</span><span class="brand-ix">ix</span>
+      <span class="brand-tag">AI</span>
     </div>
-    <div class="topbar-status">
-      <span class="status-dot"></span>
-      <span class="status-text">ONLINE</span>
-    </div>
+    <span class="status-chip">
+      <span class="status-dot"></span>Online
+    </span>
   </div>
-  <nav class="topbar-right">
-    <a href="../cysearch/index.html" class="nav-link">◉ CYSEARCH MAP</a>
-    <button class="clear-btn" id="clear-btn">CLEAR CHAT</button>
-  </nav>
+  <div class="topbar-right">
+    <a href="../cysearch/index.html" class="nav-link">◉ Cysearch Map</a>
+    <button class="btn-clear" id="clear-btn">Clear chat</button>
+  </div>
 </header>
 
-<!-- ── Main layout ─────────────────────────────── -->
-<main class="main-layout">
+<!-- ── Layout ─────────────────────────────────── -->
+<main class="layout">
 
-  <!-- Chat panel -->
-  <section class="chat-panel">
+  <!-- Chat -->
+  <section class="chat-section">
 
-    <!-- Messages -->
     <div class="messages" id="messages">
-
-      <!-- Welcome message -->
-      <div class="msg msg-ai welcome-msg">
-        <div class="msg-icon">◈</div>
-        <div class="msg-body">
-          <div class="msg-author">CYANIX AI</div>
-          <div class="msg-text">
-            <p>Welcome to <strong>Cyanix AI</strong> — your intelligent navigator of the digital universe.</p>
-            <p style="margin-top:8px;">I'm connected to <span class="inline-tag">Cysearch</span>, your galaxy-mapped internet search engine. When you ask for websites, tools, tutorials, or resources, I'll automatically query Cysearch and bring back real results.</p>
-            <p style="margin-top:8px;">Ask me anything. I'll search the galaxy when needed. 🌌</p>
-          </div>
-          <div class="suggested-row">
-            <button class="suggest-btn" data-q="What are the best AI tools right now?">Best AI tools</button>
-            <button class="suggest-btn" data-q="Show me web development resources">Web dev resources</button>
-            <button class="suggest-btn" data-q="Find me startup tools">Startup tools</button>
-            <button class="suggest-btn" data-q="What design resources do you recommend?">Design resources</button>
-          </div>
-        </div>
-      </div>
-
+      <!-- Messages injected by JS -->
     </div>
 
     <!-- Typing indicator -->
-    <div class="typing-indicator hidden" id="typing">
-      <div class="msg-icon">◈</div>
-      <div class="typing-dots">
+    <div class="typing-row hidden" id="typing">
+      <div class="avatar ai-avatar">✦</div>
+      <div class="typing-bubbles">
         <span></span><span></span><span></span>
       </div>
-      <div class="typing-label" id="typing-label">CYANIX IS THINKING...</div>
+      <span class="typing-label" id="typing-label">Thinking...</span>
     </div>
 
-    <!-- Input area -->
+    <!-- Input -->
     <div class="input-area">
-      <div class="input-wrap">
+      <div class="input-box" id="input-box">
         <textarea
           id="chat-input"
           class="chat-input"
           rows="1"
-          placeholder="ASK CYANIX ANYTHING..."
+          placeholder="Ask me anything..."
           autocomplete="off"
           spellcheck="false"
         ></textarea>
-        <button class="send-btn" id="send-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <button class="send-btn" id="send-btn" title="Send message">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/>
             <polygon points="22 2 15 22 11 13 2 9 22 2"/>
           </svg>
         </button>
       </div>
-      <div class="input-footer">
-        <span class="input-hint">ENTER to send · SHIFT+ENTER for new line</span>
-        <span class="cysearch-indicator" id="cysearch-indicator">
-          <span class="cs-dot"></span> CYSEARCH READY
+      <div class="input-meta">
+        <span class="input-hint">Enter to send · Shift+Enter for new line</span>
+        <span class="cs-status" id="cysearch-indicator">
+          <span class="cs-dot"></span> Cysearch connected
         </span>
       </div>
     </div>
 
   </section>
 
-  <!-- Side panel -->
-  <aside class="side-panel" id="side-panel">
-    <div class="side-header">
-      <span class="side-title">GALAXY NODES</span>
-      <span class="side-sub">Last search results</span>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <span class="sidebar-title">Search Results</span>
+      <span class="sidebar-sub">Powered by Cysearch</span>
     </div>
     <div class="nodes-list" id="nodes-list">
       <div class="nodes-empty">
-        <div class="nodes-empty-icon">◉</div>
-        <div class="nodes-empty-text">Search results will appear here as galaxy nodes</div>
+        <div class="empty-icon">◉</div>
+        <p class="empty-text">When I search the web for you, results will show up here as clickable cards.</p>
       </div>
     </div>
-    <div class="side-footer">
-      <a href="../cysearch/index.html" class="open-galaxy-btn">OPEN IN GALAXY MAP ↗</a>
+    <div class="sidebar-foot">
+      <a href="../cysearch/index.html" class="btn-galaxy">Open Galaxy Map →</a>
     </div>
   </aside>
 
