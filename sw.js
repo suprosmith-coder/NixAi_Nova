@@ -7,8 +7,8 @@
      • Unknown navigation requests  → Serve index.html (SPA fallback)
 ══════════════════════════════════════════════════════════════ */
 
-const CACHE_NAME    = 'cyanix-ai-v1';
-const RUNTIME_CACHE = 'cyanix-runtime-v1';
+const CACHE_NAME    = 'cyanix-ai-v4';   // bumped — forces old cache to clear
+const RUNTIME_CACHE = 'cyanix-runtime-v4';
 
 // Files to pre-cache on install (app shell)
 const PRECACHE_URLS = [
@@ -19,8 +19,8 @@ const PRECACHE_URLS = [
   './manifest.json',
   './cyanix_emblem.png',
   // Icons
-  '.manifest/icon-192x192.png',
-  '.manifest/icon-512x512.png',
+  './icons/manifest/icon-192x192.png',
+  './icons/manifest/icon-512x512.png',
 ];
 
 // Never cache these — always go to network
@@ -180,8 +180,5 @@ self.addEventListener('message', event => {
   }
   if (event.data?.type === 'GET_VERSION') {
     event.ports[0]?.postMessage({ version: CACHE_NAME });
-  }
-});
-E });
   }
 });

@@ -160,25 +160,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  // Listen for future auth events
+  // Guard: prevent onSignedIn from running twice (onAuthStateChange fires
+  // INITIAL_SESSION event AND we call getSession() below — without this
+  // the function runs twice, which can corrupt _currentId mid-insert)
+  let _bootHandled = false;
+
   _sb.auth.onAuthStateChange(async (event, session) => {
+    console.log('[CyanixAI] auth event:', event);
     _session = session;
-    if (session) {
-      await onSignedIn(session);
-    } else {
+
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (!_bootHandled) {
+        _bootHandled = true;
+        await onSignedIn(session);
+      }
+    } else if (event === 'SIGNED_OUT') {
+      _bootHandled = false;
       onSignedOut();
     }
+    // INITIAL_SESSION is handled below by getSession() — skip here
   });
 
-  // Check existing session
+  // Check existing session — this is the authoritative initial check
   try {
-    const { data: { session } } = await _sb.auth.getSession();
+    const { data: { session }, error } = await _sb.auth.getSession();
+    if (error) throw error;
     _session = session;
 
-    if (session) {
-      // onSignedIn will be called by onAuthStateChange or we trigger it
+    if (session && !_bootHandled) {
+      _bootHandled = true;
       await onSignedIn(session);
-    } else {
+    } else if (!session) {
       hideSplash();
       show('view-auth');
     }
@@ -331,6 +343,12 @@ async function onSignedIn(session) {
   if ($('user-name'))   $('user-name').textContent  = name;
   if ($('user-avatar')) $('user-avatar').textContent = initials;
 
+  // ── Diagnose DB connectivity right on sign-in ──────────────
+  // This tells you the REAL error (missing table, RLS, bad key)
+  // instead of finding out mid-conversation
+  const dbOk = await testDatabaseAccess();
+  if (!dbOk) return; // error toast already shown inside testDatabaseAccess
+
   // Load preferences from Supabase
   await loadPreferences();
 
@@ -339,6 +357,52 @@ async function onSignedIn(session) {
 
   if (_chats.length === 0) showWelcome();
   else await loadChat(_chats[0].id);
+}
+
+// Runs a lightweight SELECT on chats table to verify RLS + connection
+async function testDatabaseAccess() {
+  try {
+    const { error } = await _sb
+      .from('chats')
+      .select('id')
+      .limit(1);
+
+    if (!error) {
+      console.log('[CyanixAI] DB access ✓');
+      return true;
+    }
+
+    // Table doesn't exist — schema.sql was never run
+    if (error.code === '42P01') {
+      toast('⚠️ Database tables not found. Please run schema.sql in Supabase SQL Editor.', 8000);
+      console.error('[CyanixAI] Tables missing:', error.message);
+      return false;
+    }
+
+    // RLS blocked the read — policies wrong or JWT not attached
+    if (error.code === '42501' || error.message?.includes('row-level security')) {
+      toast('⚠️ Database permission error (RLS). Re-run schema.sql in Supabase.', 8000);
+      console.error('[CyanixAI] RLS error:', error.message);
+      return false;
+    }
+
+    // JWT / auth error
+    if (error.message?.includes('JWT') || error.message?.includes('invalid') || error.code === 'PGRST301') {
+      toast('⚠️ Auth token error. Try signing out and back in.', 6000);
+      console.error('[CyanixAI] JWT error:', error.message);
+      return false;
+    }
+
+    // Unknown DB error — show it verbatim
+    toast(`⚠️ DB error ${error.code}: ${error.message}`, 8000);
+    console.error('[CyanixAI] Unknown DB error:', error);
+    return false;
+
+  } catch (err) {
+    toast('⚠️ Cannot reach database. Check your Supabase URL and anon key.', 8000);
+    console.error('[CyanixAI] DB connectivity error:', err);
+    return false;
+  }
 }
 
 function onSignedOut() {
@@ -632,34 +696,91 @@ async function loadChat(id) {
   }
 }
 
-async function createNewChatInDB(firstMessage) {
-  const title = firstMessage.slice(0, 60).trim() + (firstMessage.length > 60 ? '…' : '');
+// Generate a local UUID — works in all modern browsers
+function localUUID() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
 
-  // Ensure we have a fresh token before inserting
-  // (JWT can expire after ~1hr of idle — Supabase auto-refreshes but only if active)
-  const { data: { session: freshSession }, error: refreshErr } = await _sb.auth.getSession();
-  if (refreshErr || !freshSession) {
-    throw new Error('Your session expired. Please sign in again.');
-  }
-  _session = freshSession;
+// Try to persist chat to Supabase in the background.
+// If it fails we silently continue — app already works locally.
+async function syncChatToDB(localId, title) {
+  if (!_sb || !_session) return;
+  try {
+    const { data, error } = await _sb.from('chats').insert({
+      user_id: _session.user.id,
+      title,
+      model: _settings.model,
+    }).select('id').single();
 
-  const { data, error } = await _sb.from('chats').insert({
-    user_id: _session.user.id,
-    title,
-    model:   _settings.model,
-  }).select('id').single();
-
-  if (error) {
-    // Surface the real Postgres/RLS error so it's actually debuggable
-    const detail = error.details || error.hint || error.message || String(error);
-    const code   = error.code   || '';
-    // RLS violation — user row doesn't satisfy the policy
-    if (code === '42501' || error.message?.includes('row-level security')) {
-      throw new Error('Permission denied by database (RLS). Make sure you ran the latest schema.sql in Supabase.');
+    if (error) {
+      console.warn('[CyanixAI] DB sync failed (non-fatal):', error.code, error.message);
+      return null;
     }
-    throw new Error(`DB error ${code}: ${detail}`);
+
+    // Swap local UUID for real DB id everywhere
+    if (data.id && data.id !== localId) {
+      _currentId = data.id;
+      _chats = _chats.map(c => c.id === localId ? { ...c, id: data.id } : c);
+      renderChatList();
+    }
+    return data.id;
+  } catch (err) {
+    console.warn('[CyanixAI] DB sync exception (non-fatal):', err.message);
+    return null;
   }
-  return data.id;
+}
+
+async function syncMessagesToDB(chatId, userText, aiText) {
+  if (!_sb || !_session || !chatId) return null;
+  try {
+    const { data, error } = await _sb.from('messages').insert([
+      { chat_id: chatId, user_id: _session.user.id, role: 'user',      content: userText },
+      { chat_id: chatId, user_id: _session.user.id, role: 'assistant', content: aiText   },
+    ]).select('id');
+
+    if (error) {
+      console.warn('[CyanixAI] Message sync failed (non-fatal):', error.code, error.message);
+      return null;
+    }
+    return data?.[1]?.id ?? null; // return AI message id for feedback
+  } catch (err) {
+    console.warn('[CyanixAI] Message sync exception (non-fatal):', err.message);
+    return null;
+  }
+}
+
+// Runs entirely in background — never awaited by the UI
+async function bgSyncMessages(isNewChat, userText, aiText, msgEl) {
+  let chatId = _currentId;
+
+  try {
+    // Step 1: if this was a new chat, create it in DB
+    if (isNewChat) {
+      const title = userText.slice(0, 60).trim();
+      const realId = await syncChatToDB(chatId, title);
+      if (realId) chatId = realId; // _currentId already updated inside syncChatToDB
+    }
+
+    // Step 2: save both messages
+    const aiMsgId = await syncMessagesToDB(chatId, userText, aiText);
+
+    // Step 3: add feedback buttons now that we have a real message ID
+    if (aiMsgId && msgEl) addFeedbackButtons(msgEl, aiMsgId);
+
+    // Step 4: training data (optional, consent-gated)
+    await maybeCollectTraining(userText, aiText);
+
+    // Step 5: refresh sidebar chat list
+    await loadChats();
+
+  } catch (err) {
+    // Background sync errors are non-fatal — just log
+    console.warn('[CyanixAI] bgSyncMessages error (non-fatal):', err.message);
+  }
 }
 
 async function saveChatTitle(chatId, title) {
@@ -668,21 +789,7 @@ async function saveChatTitle(chatId, title) {
     .eq('id', chatId);
 }
 
-async function saveMessages(chatId, userText, aiText) {
-  if (!chatId || !userText) return { userMsgId: null, aiMsgId: null };
-  const { data, error } = await _sb.from('messages').insert([
-    { chat_id: chatId, user_id: _session.user.id, role: 'user',      content: userText },
-    { chat_id: chatId, user_id: _session.user.id, role: 'assistant', content: aiText   },
-  ]).select('id');
-
-  if (error) {
-    console.error('[CyanixAI] saveMessages error:', error.code, error.message, error.details);
-    // Don't crash the chat — AI response already showed. Just warn.
-    toast(`Could not save messages (${error.code || error.message}). Chat history may not persist.`, 4000);
-    return {};
-  }
-  return { userMsgId: data?.[0]?.id, aiMsgId: data?.[1]?.id };
-}
+// saveMessages replaced by syncMessagesToDB (background sync)
 
 // Collect training data (only if consent given)
 async function maybeCollectTraining(userText, aiText) {
@@ -775,30 +882,16 @@ async function sendMessage(text) {
   _responding = true;
   setSendBtn('stop');
 
-  // Create chat in DB if new
-  if (!_currentId) {
-    try {
-      _currentId = await createNewChatInDB(text);
-      // Add to local list optimistically
-      _chats.unshift({ id: _currentId, title: text.slice(0,60), updated_at: new Date().toISOString() });
-      renderChatList();
-      if ($('chat-title')) $('chat-title').textContent = text.slice(0,60);
-    } catch (err) {
-      console.error('[CyanixAI] createNewChatInDB error:', err);
-      const msg = err.message || 'Unknown error';
-      // Session expired — force sign out so user can log back in
-      if (msg.includes('session expired') || msg.includes('JWT')) {
-        toast('Session expired. Signing you out…');
-        setTimeout(() => signOut(), 1500);
-        _responding = false;
-        setSendBtn('send');
-        return;
-      }
-      toast(`Chat error: ${msg}`, 5000);
-      _responding = false;
-      setSendBtn('send');
-      return;
-    }
+  // ── LOCAL-FIRST: assign a local UUID immediately — never blocks ──
+  // The app works whether or not Supabase is reachable.
+  // DB sync happens in the background after the AI responds.
+  const isNewChat = !_currentId;
+  if (isNewChat) {
+    _currentId = localUUID();
+    const title = text.slice(0, 60).trim();
+    _chats.unshift({ id: _currentId, title, updated_at: new Date().toISOString(), _local: true });
+    renderChatList();
+    if ($('chat-title')) $('chat-title').textContent = title;
   }
 
   hide('welcome-state');
@@ -909,28 +1002,21 @@ async function sendMessage(text) {
 
       // Only save and add feedback if we have content
       if (aiText.trim()) {
-        const msgId = await saveMessagesAndUpdateHistory(text, aiText);
-        if (msgId && msgEl) addFeedbackButtons(msgEl, msgId);
+        _history.push({ role: 'assistant', content: aiText });
+        // Background sync — doesn't block the UI
+        bgSyncMessages(isNewChat, text, aiText, msgEl);
       }
 
     } else {
       const data = await res.json();
       aiText = data.choices?.[0]?.message?.content || 'No response received.';
       const { msgEl } = renderMessage('ai', aiText, true);
-      const msgId = await saveMessagesAndUpdateHistory(text, aiText);
-      if (msgId && msgEl) addFeedbackButtons(msgEl, msgId);
+      _history.push({ role: 'assistant', content: aiText });
+      bgSyncMessages(isNewChat, text, aiText, msgEl);
     }
 
-    await maybeCollectTraining(text, aiText);
     scrollToBottom();
-
-    // Update chat updated_at in Supabase
-    await _sb.from('chats')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', _currentId);
-
-    // Refresh chat list
-    await loadChats();
+    // Training data collected inside bgSyncMessages after DB sync
 
   } catch (err) {
     hide('typing-row');
@@ -944,18 +1030,7 @@ async function sendMessage(text) {
   $('composer-input')?.focus();
 }
 
-async function saveMessagesAndUpdateHistory(userText, aiText) {
-  _history.push({ role: 'assistant', content: aiText });
-  try {
-    const { aiMsgId } = await saveMessages(_currentId, userText, aiText);
-    // Attach IDs to history entries
-    const userIdx = (() => { for (let i = _history.length - 1; i >= 0; i--) { if (_history[i].role === 'user' && _history[i].content === userText) return i; } return -1; })();
-    const aiIdx   = _history.length - 1;
-    if (userIdx >= 0) _history[userIdx].id = null; // user msg id not needed for feedback
-    if (aiIdx   >= 0) _history[aiIdx].id   = aiMsgId;
-    return aiMsgId;
-  } catch { return null; }
-}
+// saveMessagesAndUpdateHistory replaced by bgSyncMessages
 
 function stopResponse() {
   _abortCtrl?.abort();
