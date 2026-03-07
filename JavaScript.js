@@ -14,12 +14,14 @@ const EDGE_HEADERS  = { 'Content-Type':'application/json', 'Authorization':`Bear
 
 /* ─── MODELS ──────────────────────────────────────────────────── */
 const MODELS = [
-  { id:'meta-llama/llama-4-scout-17b-16e-instruct', name:'Llama 4 Scout', tag:'FAST',    desc:'Best speed · Great for everyday tasks',      color:'#00e8ff' },
-  { id:'meta-llama/llama-4-maverick-17b-128e-instruct', name:'Llama 4 Maverick', tag:'BALANCED', desc:'Speed + reasoning · General purpose',  color:'#00e5a0' },
-  { id:'deepseek-r1-distill-llama-70b',            name:'DeepSeek R1',  tag:'THINK',   desc:'Shows reasoning process · Complex problems',  color:'#b388ff' },
-  { id:'mixtral-8x7b-32768',                        name:'Mixtral 8x7B', tag:'REASON',  desc:'Strong reasoning · Long context (32k)',        color:'#ffb703' },
-  { id:'llama-3.3-70b-versatile',                   name:'Llama 3.3 70B',tag:'POWER',   desc:'Most capable · Detailed responses',            color:'#ff7c38' },
+  { id:'gpt-oss-20b-128k',       name:'GPT OSS 20B',       tag:'FAST',   desc:'128k context · Ultra-fast everyday tasks',         color:'#00e8ff' },
+  { id:'gpt-oss-120b-128k',      name:'GPT OSS 120B',      tag:'POWER',  desc:'128k context · Deep reasoning & complex tasks',    color:'#00e5a0' },
+  { id:'gpt-oss-safeguard-20b',  name:'GPT OSS Safeguard', tag:'SAFE',   desc:'20B · Moderation & safety-filtered responses',     color:'#b388ff' },
 ];
+
+/* ─── TTS CONFIG ──────────────────────────────────────────────── */
+const TTS_MODEL = 'canopy-labs/orpheus-english';
+const TTS_URL   = `${SUPABASE_URL}/functions/v1/tts`;
 
 /* ─── CLUSTER DATA ────────────────────────────────────────────── */
 const CLUSTERS = [
@@ -871,8 +873,8 @@ function buildSystemPrompt(ragNote='') {
 
 function getThinkingLabel() {
   const m = MODELS.find(x => x.id === _settings.model);
-  if (m?.tag === 'THINK') return 'Reasoning…';
-  if (m?.tag === 'REASON') return 'Analyzing…';
+  if (m?.tag === 'SAFE')  return 'Safety filtering…';
+  if (m?.tag === 'POWER') return 'Deep reasoning…';
   return 'Thinking…';
 }
 
@@ -1009,6 +1011,9 @@ function buildMsgActions(msgEl, role, text) {
     const copy = mkEl('button','ma-btn'); copy.innerHTML = '⎘ Copy';
     copy.addEventListener('click', () => { navigator.clipboard?.writeText(text||''); copy.textContent = '✓ Copied'; setTimeout(()=>{ copy.innerHTML='⎘ Copy'; },1500); });
 
+    const speak = mkEl('button','ma-btn'); speak.innerHTML = '▶ Listen';
+    speak.addEventListener('click', () => speakText(text, speak));
+
     const up = mkEl('button','ma-btn thumbs-up'); up.innerHTML = '↑';
     up.addEventListener('click', () => { up.classList.toggle('voted'); down.classList.remove('voted'); });
 
@@ -1018,7 +1023,7 @@ function buildMsgActions(msgEl, role, text) {
     const regen = mkEl('button','ma-btn'); regen.innerHTML = '↺ Retry';
     regen.addEventListener('click', () => regenFromMsg(msgEl));
 
-    actions.appendChild(copy); actions.appendChild(up); actions.appendChild(down); actions.appendChild(regen);
+    actions.appendChild(copy); actions.appendChild(speak); actions.appendChild(up); actions.appendChild(down); actions.appendChild(regen);
   } else {
     const edit = mkEl('button','ma-btn'); edit.innerHTML = '✎ Edit';
     edit.addEventListener('click', () => enterEditMode(msgEl, text));
@@ -1106,7 +1111,7 @@ function renderWelcome() {
   hero.innerHTML = `
     <div class="welcome-badge"><span class="av-cx">CX</span></div>
     <h2 class="welcome-title">How can I help you today?</h2>
-    <p class="welcome-sub">Ask me anything — I can reason, write code, search the web, and more.<br/>Powered by Groq for lightning-fast responses.</p>
+    <p class="welcome-sub">Ask me anything — I can reason, write code, search the web, and more.<br/>Powered by GPT OSS 120B · 128k context · Canopy Labs Orpheus voice.</p>
     <div class="chips">
       <button class="chip" data-q="What are the best AI tools right now?">🤖 AI tools</button>
       <button class="chip" data-q="Show me top web development frameworks">🌐 Web dev</button>
@@ -1293,6 +1298,82 @@ function startVoice() {
 function stopVoice() {
   _voiceRec?.stop(); _isVoiceRecording = false;
   [$('voice-btn'),$('voice-inline-btn')].forEach(b=>b?.classList.remove('recording'));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TTS — CANOPY LABS ORPHEUS ENGLISH
+═══════════════════════════════════════════════════════════════ */
+let _ttsAudio = null;
+let _ttsSpeaking = false;
+
+async function speakText(text, btn) {
+  // Stop if already speaking
+  if (_ttsSpeaking) {
+    stopTTS();
+    if (btn) { btn.innerHTML = '▶ Listen'; btn.classList.remove('active'); }
+    return;
+  }
+
+  const plain = text.replace(/```[\s\S]*?```/g,'[code block]')
+    .replace(/`[^`]+`/g, match => match.slice(1,-1))
+    .replace(/[#*_~>\[\]]/g,'')
+    .replace(/\s+/g,' ').trim()
+    .slice(0, 2000);  // limit TTS length
+
+  if (!plain) { toast('Nothing to speak.'); return; }
+
+  if (btn) { btn.innerHTML = '◉ Stop'; btn.classList.add('active'); }
+  _ttsSpeaking = true;
+  toast('🔊 Loading voice…', 3000);
+
+  try {
+    const res = await fetch(TTS_URL, {
+      method: 'POST',
+      headers: EDGE_HEADERS,
+      body: JSON.stringify({ text: plain, model: TTS_MODEL }),
+    });
+
+    if (!res.ok) throw new Error(`TTS ${res.status}`);
+
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    _ttsAudio  = new Audio(url);
+    _ttsAudio.onended = () => {
+      _ttsSpeaking = false;
+      URL.revokeObjectURL(url);
+      if (btn) { btn.innerHTML = '▶ Listen'; btn.classList.remove('active'); }
+    };
+    _ttsAudio.onerror = () => {
+      _ttsSpeaking = false;
+      if (btn) { btn.innerHTML = '▶ Listen'; btn.classList.remove('active'); }
+      toast('Voice playback error.');
+    };
+    await _ttsAudio.play();
+    toast('🔊 Playing with Orpheus English');
+  } catch(e) {
+    _ttsSpeaking = false;
+    if (btn) { btn.innerHTML = '▶ Listen'; btn.classList.remove('active'); }
+    // Fallback: use Web Speech API if TTS edge function is unavailable
+    if (window.speechSynthesis) {
+      const utt = new SpeechSynthesisUtterance(plain);
+      utt.rate = 1.0; utt.pitch = 1.0; utt.lang = 'en-US';
+      utt.onend = () => {
+        _ttsSpeaking = false;
+        if (btn) { btn.innerHTML = '▶ Listen'; btn.classList.remove('active'); }
+      };
+      window.speechSynthesis.speak(utt);
+      _ttsSpeaking = true;
+      toast('🔊 Speaking (browser TTS fallback)');
+    } else {
+      toast('TTS unavailable: ' + (e.message||'Unknown error'));
+    }
+  }
+}
+
+function stopTTS() {
+  if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  _ttsSpeaking = false;
 }
 
 /* ═══════════════════════════════════════════════════════════════
