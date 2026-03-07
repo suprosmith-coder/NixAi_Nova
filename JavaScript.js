@@ -312,129 +312,130 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindAuthUI();
   bindChatUI();
   populateModels();
+  handleStartActions(); // PWA shortcuts + share target
 
-  // ─────────────────────────────────────────────────────────
-  // STARTUP DIAGNOSTIC SCANNER
-  // Checks everything in sequence on the splash screen so
-  // errors are caught before the user ever sees the UI.
-  // ─────────────────────────────────────────────────────────
-  function setSplashStatus(msg, isError = false) {
+  // ── Splash helpers ───────────────────────────────────────────
+  function splashMsg(msg) {
     const el = $('loading-status');
-    const er = $('loading-error');
     if (el) el.textContent = msg;
-    if (er) {
-      if (isError) {
-        er.textContent = msg;
-        er.classList.remove('hidden');
-        if (el) el.classList.add('hidden');
-      } else {
-        er.classList.add('hidden');
-        if (el) el.classList.remove('hidden');
-      }
-    }
-    console.log('[CyanixAI] boot:', msg);
+    console.log('[CyanixAI]', msg);
   }
-
-  // ── Check 1: Supabase config ─────────────────────────────
-  setSplashStatus('Checking configuration…');
-  if (!SUPABASE_URL.startsWith('https://') || SUPABASE_URL.includes('your-project')) {
-    setSplashStatus('⚠️ SUPABASE_URL not set in JavaScript.js', true);
-    return;
-  }
-  if (!SUPABASE_ANON || SUPABASE_ANON.length < 40) {
-    setSplashStatus('⚠️ SUPABASE_ANON key not set in JavaScript.js', true);
-    return;
-  }
-
-  // ── Check 2: Supabase SDK loaded ────────────────────────
-  setSplashStatus('Loading Supabase SDK…');
-  if (!window.supabase?.createClient) {
-    setSplashStatus('⚠️ Supabase SDK failed to load. Check your internet connection and refresh.', true);
+  function splashFail(msg) {
+    const er = $('loading-error');
+    const st = $('loading-status');
+    if (er) { er.textContent = msg; er.classList.remove('hidden'); }
+    if (st) st.classList.add('hidden');
+    console.error('[CyanixAI]', msg);
+    // Always escape to auth after 4s — never hang forever
     setTimeout(() => { hideSplash(); show('view-auth'); }, 4000);
+  }
+
+  // ── Step 1: Validate config ──────────────────────────────────
+  splashMsg('Starting…');
+  if (!SUPABASE_URL.startsWith('https://')) {
+    splashFail('⚠️ SUPABASE_URL is not configured. Check JavaScript.js'); return;
+  }
+  if (SUPABASE_ANON.length < 40) {
+    splashFail('⚠️ SUPABASE_ANON key is missing. Check JavaScript.js'); return;
+  }
+
+  // ── Step 2: Wait for Supabase SDK ───────────────────────────
+  splashMsg('Loading…');
+  for (let i = 0; i < 40; i++) {
+    if (window.supabase?.createClient) break;
+    await new Promise(r => setTimeout(r, 125));
+  }
+  if (!window.supabase?.createClient) {
+    splashFail('⚠️ Could not load Supabase SDK. Check your connection and refresh.');
     return;
   }
 
-  // ── Check 3: Supabase project reachable ─────────────────
-  setSplashStatus('Reaching Supabase project…');
-  try {
-    const ping = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      headers: { 'apikey': SUPABASE_ANON },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!ping.ok && ping.status !== 400) {
-      // 400 is expected (no table specified) — means project is reachable
-      setSplashStatus(`⚠️ Supabase unreachable (${ping.status}). Check URL/key in JavaScript.js`, true);
-      setTimeout(() => { hideSplash(); show('view-auth'); }, 5000);
-      return;
-    }
-  } catch (err) {
-    if (err.name === 'TimeoutError') {
-      setSplashStatus('⚠️ Supabase project timed out. Check SUPABASE_URL in JavaScript.js', true);
-    } else {
-      setSplashStatus(`⚠️ Cannot reach Supabase: ${err.message}`, true);
-    }
-    setTimeout(() => { hideSplash(); show('view-auth'); }, 5000);
-    return;
-  }
-
-  // ── Check 4: Create Supabase client ─────────────────────
-  setSplashStatus('Initialising…');
-  _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-  // ── Hard timeout fallback (8s) ───────────────────────────
-  const splashTimeout = setTimeout(() => {
-    if (!_splashHidden) {
-      console.warn('[CyanixAI] Auth timeout — forcing auth screen');
-      setSplashStatus('⚠️ Sign-in check timed out. Proceeding…', true);
-      setTimeout(() => { hideSplash(); show('view-auth'); }, 2000);
-    }
-  }, 8000);
-
-  // ── Auth state listener ──────────────────────────────────
-  _sb.auth.onAuthStateChange(async (event, session) => {
-    console.log('[CyanixAI] auth event:', event, session?.user?.email);
-    _session = session;
-
-    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-      clearTimeout(splashTimeout);
-      if (session) {
-        setSplashStatus('Signed in — loading chats…');
-        await onSignedIn(session);
-      } else {
-        hideSplash();
-        show('view-auth');
-      }
-    } else if (event === 'SIGNED_OUT') {
-      onSignedOut();
-    } else if (event === 'TOKEN_REFRESHED') {
-      console.log('[CyanixAI] Token refreshed silently');
-    }
+  // ── Step 3: Init Supabase ────────────────────────────────────
+  splashMsg('Connecting…');
+  _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: {
+      persistSession:       true,
+      autoRefreshToken:     true,
+      detectSessionInUrl:   true,   // handles OAuth redirect
+      storageKey:           'cyanix-auth',
+    },
   });
 
-  // ── Belt-and-suspenders: also handle getSession() directly ──
-  setSplashStatus('Checking session…');
+  // ── Step 4: Register listener for FUTURE auth events only ────
+  // Supabase v2 fires INITIAL_SESSION synchronously inside onAuthStateChange.
+  // We deliberately do NOT handle INITIAL_SESSION here — getSession() below
+  // is the single source of truth for the initial load. This prevents the
+  // double-call race where both INITIAL_SESSION and getSession() call onSignedIn.
+  _sb.auth.onAuthStateChange((event, session) => {
+    console.log('[CyanixAI] auth event:', event);
+    _session = session;
+    // Only act on events AFTER initial boot
+    if (!_splashHidden) return;
+    if (event === 'SIGNED_IN')       onSignedIn(session);
+    else if (event === 'SIGNED_OUT') onSignedOut();
+  });
+
+  // ── Step 5: Get session — single source of truth ─────────────
+  splashMsg('Checking sign-in…');
+
+  // Hard deadline — if getSession never resolves, show auth anyway
+  const deadline = setTimeout(() => {
+    if (_splashHidden) return;
+    console.warn('[CyanixAI] getSession deadline hit — showing auth');
+    hideSplash();
+    show('view-auth');
+  }, 8000);
+
   try {
-    const { data: { session }, error } = await _sb.auth.getSession();
-    if (error) throw error;
-    if (!_splashHidden) {
-      clearTimeout(splashTimeout);
-      if (session) {
-        _session = session;
-        setSplashStatus('Signed in — loading chats…');
-        await onSignedIn(session);
-      } else {
-        hideSplash();
-        show('view-auth');
-      }
+    const { data, error } = await _sb.auth.getSession();
+    clearTimeout(deadline);
+
+    if (error) {
+      console.warn('[CyanixAI] getSession error (non-fatal):', error.message);
+      hideSplash();
+      show('view-auth');
+      return;
+    }
+
+    const session = data?.session;
+    if (session) {
+      _session = session;
+      splashMsg('Loading your chats…');
+      await onSignedIn(session);
+    } else {
+      hideSplash();
+      show('view-auth');
     }
   } catch (err) {
-    console.error('[CyanixAI] getSession error:', err);
-    clearTimeout(splashTimeout);
-    setSplashStatus(`⚠️ Session error: ${err.message}`, true);
-    setTimeout(() => { hideSplash(); show('view-auth'); }, 3000);
+    clearTimeout(deadline);
+    console.error('[CyanixAI] getSession threw:', err);
+    hideSplash();
+    show('view-auth');
   }
 });
 
+// ── Handle PWA shortcut actions + Web Share Target ────────────
+function handleStartActions() {
+  const action     = window._startAction;
+  const sharedText = window._sharedText;
+  if (action === 'new-chat') {
+    // Will be acted on once chat UI is visible
+    window.addEventListener('cyanix:ready', () => newChat(), { once: true });
+  } else if (action === 'settings') {
+    window.addEventListener('cyanix:ready', () => show('settings-modal'), { once: true });
+  }
+  if (sharedText) {
+    window.addEventListener('cyanix:ready', () => {
+      const input = $('composer-input');
+      if (input) {
+        input.value = sharedText;
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+        input.focus();
+      }
+    }, { once: true });
+  }
+}
 let _splashHidden = false;
 function hideSplash() {
   if (_splashHidden) return;   // idempotent — safe to call multiple times
@@ -656,6 +657,9 @@ async function onSignedIn(session) {
 
   if (_chats.length === 0) showWelcome();
   else await loadChat(_chats[0].id);
+
+  // Fire ready event — PWA shortcuts and share target use this
+  window.dispatchEvent(new CustomEvent('cyanix:ready'));
 }
 
 // Runs a lightweight SELECT on chats table to verify RLS + connection

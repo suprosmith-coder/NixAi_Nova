@@ -1,30 +1,64 @@
 <!DOCTYPE html>
-<html lang="en" dir="auto">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- ── Primary ──────────────────────────────────────────── -->
   <title>Cyanix AI</title>
-  <meta name="description" content="Cyanix AI — Intelligent assistant." />
-  <link rel="manifest" href="manifest.json" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#0080ff" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Cyanix AI — Your intelligent assistant powered by advanced language models." />
+  <meta name="keywords"    content="AI, assistant, chat, GPT, Cyanix, productivity" />
+  <meta name="author"      content="Cyanix AI" />
+  <meta name="robots"      content="index, follow" />
+
+  <!-- ── PWA / App ─────────────────────────────────────────── -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="mobile-web-app-capable"                content="yes" />
+  <meta name="application-name"                      content="Cyanix AI" />
+
+  <!-- Theme colour — must match manifest theme_color -->
+  <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)"  />
+
+  <!-- ── Apple / iOS ──────────────────────────────────────── -->
+  <meta name="apple-mobile-web-app-capable"          content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Cyanix" />
+  <meta name="apple-mobile-web-app-title"            content="Cyanix AI" />
   <link rel="apple-touch-icon" sizes="120x120" href="./icons/ios/apple-touch-icon-120x120.png" />
   <link rel="apple-touch-icon" sizes="152x152" href="./icons/ios/apple-touch-icon-152x152.png" />
   <link rel="apple-touch-icon" sizes="167x167" href="./icons/ios/apple-touch-icon-167x167.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/ios/apple-touch-icon-180x180.png" />
-  <meta name="msapplication-TileColor" content="#0080ff" />
-  <meta name="msapplication-TileImage" content="./icons/manifest/icon-144x144.png" />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="Cyanix AI" />
-  <meta property="og:image" content="./icons/manifest/icon-512x512.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="./icons/manifest/icon-96x96.png" />
+  <!-- iOS splash screens -->
+  <meta name="apple-touch-startup-image" content="./icons/manifest/icon-512x512.png" />
+
+  <!-- ── Microsoft / Windows ───────────────────────────────── -->
+  <meta name="msapplication-TileColor"  content="#2563eb" />
+  <meta name="msapplication-TileImage"  content="./icons/manifest/icon-144x144.png" />
+  <meta name="msapplication-tap-highlight" content="no" />
+
+  <!-- ── Open Graph / Social ───────────────────────────────── -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="Cyanix AI" />
+  <meta property="og:title"       content="Cyanix AI" />
+  <meta property="og:description" content="Your intelligent AI assistant — chat, code, create." />
+  <meta property="og:image"       content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
+  <meta property="og:url"         content="https://suprosmith-coder.github.io/NixAi_Nova/" />
+  <meta name="twitter:card"       content="summary_large_image" />
+  <meta name="twitter:title"      content="Cyanix AI" />
+  <meta name="twitter:description" content="Your intelligent AI assistant." />
+  <meta name="twitter:image"      content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
+
+  <!-- ── Favicon ───────────────────────────────────────────── -->
+  <link rel="icon"       type="image/png" sizes="32x32" href="./icons/manifest/icon-96x96.png" />
+  <link rel="icon"       type="image/png" sizes="16x16" href="./icons/manifest/icon-48x48.png" />
+  <link rel="shortcut icon"                             href="./icons/manifest/icon-96x96.png" />
+
+  <!-- ── Fonts ─────────────────────────────────────────────── -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=8" />
+
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
 
@@ -374,15 +408,66 @@
 <div class="toast hidden" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="JavaScript.js?v=8"></script>
+<script src="JavaScript.js?v=10"></script>
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js', { scope: './' })
-        .then(r => { console.log('[CyanixAI] SW ok'); r.update(); })
-        .catch(e => console.warn('[CyanixAI] SW fail:', e));
-    });
+/* ── Service Worker registration + auto-reload on update ── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { scope: './' })
+    .then(reg => {
+      console.log('[CyanixAI] SW registered scope:', reg.scope);
+
+      // Force immediate check for SW update
+      reg.update();
+
+      // When a new SW installs, prompt it to activate immediately
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (!newSW) return;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            console.log('[CyanixAI] New SW installed — activating');
+            newSW.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    })
+    .catch(e => console.warn('[CyanixAI] SW registration failed:', e));
+
+  // When the SW controller changes (new SW took over) — reload for fresh code
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      console.log('[CyanixAI] New SW active — reloading for fresh code');
+      window.location.reload();
+    }
+  });
+
+  // Listen for SW_UPDATED message (sent by activate handler in sw.js)
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'SW_UPDATED') {
+      console.log('[CyanixAI] SW updated to', event.data.version);
+    }
+  });
+}
+
+// ── Share Target handler ─────────────────────────────────────
+// Handles text/URL shared to the app via the Web Share Target API
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  const sharedText = params.get('text') || params.get('url') || params.get('title');
+
+  if (action === 'new-chat') {
+    // App shortcut: start a new chat
+    window._startAction = 'new-chat';
+  } else if (action === 'settings') {
+    window._startAction = 'settings';
+  } else if (sharedText) {
+    // Web Share Target: inject shared content into composer
+    window._sharedText = sharedText;
   }
+});
 </script>
 </body>
 </html>
