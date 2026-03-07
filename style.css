@@ -697,3 +697,29 @@ kbd { font-family: var(--font); font-size: 0.73rem; font-weight: 600; background
   .auth-card { max-width: 100%; }
   .oauth-row { flex-direction: column; }
 }
+
+
+/* ── Date of birth field (age gate) ──────────────────────────── */
+.auth-dob-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  margin-top: 2px;
+}
+.auth-dob-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.auth-dob-note {
+  font-weight: 400;
+  color: var(--text-4);
+  font-size: 0.75rem;
+}
+.auth-dob-input {
+  color-scheme: light dark;
+}
+[data-theme="dark"] .auth-dob-input {
+  color-scheme: dark;
+}

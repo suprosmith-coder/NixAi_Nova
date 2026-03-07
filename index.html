@@ -72,6 +72,14 @@
       <input class="auth-input" id="su-name"     type="text"     placeholder="Full name"              autocomplete="name" />
       <input class="auth-input" id="su-email"    type="email"    placeholder="Email"                  autocomplete="email" />
       <input class="auth-input" id="su-password" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+
+      <!-- Age verification — required, must be 13+ -->
+      <div class="auth-dob-group">
+        <label class="auth-dob-label">Date of birth <span class="auth-dob-note">(You must be 13 or older)</span></label>
+        <input class="auth-input auth-dob-input" id="su-dob" type="date" autocomplete="bday"
+               max="" placeholder="YYYY-MM-DD" />
+      </div>
+
       <div class="auth-msg hidden" id="su-err" data-type="err"></div>
       <div class="auth-msg hidden" id="su-ok"  data-type="ok"></div>
       <button class="auth-submit" id="su-btn">Create Account</button>

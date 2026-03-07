@@ -234,40 +234,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  // Guard: prevent onSignedIn from running twice (onAuthStateChange fires
-  // INITIAL_SESSION event AND we call getSession() below — without this
-  // the function runs twice, which can corrupt _currentId mid-insert)
-  let _bootHandled = false;
-
+  // Auth state listener — handles ALL sign in/out events including
+  // page reload, OAuth redirect, sign out, and token refresh.
+  // No boot flag needed — onSignedIn is idempotent.
   _sb.auth.onAuthStateChange(async (event, session) => {
-    console.log('[CyanixAI] auth event:', event);
+    console.log('[CyanixAI] auth event:', event, session?.user?.email);
     _session = session;
 
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      if (!_bootHandled) {
-        _bootHandled = true;
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      if (session) {
         await onSignedIn(session);
+      } else {
+        // INITIAL_SESSION with no session = not logged in
+        hideSplash();
+        show('view-auth');
       }
     } else if (event === 'SIGNED_OUT') {
-      _bootHandled = false;
       onSignedOut();
+    } else if (event === 'TOKEN_REFRESHED') {
+      // Token silently refreshed — just update session, no UI change needed
+      console.log('[CyanixAI] Token refreshed');
     }
-    // INITIAL_SESSION is handled below by getSession() — skip here
   });
 
-  // Check existing session — this is the authoritative initial check
+  // Kick things off — getSession() triggers INITIAL_SESSION event above
+  // so we don't need to handle the result separately
   try {
-    const { data: { session }, error } = await _sb.auth.getSession();
-    if (error) throw error;
-    _session = session;
-
-    if (session && !_bootHandled) {
-      _bootHandled = true;
-      await onSignedIn(session);
-    } else if (!session) {
-      hideSplash();
-      show('view-auth');
-    }
+    await _sb.auth.getSession();
   } catch (err) {
     console.error('[CyanixAI] getSession error:', err);
     hideSplash();
@@ -315,6 +308,7 @@ function showPanel(name) {
     if (el) el.classList.toggle('hidden', p !== name);
   });
   clearAuthMessages();
+  if (name === 'signup') initDobField();
 }
 
 function clearAuthMessages() {
@@ -350,9 +344,35 @@ async function signUp() {
   const name     = $('su-name')?.value.trim();
   const email    = $('su-email')?.value.trim();
   const password = $('su-password')?.value;
+  const dobVal   = $('su-dob')?.value;   // "YYYY-MM-DD"
 
-  if (!email || !password) { setMsg('su-err','Please fill in all fields.','err'); return; }
-  if (password.length < 8)  { setMsg('su-err','Password must be at least 8 characters.','err'); return; }
+  if (!email || !password) { setMsg('su-err', 'Please fill in all fields.', 'err'); return; }
+  if (password.length < 8)  { setMsg('su-err', 'Password must be at least 8 characters.', 'err'); return; }
+
+  // ── Age gate (13+) ───────────────────────────────────────────
+  if (!dobVal) {
+    setMsg('su-err', 'Please enter your date of birth.', 'err');
+    $('su-dob')?.focus();
+    return;
+  }
+
+  const dob      = new Date(dobVal);
+  const today    = new Date();
+  // Calculate exact age in years
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+
+  if (isNaN(age) || dob > today) {
+    setMsg('su-err', 'Please enter a valid date of birth.', 'err');
+    return;
+  }
+  if (age < 13) {
+    setMsg('su-err', 'You must be 13 or older to use Cyanix AI.', 'err');
+    return;
+  }
 
   const btn = $('su-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
@@ -360,12 +380,29 @@ async function signUp() {
 
   const { error } = await _sb.auth.signUp({
     email, password,
-    options: { data: { full_name: name || email.split('@')[0] }, emailRedirectTo: REDIRECT_URL },
+    options: {
+      data: { full_name: name || email.split('@')[0], dob: dobVal },
+      emailRedirectTo: REDIRECT_URL,
+    },
   });
 
   if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
   if (error) setMsg('su-err', error.message, 'err');
   else setMsg('su-ok', 'Check your email to confirm your account!', 'ok');
+}
+
+// Set DOB max date to today when auth panel opens so future dates are blocked
+function initDobField() {
+  const dob = $('su-dob');
+  if (!dob) return;
+  const today = new Date();
+  // Max = today (can't be born in the future)
+  // Practical max for 13+ = today minus 13 years
+  const maxAge13 = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+  dob.max = maxAge13.toISOString().split('T')[0];
+  // Min = 120 years ago (reasonable human lifespan)
+  const minDate = new Date(today.getFullYear() - 120, 0, 1);
+  dob.min = minDate.toISOString().split('T')[0];
 }
 
 async function sendReset() {
@@ -394,22 +431,17 @@ async function signOut() {
   hide('user-menu');
   hide('model-dropdown');
 
-  // Show chat is gone right away so button feels instant
-  hide('view-chat');
-  show('view-auth');
-  showPanel('signin');
-
-  // Reset state
-  _session   = null;
-  _chats     = [];
-  _currentId = null;
-  _history   = [];
-
-  // Sign out from Supabase in background (non-blocking)
+  // Sign out from Supabase FIRST — this triggers onAuthStateChange(SIGNED_OUT)
+  // which calls onSignedOut() to reset UI and state.
+  // Do NOT null _session before this call — Supabase needs the token
+  // to hit the revocation endpoint, and nulling it early can prevent
+  // the SIGNED_OUT event from firing, breaking sign-back-in.
   try {
     await _sb.auth.signOut();
   } catch (err) {
     console.error('[CyanixAI] signOut error:', err);
+    // Force UI reset even if Supabase call failed
+    onSignedOut();
   }
 
   toast('Signed out.');
@@ -417,6 +449,20 @@ async function signOut() {
 
 /* ── After sign in ──────────────────────────────────────── */
 async function onSignedIn(session) {
+  // Idempotent: skip if already showing chat for this same user
+  const chatView     = $('view-chat');
+  const alreadyShown = chatView && !chatView.classList.contains('hidden');
+  const sameUser     = _session?.user?.id === session?.user?.id;
+  if (alreadyShown && sameUser && _chats.length > 0) {
+    console.log('[CyanixAI] onSignedIn: same user already loaded, skipping');
+    return;
+  }
+
+  // Reset chat state for fresh load (important after sign-out + sign-in)
+  _chats     = [];
+  _currentId = null;
+  _history   = [];
+
   hide('view-auth');
   hideSplash();
   show('view-chat');
