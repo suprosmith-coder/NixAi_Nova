@@ -39,6 +39,9 @@ let _responding  = false;
 let _abortCtrl   = null;
 let _ttsAudio    = null;
 let _ttsSpeaking = false;
+let _mediaRec    = null;   // MediaRecorder for voice input
+let _sttChunks   = [];     // recorded audio chunks
+let _sttActive   = false;  // recording in progress
 
 let _settings = {
   model:            MODELS[0].id,
@@ -310,30 +313,84 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindChatUI();
   populateModels();
 
-  // ── Hard timeout: if nothing resolves in 6s, show auth screen ──
-  // This is the safety net for slow CDN, network issues, or
-  // INITIAL_SESSION never firing (happens in some environments).
-  const splashTimeout = setTimeout(() => {
-    if (!_splashHidden) {
-      console.warn('[CyanixAI] Boot timeout — forcing auth screen');
-      hideSplash();
-      show('view-auth');
+  // ─────────────────────────────────────────────────────────
+  // STARTUP DIAGNOSTIC SCANNER
+  // Checks everything in sequence on the splash screen so
+  // errors are caught before the user ever sees the UI.
+  // ─────────────────────────────────────────────────────────
+  function setSplashStatus(msg, isError = false) {
+    const el = $('loading-status');
+    const er = $('loading-error');
+    if (el) el.textContent = msg;
+    if (er) {
+      if (isError) {
+        er.textContent = msg;
+        er.classList.remove('hidden');
+        if (el) el.classList.add('hidden');
+      } else {
+        er.classList.add('hidden');
+        if (el) el.classList.remove('hidden');
+      }
     }
-  }, 6000);
+    console.log('[CyanixAI] boot:', msg);
+  }
 
-  // ── Supabase SDK check ───────────────────────────────────────
-  if (!window.supabase?.createClient) {
-    clearTimeout(splashTimeout);
-    hideSplash();
-    show('view-auth');
-    toast('Service unavailable — check connection and refresh.');
-    console.error('[CyanixAI] Supabase SDK not loaded.');
+  // ── Check 1: Supabase config ─────────────────────────────
+  setSplashStatus('Checking configuration…');
+  if (!SUPABASE_URL.startsWith('https://') || SUPABASE_URL.includes('your-project')) {
+    setSplashStatus('⚠️ SUPABASE_URL not set in JavaScript.js', true);
+    return;
+  }
+  if (!SUPABASE_ANON || SUPABASE_ANON.length < 40) {
+    setSplashStatus('⚠️ SUPABASE_ANON key not set in JavaScript.js', true);
     return;
   }
 
+  // ── Check 2: Supabase SDK loaded ────────────────────────
+  setSplashStatus('Loading Supabase SDK…');
+  if (!window.supabase?.createClient) {
+    setSplashStatus('⚠️ Supabase SDK failed to load. Check your internet connection and refresh.', true);
+    setTimeout(() => { hideSplash(); show('view-auth'); }, 4000);
+    return;
+  }
+
+  // ── Check 3: Supabase project reachable ─────────────────
+  setSplashStatus('Reaching Supabase project…');
+  try {
+    const ping = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      headers: { 'apikey': SUPABASE_ANON },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!ping.ok && ping.status !== 400) {
+      // 400 is expected (no table specified) — means project is reachable
+      setSplashStatus(`⚠️ Supabase unreachable (${ping.status}). Check URL/key in JavaScript.js`, true);
+      setTimeout(() => { hideSplash(); show('view-auth'); }, 5000);
+      return;
+    }
+  } catch (err) {
+    if (err.name === 'TimeoutError') {
+      setSplashStatus('⚠️ Supabase project timed out. Check SUPABASE_URL in JavaScript.js', true);
+    } else {
+      setSplashStatus(`⚠️ Cannot reach Supabase: ${err.message}`, true);
+    }
+    setTimeout(() => { hideSplash(); show('view-auth'); }, 5000);
+    return;
+  }
+
+  // ── Check 4: Create Supabase client ─────────────────────
+  setSplashStatus('Initialising…');
   _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  // ── Auth state listener ──────────────────────────────────────
+  // ── Hard timeout fallback (8s) ───────────────────────────
+  const splashTimeout = setTimeout(() => {
+    if (!_splashHidden) {
+      console.warn('[CyanixAI] Auth timeout — forcing auth screen');
+      setSplashStatus('⚠️ Sign-in check timed out. Proceeding…', true);
+      setTimeout(() => { hideSplash(); show('view-auth'); }, 2000);
+    }
+  }, 8000);
+
+  // ── Auth state listener ──────────────────────────────────
   _sb.auth.onAuthStateChange(async (event, session) => {
     console.log('[CyanixAI] auth event:', event, session?.user?.email);
     _session = session;
@@ -341,6 +398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       clearTimeout(splashTimeout);
       if (session) {
+        setSplashStatus('Signed in — loading chats…');
         await onSignedIn(session);
       } else {
         hideSplash();
@@ -353,18 +411,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ── Explicit session check — belt-and-suspenders ─────────────
-  // Don't rely solely on INITIAL_SESSION event — also directly handle
-  // the getSession() result in case the event is late or dropped.
+  // ── Belt-and-suspenders: also handle getSession() directly ──
+  setSplashStatus('Checking session…');
   try {
     const { data: { session }, error } = await _sb.auth.getSession();
     if (error) throw error;
-
-    // Only act if splash is still showing (event hasn't fired yet)
     if (!_splashHidden) {
       clearTimeout(splashTimeout);
       if (session) {
         _session = session;
+        setSplashStatus('Signed in — loading chats…');
         await onSignedIn(session);
       } else {
         hideSplash();
@@ -374,8 +430,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('[CyanixAI] getSession error:', err);
     clearTimeout(splashTimeout);
-    hideSplash();
-    show('view-auth');
+    setSplashStatus(`⚠️ Session error: ${err.message}`, true);
+    setTimeout(() => { hideSplash(); show('view-auth'); }, 3000);
   }
 });
 
@@ -672,6 +728,7 @@ function bindChatUI() {
   on('new-chat-top', 'click', newChat);
 
   on('send-btn', 'click', handleSend);
+  on('mic-btn',  'click', toggleVoiceInput);
   on('composer-input', 'keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   });
@@ -1344,10 +1401,14 @@ function renderMessage(role, content, animate = true, msgId = null) {
   if (role === 'user') {
     row.innerHTML = `
       <div class="msg-content">
-        <div class="msg-bubble">${esc(content)}</div>
+        <div class="msg-bubble" data-raw="${esc(content)}">${esc(content)}</div>
         <div class="msg-ts">${timeStr()}</div>
         <div class="msg-actions">
           <button class="msg-action-btn" onclick="copyMsg(this)">Copy</button>
+          <button class="msg-action-btn edit-msg-btn" onclick="editMessage(this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
         </div>
       </div>`;
   } else {
@@ -1412,6 +1473,76 @@ async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
   }
 }
 
+// ── Message edit + regenerate ───────────────────────────────
+window.editMessage = function(btn) {
+  const msgRow    = btn.closest('.msg-row');
+  const bubble    = msgRow.querySelector('.msg-bubble');
+  const rawText   = bubble.dataset.raw || bubble.textContent.trim();
+  const content   = msgRow.querySelector('.msg-content');
+
+  // Already editing — ignore
+  if (content.querySelector('.edit-area')) return;
+
+  // Build inline edit UI
+  const editArea = document.createElement('div');
+  editArea.className = 'edit-area';
+  editArea.innerHTML = `
+    <textarea class="edit-textarea">${rawText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+    <div class="edit-actions">
+      <button class="edit-cancel-btn">Cancel</button>
+      <button class="edit-send-btn">Send &amp; Regenerate</button>
+    </div>`;
+
+  // Swap bubble for edit area
+  bubble.style.display = 'none';
+  content.insertBefore(editArea, content.querySelector('.msg-ts'));
+
+  const ta = editArea.querySelector('.edit-textarea');
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+  ta.focus();
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  });
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doEdit(); }
+    if (e.key === 'Escape') cancelEdit();
+  });
+
+  editArea.querySelector('.edit-cancel-btn').onclick = cancelEdit;
+  editArea.querySelector('.edit-send-btn').onclick   = doEdit;
+
+  function cancelEdit() {
+    editArea.remove();
+    bubble.style.display = '';
+  }
+
+  function doEdit() {
+    const newText = ta.value.trim();
+    if (!newText) return;
+
+    // Find this message's index in _history
+    const allRows    = Array.from($('messages').querySelectorAll('.msg-row'));
+    const rowIndex   = allRows.indexOf(msgRow);
+    const userCount  = allRows.slice(0, rowIndex + 1).filter(r => r.classList.contains('user')).length;
+    // _history: [user, ai, user, ai, ...] — userCount-th user = index (userCount-1)*2
+    const historyIdx = (userCount - 1) * 2;
+
+    // Remove all messages from this point onwards in DOM and history
+    allRows.slice(rowIndex).forEach(r => r.remove());
+    _history.splice(historyIdx);
+
+    // Cancel any in-flight response
+    if (_responding && _abortCtrl) _abortCtrl.abort();
+    _responding = false;
+    hide('typing-row');
+
+    // Send the edited message
+    sendMessage(newText);
+  }
+};
+
 window.copyMsg = function(btn) {
   const bubble = btn.closest('.msg-content').querySelector('.msg-bubble');
   navigator.clipboard?.writeText(bubble.innerText || bubble.textContent || '').then(() => {
@@ -1419,6 +1550,217 @@ window.copyMsg = function(btn) {
     setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
   });
 };
+
+/* ══════════════════════════════════════════════════════════
+   VOICE INPUT — Groq Whisper STT
+   Uses the browser MediaRecorder API to capture audio,
+   sends it to Groq's whisper-large-v3 via a tiny edge proxy
+   (or directly to Groq if we add a whisper edge function).
+   Falls back to Web Speech API if MediaRecorder not supported.
+══════════════════════════════════════════════════════════ */
+async function toggleVoiceInput() {
+  const btn     = $('mic-btn');
+  const input   = $('composer-input');
+  if (!btn || !input) return;
+
+  // ── Already recording — stop and transcribe ──────────────
+  if (_sttActive) {
+    _sttActive = false;
+    btn.classList.remove('mic-recording');
+    btn.title = 'Voice input';
+    if (_mediaRec && _mediaRec.state !== 'inactive') {
+      _mediaRec.stop();   // triggers ondataavailable + onstop
+    }
+    return;
+  }
+
+  // ── Check browser support ─────────────────────────────────
+  if (!navigator.mediaDevices?.getUserMedia) {
+    // Fallback: Web Speech API (Chrome/Edge only)
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      startWebSpeech(btn, input);
+    } else {
+      toast('Voice input not supported in this browser.');
+    }
+    return;
+  }
+
+  // ── Request mic permission ────────────────────────────────
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      toast('Microphone permission denied. Allow mic access and try again.');
+    } else {
+      toast('Could not access microphone: ' + err.message);
+    }
+    return;
+  }
+
+  // ── Start recording ───────────────────────────────────────
+  _sttActive  = true;
+  _sttChunks  = [];
+  btn.classList.add('mic-recording');
+  btn.title = 'Tap to stop recording';
+  toast('Recording… tap mic to stop', 60000);
+
+  // Pick best supported format — webm/opus is widely supported
+  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+    ? 'audio/webm;codecs=opus'
+    : MediaRecorder.isTypeSupported('audio/webm')
+    ? 'audio/webm'
+    : 'audio/ogg';
+
+  _mediaRec = new MediaRecorder(stream, { mimeType });
+
+  _mediaRec.ondataavailable = e => {
+    if (e.data.size > 0) _sttChunks.push(e.data);
+  };
+
+  _mediaRec.onstop = async () => {
+    // Stop all mic tracks immediately to release mic indicator
+    stream.getTracks().forEach(t => t.stop());
+
+    // Clear the "Recording…" toast
+    hide('toast');
+
+    if (_sttChunks.length === 0) {
+      toast('No audio captured — try again.');
+      return;
+    }
+
+    const audioBlob = new Blob(_sttChunks, { type: mimeType });
+    _sttChunks = [];
+
+    // Must be > ~0.5s of audio or Whisper errors
+    if (audioBlob.size < 1000) {
+      toast('Recording too short — hold mic longer.');
+      return;
+    }
+
+    // ── Transcribe via Groq Whisper ───────────────────────
+    btn.classList.add('mic-transcribing');
+    btn.title = 'Transcribing…';
+    toast('Transcribing…', 8000);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'voice.' + (mimeType.includes('webm') ? 'webm' : 'ogg'));
+      formData.append('model', 'whisper-large-v3');
+      formData.append('language', 'en');
+      formData.append('response_format', 'json');
+
+      // Call Groq Whisper API directly from browser
+      // GROQ_API_KEY is the client-side key — for production move this
+      // behind your own edge function proxy
+      const GROQ_KEY = 'REPLACE_WITH_GROQ_KEY'; // ← set below via edge function
+
+      // Try via edge function proxy first (preferred — key stays server-side)
+      const WHISPER_URL = `${SUPABASE_URL}/functions/v1/whisper`;
+
+      let transcript = '';
+      try {
+        const res = await fetch(WHISPER_URL, {
+          method:  'POST',
+          headers: edgeHeaders(),
+          body:    formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          transcript = data.text?.trim() || '';
+        } else {
+          throw new Error('edge function not available');
+        }
+      } catch {
+        // Edge function not deployed — use Web Speech API fallback
+        toast('STT edge function not deployed. Use the whisper edge function.', 5000);
+        btn.classList.remove('mic-transcribing');
+        btn.title = 'Voice input';
+        return;
+      }
+
+      hide('toast');
+      btn.classList.remove('mic-transcribing');
+      btn.title = 'Voice input';
+
+      if (!transcript) {
+        toast('Could not understand audio — try again.');
+        return;
+      }
+
+      // ── Insert transcript into composer ──────────────────
+      const current = input.value.trim();
+      input.value = current ? current + ' ' + transcript : transcript;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+      input.focus();
+
+      // Place cursor at end
+      input.setSelectionRange(input.value.length, input.value.length);
+      toast('✓ Voice transcribed!');
+
+    } catch (err) {
+      console.error('[CyanixAI] STT error:', err);
+      btn.classList.remove('mic-transcribing');
+      btn.title = 'Voice input';
+      toast('Transcription failed: ' + err.message);
+    }
+  };
+
+  // Collect data every 250ms chunks
+  _mediaRec.start(250);
+}
+
+// Web Speech API fallback (Chrome/Edge without MediaRecorder)
+function startWebSpeech(btn, input) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recog = new SpeechRecognition();
+  recog.lang          = 'en-US';
+  recog.interimResults = true;
+  recog.maxAlternatives = 1;
+
+  _sttActive = true;
+  btn.classList.add('mic-recording');
+  btn.title = 'Listening… tap to stop';
+  toast('Listening…', 60000);
+
+  let finalText = '';
+  recog.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t + ' ';
+      else interim = t;
+    }
+    // Live preview in input
+    input.value = finalText + interim;
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+  };
+
+  recog.onerror = e => {
+    btn.classList.remove('mic-recording');
+    btn.title = 'Voice input';
+    _sttActive = false;
+    hide('toast');
+    if (e.error !== 'aborted') toast('Speech recognition error: ' + e.error);
+  };
+
+  recog.onend = () => {
+    btn.classList.remove('mic-recording');
+    btn.title = 'Voice input';
+    _sttActive = false;
+    hide('toast');
+    input.value = input.value.trim();
+    input.focus();
+  };
+
+  // Allow stopping by clicking mic again
+  btn.onclick = () => { recog.stop(); btn.onclick = () => toggleVoiceInput(); };
+
+  recog.start();
+}
 
 window.speakMsg = async function(btn) {
   // BUG FIX #4: Clone the bubble and remove all child buttons/action elements

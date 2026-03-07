@@ -941,3 +941,123 @@ kbd { font-family: var(--font); font-size: 0.73rem; font-weight: 600; background
   color: #fff;
   border-color: var(--blue, #2563eb);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   LOADING SPLASH — status & error lines
+══════════════════════════════════════════════════════════════ */
+.loading-status {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+  max-width: 300px;
+  text-align: center;
+  min-height: 1.2em;
+  transition: opacity 0.2s;
+}
+.loading-error {
+  font-size: 0.78rem;
+  color: #ef4444;
+  margin-top: 6px;
+  max-width: 320px;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 8px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MIC BUTTON — voice input states
+══════════════════════════════════════════════════════════════ */
+.mic-btn { position: relative; }
+
+/* Recording — pulse red */
+.mic-btn.mic-recording {
+  color: #ef4444 !important;
+}
+.mic-btn.mic-recording::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid #ef4444;
+  animation: micPulse 1s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%,100% { transform: scale(1);    opacity: 0.8; }
+  50%      { transform: scale(1.35); opacity: 0.2; }
+}
+
+/* Transcribing — spin blue */
+.mic-btn.mic-transcribing {
+  color: var(--blue) !important;
+  animation: micSpin 1s linear infinite;
+}
+@keyframes micSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EDIT MESSAGE — inline edit UI
+══════════════════════════════════════════════════════════════ */
+.edit-msg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.edit-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 6px 0 4px;
+}
+.edit-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 12px;
+  border: 2px solid var(--blue);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: 0.93rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--blue-light);
+  transition: border-color 0.15s;
+}
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.edit-cancel-btn {
+  padding: 6px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.13s;
+}
+.edit-cancel-btn:hover { background: var(--surface-2); color: var(--text-1); }
+.edit-send-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--blue);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.edit-send-btn:hover { background: var(--blue-dark, #1d4ed8); }
