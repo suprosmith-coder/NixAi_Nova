@@ -117,9 +117,80 @@ function edgeHeaders() {
 }
 
 /* ── Markdown renderer ──────────────────────────────────── */
+// Streaming-safe renderer — handles partial <think> blocks during live stream
+function renderStreamingContent(text) {
+  const hasOpenThink  = text.includes('<think>');
+  const hasCloseThink = text.includes('</think>');
+
+  // Fully closed <think> block — render normally
+  if (hasOpenThink && hasCloseThink) {
+    return mdToHTML(text);
+  }
+
+  // Partial: <think> opened but not closed yet — show live thinking panel
+  if (hasOpenThink && !hasCloseThink) {
+    const thinkStart  = text.indexOf('<think>') + 7;
+    const thinkRaw    = text.slice(thinkStart);
+    const afterThink  = ''; // nothing after the open think yet
+    const safe = thinkRaw
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/
+/g,'<br>');
+    return `<details class="think-block" open>
+      <summary class="think-summary">
+        <svg class="think-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        Cyanix is thinking…
+      </summary>
+      <div class="think-body">${safe}</div>
+    </details>`;
+  }
+
+  // No think block at all — normal render
+  return mdToHTML(text);
+}
+
 function mdToHTML(text) {
+  // ── Strip and render <think>...</think> as a collapsible reasoning panel ──
+  let thinkHTML = '';
+  text = text.replace(/<think>([\s\S]*?)<\/think>/i, (_, content) => {
+    const trimmed = content.trim();
+    if (!trimmed) return '';
+    // Escape HTML inside think block, then convert newlines
+    const safe = trimmed
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\n/g,'<br>');
+    thinkHTML = `<details class="think-block" open>
+      <summary class="think-summary">
+        <svg class="think-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        Cyanix is thinking…
+      </summary>
+      <div class="think-body">${safe}</div>
+    </details>`;
+    return '';
+  });
+
+  // ── Render follow-up suggestions section ─────────────────
+  // Matches the "---\n💡 **Want to go further?**\n..." footer
+  let suggestHTML = '';
+  const suggestMatch = text.match(/---\s*\n?💡\s*\*\*[^\n]+\*\*([\s\S]*?)$/);
+  if (suggestMatch) {
+    text = text.replace(/---\s*\n?💡\s*\*\*[^\n]+\*\*[\s\S]*?$/, '').trimEnd();
+    const lines = suggestMatch[1].trim().split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length) {
+      const chips = lines.map(l =>
+        `<button class="suggest-chip" onclick="injectSuggestion(this)">${
+          l.replace(/^[-–•]\s*/, '').replace(/[?]$/, '').trim() + '?'
+        }</button>`
+      ).join('');
+      suggestHTML = `<div class="suggest-row">
+        <span class="suggest-label">💡 Want to go further?</span>
+        <div class="suggest-chips">${chips}</div>
+      </div>`;
+    }
+  }
+
   const codeBlocks = [];
-  let t = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+  let t = text.replace(/\`\`\`(\w*)\n?([\s\S]*?)\`\`\`/g, (_, lang, code) => {
     const idx = codeBlocks.length;
     codeBlocks.push({ lang: lang || 'code', code });
     return `\x00CODE${idx}\x00`;
@@ -165,7 +236,7 @@ function mdToHTML(text) {
       <pre><code>${ec}</code></pre>
     </div>`;
   });
-  return t;
+  return (thinkHTML ? thinkHTML + '\n' : '') + t + (suggestHTML ? '\n' + suggestHTML : '');
 }
 
 window.copyCode = function(btn) {
@@ -174,6 +245,24 @@ window.copyCode = function(btn) {
     btn.textContent = 'Copied!';
     setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
   });
+};
+
+// When user taps a suggestion chip, inject the text into the composer and send
+window.injectSuggestion = function(btn) {
+  const text = btn.textContent.trim();
+  const input = $('composer-input');
+  if (!input) return;
+  input.value = text;
+  input.focus();
+  // Auto-resize textarea
+  input.style.height = 'auto';
+  input.style.height = input.scrollHeight + 'px';
+  // Trigger send after a brief visual flash so the user sees what was injected
+  btn.classList.add('chip-used');
+  setTimeout(() => {
+    const sendBtn = $('send-btn');
+    if (sendBtn) sendBtn.click();
+  }, 180);
 };
 
 window.bundleCode = function(btn) {
@@ -1135,7 +1224,7 @@ async function sendMessage(text) {
               const delta = parsed.choices?.[0]?.delta?.content || '';
               if (delta) {
                 aiText += delta;
-                bubbleEl.innerHTML = mdToHTML(aiText) + '<span class="stream-cursor"></span>';
+                bubbleEl.innerHTML = renderStreamingContent(aiText) + '<span class="stream-cursor"></span>';
                 scrollToBottom();
               }
             } catch (pe) {

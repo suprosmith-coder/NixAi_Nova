@@ -723,3 +723,108 @@ kbd { font-family: var(--font); font-size: 0.73rem; font-weight: 600; background
 [data-theme="dark"] .auth-dob-input {
   color-scheme: dark;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   THINK BLOCK — collapsible reasoning panel
+══════════════════════════════════════════════════════════════ */
+.think-block {
+  background: var(--blue-light, #eff6ff);
+  border: 1.5px solid var(--blue-mid, #bfdbfe);
+  border-radius: 10px;
+  padding: 0;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: background 0.15s;
+}
+[data-theme="dark"] .think-block {
+  background: rgba(59,130,246,0.08);
+  border-color: rgba(59,130,246,0.22);
+}
+.think-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--blue, #2563eb);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  letter-spacing: 0.2px;
+}
+.think-summary::-webkit-details-marker { display: none; }
+.think-summary::after {
+  content: '▸';
+  margin-left: auto;
+  font-size: 0.7rem;
+  transition: transform 0.18s;
+  color: var(--blue);
+}
+.think-block[open] .think-summary::after {
+  transform: rotate(90deg);
+}
+.think-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.think-body {
+  padding: 0 14px 12px 14px;
+  font-size: 0.82rem;
+  color: var(--text-2, #475569);
+  line-height: 1.65;
+  border-top: 1px solid var(--blue-mid, #bfdbfe);
+}
+[data-theme="dark"] .think-body {
+  color: var(--text-3, #94a3b8);
+  border-top-color: rgba(59,130,246,0.18);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SUGGESTION CHIPS — follow-up prompts
+══════════════════════════════════════════════════════════════ */
+.suggest-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+.suggest-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-3, #94a3b8);
+  letter-spacing: 0.3px;
+}
+.suggest-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.suggest-chip {
+  padding: 5px 12px;
+  background: var(--surface-2, #f1f5f9);
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 99px;
+  font-size: 0.79rem;
+  font-weight: 500;
+  color: var(--text-2, #475569);
+  cursor: pointer;
+  transition: all 0.13s;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.suggest-chip:hover {
+  background: var(--blue-light, #eff6ff);
+  border-color: var(--blue, #2563eb);
+  color: var(--blue, #2563eb);
+  transform: translateY(-1px);
+}
+.suggest-chip.chip-used {
+  background: var(--blue, #2563eb);
+  color: #fff;
+  border-color: var(--blue, #2563eb);
+}
