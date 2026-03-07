@@ -1,461 +1,326 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <meta name="theme-color" content="#010812"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cyanix AI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- ╔═══════════════════════════════╗
-     ║  GALAXY MAP VIEW             ║
-     ╚═══════════════════════════════╝ -->
-<div id="view-map" class="view">
-  <canvas id="hud-canvas"></canvas>
-  <div class="scanline-wrap" aria-hidden="true"><div class="scanline"></div></div>
-  <div class="frame" aria-hidden="true">
-    <span class="fc fc-tl"></span><span class="fc fc-tr"></span>
-    <span class="fc fc-bl"></span><span class="fc fc-br"></span>
-  </div>
-  <header class="topbar">
-    <div class="logo"><span class="logo-badge">CX</span><span class="logo-text">CYANIX <em>AI</em></span></div>
-    <nav class="topbar-right">
-      <button class="nav-btn" id="map-theme-btn" title="Toggle theme">◑</button>
-      <button class="nav-btn" id="map-signin-btn">◈ Sign In</button>
-    </nav>
-  </header>
+<!-- ══════════════════════════════════════════════════════════
+     AUTH VIEW
+══════════════════════════════════════════════════════════ -->
+<div id="view-auth" class="view auth-bg">
+  <div class="auth-card">
 
-  <!-- HUD Panels -->
-  <div class="hud-tl hud-panel">
-    <div class="hud-row"><span class="hl">SYS</span><span class="hv hv-cyan">CYANIX NET v2.0</span></div>
-    <div class="hud-row"><span class="hl">NODES</span><span class="hv hv-cyan" id="counter">0</span></div>
-    <div class="hud-row"><span class="hl">STATUS</span><span class="hv hv-green">● ONLINE</span></div>
-  </div>
-  <div class="hud-tr hud-panel">
-    <div class="hl mb4">DEPTH</div>
-    <div class="tier-btns">
-      <button class="tier-btn active" data-layer="1">T1</button>
-      <button class="tier-btn" data-layer="2">T2</button>
-      <button class="tier-btn" data-layer="3">T3</button>
-      <button class="tier-btn" data-layer="4">ALL</button>
+    <!-- Logo -->
+    <div class="auth-logo">
+      <svg class="auth-emblem" viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hg1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#38bdf8"/>
+            <stop offset="50%" stop-color="#0080ff"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+          </linearGradient>
+          <linearGradient id="hg2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.60)"/>
+            <stop offset="100%" stop-color="rgba(255,255,255,0.18)"/>
+          </linearGradient>
+        </defs>
+        <path d="M26 2 L49 15 L49 43 L26 56 L3 43 L3 15 Z" fill="url(#hg1)"/>
+        <path d="M26 13 L39 20 L39 33 L26 40 L13 33 L13 20 Z" fill="url(#hg2)"/>
+        <path d="M26 21 L32 24.5 L32 31.5 L26 35 L20 31.5 L20 24.5 Z" fill="rgba(5,12,50,0.30)"/>
+      </svg>
+      <span class="auth-brand">Cyanix <em>AI</em></span>
     </div>
-    <div class="hl mt8 mb4">SECTORS</div>
-    <div id="legend-items" class="legend-list"></div>
-  </div>
-  <div class="hud-bl hud-panel">
-    <div class="hud-row"><span class="hl">CURSOR</span><span class="hv mono" id="hud-coords">X:000 Y:000</span></div>
-    <div class="hud-row"><span class="hl">SECTOR</span><span class="hv mono" id="hud-sector">—</span></div>
-  </div>
-  <div class="hud-br hud-panel">
-    <div class="hud-row"><span class="hl">SIGNAL</span><span class="hv hv-green">▮▮▮▮▮</span></div>
-    <div class="hud-row"><span class="hl">PING</span><span class="hv mono">4ms</span></div>
-  </div>
 
-  <!-- Hero -->
-  <div class="hero">
-    <p class="hero-eyebrow">◈ NEURAL INTERNET MAP</p>
-    <h1 class="hero-h1">Search the Internet<br/><span class="hero-glow">as a Galaxy</span></h1>
-    <p class="hero-sub">Every website is a node. Every category is a cluster.<br/>AI-powered search across the entire web.</p>
-    <div class="hero-cta">
-      <button class="cta-primary" id="enter-chat-btn"><span class="cta-icon">✦</span>Ask Cyanix AI</button>
-      <button class="cta-ghost" id="explore-btn"><span class="cta-icon">◎</span>Explore Map</button>
+    <!-- Sign In Panel -->
+    <div class="auth-panel" id="panel-signin">
+      <h2 class="auth-heading">Sign in to your account</h2>
+
+      <input class="auth-input" id="si-email" type="email" placeholder="Email" autocomplete="email" />
+      <input class="auth-input" id="si-password" type="password" placeholder="Password" autocomplete="current-password" />
+      <div class="auth-forgot"><a id="forgot-link" href="#">Forgot password?</a></div>
+
+      <div class="auth-msg hidden" id="si-err" data-type="err"></div>
+      <div class="auth-msg hidden" id="si-ok"  data-type="ok"></div>
+
+      <button class="auth-submit" id="si-btn">Sign In</button>
+
+      <div class="auth-divider"><span>Or continue with</span></div>
+
+      <div class="oauth-row">
+        <button class="oauth-btn" id="si-google">
+          <svg width="17" height="17" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Sign in with Google
+        </button>
+        <button class="oauth-btn" id="si-github">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+          Sign in with GitHub
+        </button>
+      </div>
+
+      <p class="auth-switch">Don't have an account? <a class="switch-link" data-to="signup" href="#">Sign up</a></p>
     </div>
-  </div>
 
-  <!-- Node tooltip -->
-  <div id="node-tip" class="node-tip" style="display:none;">
-    <div class="ntip-header"><span id="ntip-cat" class="ntip-cat"></span><span id="ntip-tier" class="ntip-tier"></span></div>
-    <div id="ntip-name" class="ntip-name"></div>
-    <div id="ntip-url"  class="ntip-url"></div>
-    <div id="ntip-desc" class="ntip-desc"></div>
-    <button id="ntip-open" class="ntip-open" style="display:none;">Open Site →</button>
+    <!-- Sign Up Panel -->
+    <div class="auth-panel hidden" id="panel-signup">
+      <h2 class="auth-heading">Create your account</h2>
+
+      <input class="auth-input" id="su-name" type="text" placeholder="Full name" autocomplete="name" />
+      <input class="auth-input" id="su-email" type="email" placeholder="Email" autocomplete="email" />
+      <input class="auth-input" id="su-password" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+
+      <div class="auth-msg hidden" id="su-err" data-type="err"></div>
+      <div class="auth-msg hidden" id="su-ok"  data-type="ok"></div>
+
+      <button class="auth-submit" id="su-btn">Create Account</button>
+
+      <div class="auth-divider"><span>Or continue with</span></div>
+
+      <div class="oauth-row">
+        <button class="oauth-btn" id="su-google">
+          <svg width="17" height="17" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Continue with Google
+        </button>
+        <button class="oauth-btn" id="su-github">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+          Continue with GitHub
+        </button>
+      </div>
+
+      <p class="auth-switch">Already have an account? <a class="switch-link" data-to="signin" href="#">Sign in</a></p>
+    </div>
+
+    <!-- Forgot Password Panel -->
+    <div class="auth-panel hidden" id="panel-forgot">
+      <h2 class="auth-heading">Reset your password</h2>
+      <p class="auth-sub">Enter your email and we'll send you a reset link.</p>
+
+      <input class="auth-input" id="fp-email" type="email" placeholder="Email" />
+
+      <div class="auth-msg hidden" id="fp-err" data-type="err"></div>
+      <div class="auth-msg hidden" id="fp-ok"  data-type="ok"></div>
+
+      <button class="auth-submit" id="fp-btn">Send Reset Link</button>
+      <p class="auth-switch"><a class="switch-link" data-to="signin" href="#">← Back to Sign In</a></p>
+    </div>
+
   </div>
 </div>
 
 
-<!-- ╔═══════════════════════════════╗
-     ║  CHAT VIEW                   ║
-     ╚═══════════════════════════════╝ -->
-<div id="view-chat" class="view" style="display:none;">
+<!-- ══════════════════════════════════════════════════════════
+     CHAT VIEW
+══════════════════════════════════════════════════════════ -->
+<div id="view-chat" class="view chat-view hidden">
 
   <!-- Sidebar -->
-  <aside id="sidebar" class="sidebar">
-    <div class="sb-top">
-      <button class="new-chat-btn" id="new-chat-btn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        New Chat
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sb-logo">
+      <div class="sb-emblem">C</div>
+      <span class="sb-brand">Cyanix <em>AI</em></span>
+    </div>
+
+    <button class="new-chat-btn" id="new-chat-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New chat
+    </button>
+
+    <div class="sb-list" id="chat-list"></div>
+
+    <div class="sb-footer">
+      <button class="sb-footer-btn" id="help-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+        Help
       </button>
-    </div>
-    <div class="sb-search">
-      <span class="sb-search-icon">⌕</span>
-      <input id="history-search" class="sb-search-input" type="text" placeholder="Search conversations…" autocomplete="off"/>
-    </div>
-    <div class="sb-list" id="chat-list">
-      <!-- filled by JS -->
-    </div>
-    <div class="sb-bottom">
-      <button class="sb-icon-btn" id="sb-theme-btn" title="Toggle theme">◑</button>
-      <button class="sb-icon-btn" id="sb-shortcuts-btn" title="Keyboard shortcuts">⌨</button>
-      <span id="sb-user-label" class="sb-user-label" style="display:none;"></span>
-      <button class="sb-sign-btn" id="sb-signin-btn">Sign In</button>
+      <button class="sb-footer-btn" id="settings-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+      <button class="sb-user-btn" id="user-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-name">Loading…</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
     </div>
   </aside>
 
-  <!-- Sidebar mobile overlay -->
-  <div id="sb-overlay" class="sb-overlay" style="display:none;"></div>
+  <!-- User menu popup -->
+  <div class="user-menu hidden" id="user-menu">
+    <button class="um-item" id="um-settings">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
+    <div class="um-sep"></div>
+    <button class="um-item danger" id="um-signout">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </button>
+  </div>
 
-  <!-- Main -->
-  <div class="chat-wrap" id="chat-wrap">
+  <!-- Main chat area -->
+  <main class="chat-main">
 
     <!-- Topbar -->
-    <header class="chat-topbar">
+    <div class="chat-topbar">
       <div class="ct-left">
-        <button class="icon-btn" id="sb-toggle-btn" aria-label="Toggle sidebar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <button class="tb-icon-btn" id="sidebar-toggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <div class="logo small"><span class="logo-badge">CX</span><span class="logo-text">CYANIX <em>AI</em></span></div>
-        <span class="status-pill"><span class="status-dot"></span>Online</span>
+        <span class="chat-title-label" id="chat-title">New chat</span>
       </div>
-
-      <!-- Model selector -->
-      <div class="model-picker" id="model-picker-wrap">
-        <button class="model-picker-btn" id="model-picker-btn">
-          <span id="model-tag" class="model-tag">FAST</span>
-          <span id="model-name-label">Llama 4 Scout</span>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="model-dropdown" id="model-dropdown" style="display:none;">
-          <!-- filled by JS -->
-        </div>
-      </div>
-
       <div class="ct-right">
-        <span id="ct-user-chip" class="user-chip" style="display:none;"></span>
-        <button class="icon-btn" id="voice-btn" title="Voice input (V)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <div class="model-picker" id="model-picker">
+          <button class="model-pill" id="model-btn">
+            <span id="model-name-label">GPT OSS 20B</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="model-dropdown hidden" id="model-dropdown"></div>
+        </div>
+        <button class="tb-icon-btn" id="new-chat-top">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="icon-btn" id="export-btn" title="Export chat (E)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>
-        <button class="icon-btn" id="share-btn" title="Share chat">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        </button>
-        <button class="icon-btn" id="settings-btn" title="Settings (S)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        </button>
-        <button class="ghost-btn" id="galaxy-btn">◎ Map</button>
-        <button class="ghost-btn" id="ct-signin-btn">Sign In</button>
       </div>
-    </header>
-
-    <!-- Usage bar -->
-    <div class="usage-bar" id="usage-bar">
-      <span class="ub-item" id="ub-tokens">~0 tokens</span>
-      <span class="ub-sep">·</span>
-      <span class="ub-item" id="ub-model">—</span>
-      <span class="ub-sep">·</span>
-      <span class="ub-item" id="ub-msgs">0 messages</span>
     </div>
 
     <!-- Messages -->
     <div class="chat-scroll" id="chat-scroll">
-      <div id="messages" class="messages"></div>
+      <div class="messages" id="messages">
 
-      <!-- Thinking / typing row -->
-      <div class="ai-status hidden" id="ai-status">
-        <div class="ai-status-inner">
-          <div class="ai-status-avatar"><span class="av-cx">CX</span></div>
-          <div class="ai-status-dots"><span></span><span></span><span></span></div>
-          <span class="ai-status-label" id="ai-status-label">Thinking…</span>
+        <!-- Welcome screen -->
+        <div class="welcome-wrap" id="welcome-state">
+          <div class="welcome-icon-wrap">
+            <svg viewBox="0 0 52 58" fill="none" width="52" height="52">
+              <defs>
+                <linearGradient id="wg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#38bdf8"/>
+                  <stop offset="50%" stop-color="#0080ff"/>
+                  <stop offset="100%" stop-color="#7c3aed"/>
+                </linearGradient>
+                <linearGradient id="wg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="rgba(255,255,255,0.55)"/>
+                  <stop offset="100%" stop-color="rgba(255,255,255,0.18)"/>
+                </linearGradient>
+              </defs>
+              <path d="M26 2 L49 15 L49 43 L26 56 L3 43 L3 15 Z" fill="url(#wg1)"/>
+              <path d="M26 13 L39 20 L39 33 L26 40 L13 33 L13 20 Z" fill="url(#wg2)"/>
+              <path d="M26 21 L32 24.5 L32 31.5 L26 35 L20 31.5 L20 24.5 Z" fill="rgba(5,12,50,0.30)"/>
+            </svg>
+          </div>
+          <h2 class="welcome-title">Welcome to Cyanix AI!</h2>
+          <p class="welcome-sub">How can I assist you today?</p>
+          <div class="suggestion-grid" id="suggestion-grid">
+            <button class="sugg-chip">Learn about Cyanix AI</button>
+            <button class="sugg-chip">Generate a blog post</button>
+            <button class="sugg-chip">Explain a machine learning concept</button>
+            <button class="sugg-chip">Summarize this text</button>
+          </div>
         </div>
-      </div>
 
-      <!-- Continue generating -->
-      <div class="continue-row hidden" id="continue-row">
-        <button class="continue-btn" id="continue-btn">↺ Continue generating</button>
       </div>
     </div>
 
-    <!-- Context bar (RAG) -->
-    <div class="context-bar hidden" id="context-bar">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span id="context-label" class="context-label">Context loaded</span>
-      <button class="context-clear" id="context-clear">✕</button>
+    <!-- Typing indicator -->
+    <div class="typing-wrap hidden" id="typing-row">
+      <div class="ai-avatar-mini">C</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
     </div>
 
     <!-- Composer -->
     <div class="composer-area">
       <div class="composer-box" id="composer-box">
-        <button class="compose-icon-btn" id="rag-btn" title="Add context (Ctrl+K)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <button class="compose-icon-btn" id="emoji-btn" title="Emoji">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3"/><line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3"/></svg>
         </button>
-        <textarea id="chat-input" class="composer-input" rows="1" placeholder="Ask Cyanix AI anything… (⌘K for context)" autocomplete="off" spellcheck="false"></textarea>
-        <button class="compose-icon-btn" id="voice-inline-btn" title="Voice input">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+        <textarea id="composer-input" class="composer-input" placeholder="Message Cyanix AI..." rows="1"></textarea>
+        <button class="compose-icon-btn" id="attach-btn" title="Attach file">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         </button>
-        <button class="send-btn" id="send-btn" title="Send (Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <button class="send-btn" id="send-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
-      <div class="composer-meta">
-        <span class="c-hint">↵ send · ⇧↵ new line · ⌘K context</span>
-        <span class="search-status" id="search-status"><span class="ss-dot"></span>Web Search Ready</span>
-      </div>
+      <p class="composer-hint">Cyanix AI can make mistakes. Verify important information.</p>
     </div>
-  </div><!-- /chat-wrap -->
 
-  <!-- Settings Drawer -->
-  <div id="settings-drawer" class="settings-drawer">
-    <div class="sd-header">
-      <span class="sd-title">Settings</span>
-      <button class="icon-btn" id="settings-close">✕</button>
-    </div>
-    <div class="sd-body">
-
-      <div class="sd-section">
-        <div class="sd-label">SYSTEM INSTRUCTIONS</div>
-        <textarea id="system-prompt" class="sd-textarea" rows="4" placeholder="e.g. Always reply in Spanish. Be concise. Act as a senior developer."></textarea>
-        <p class="sd-hint">Sent with every message as the system role.</p>
-      </div>
-
-      <div class="sd-section">
-        <div class="sd-label">RESPONSE TONE</div>
-        <div class="sd-pills" id="tone-pills">
-          <button class="sd-pill active" data-val="balanced">Balanced</button>
-          <button class="sd-pill" data-val="casual">Casual</button>
-          <button class="sd-pill" data-val="professional">Professional</button>
-        </div>
-      </div>
-
-      <div class="sd-section">
-        <div class="sd-label">RESPONSE LENGTH</div>
-        <div class="sd-pills" id="length-pills">
-          <button class="sd-pill active" data-val="balanced">Balanced</button>
-          <button class="sd-pill" data-val="concise">Concise</button>
-          <button class="sd-pill" data-val="detailed">Detailed</button>
-        </div>
-      </div>
-
-      <div class="sd-section">
-        <div class="sd-label">OUTPUT FORMAT</div>
-        <div class="sd-pills" id="format-pills">
-          <button class="sd-pill active" data-val="markdown">Markdown</button>
-          <button class="sd-pill" data-val="plain">Plain text</button>
-        </div>
-      </div>
-
-      <div class="sd-section">
-        <div class="sd-label">CONTEXT WINDOW</div>
-        <div class="sd-row">
-          <input type="range" id="ctx-slider" min="4" max="40" step="2" value="20" class="sd-slider"/>
-          <span id="ctx-val" class="sd-slider-val">20 messages</span>
-        </div>
-      </div>
-
-      <div class="sd-section">
-        <div class="sd-label">STREAMING</div>
-        <div class="sd-toggle-row">
-          <span class="sd-toggle-label">Stream responses in real-time</span>
-          <label class="toggle-switch">
-            <input type="checkbox" id="stream-toggle" checked/>
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="sd-section">
-        <div class="sd-label">THEME</div>
-        <div class="sd-pills" id="theme-pills">
-          <button class="sd-pill active" data-val="dark">Dark</button>
-          <button class="sd-pill" data-val="light">Light</button>
-        </div>
-      </div>
-
-      <div class="sd-section">
-        <button class="sd-action-btn danger" id="clear-all-btn">Clear all conversations</button>
-      </div>
-
-    </div>
-  </div>
-  <div id="settings-overlay" class="settings-overlay" style="display:none;"></div>
-
+  </main>
 </div><!-- /view-chat -->
 
 
-<!-- ╔═══════════════════════════════╗
-     ║  RAG CONTEXT MODAL           ║
-     ╚═══════════════════════════════╝ -->
-<div id="rag-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <div class="modal-header">
-      <span class="modal-title">Add Context</span>
-      <button class="icon-btn" id="rag-modal-close">✕</button>
-    </div>
-    <p class="modal-desc">Paste notes, docs, or code for Cyanix AI to reference in this session.</p>
-    <textarea id="rag-textarea" class="modal-textarea" rows="10" placeholder="Paste your text here…"></textarea>
-    <div class="modal-footer">
-      <button class="ghost-btn" id="rag-cancel">Cancel</button>
-      <button class="cta-primary sm" id="rag-save">Load Context</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- ╔═══════════════════════════════╗
-     ║  EXPORT MODAL                ║
-     ╚═══════════════════════════════╝ -->
-<div id="export-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box sm">
-    <div class="modal-header">
-      <span class="modal-title">Export Chat</span>
-      <button class="icon-btn" id="export-modal-close">✕</button>
-    </div>
-    <div class="export-options">
-      <button class="export-opt" id="export-md">
-        <span class="eo-icon">M↓</span>
-        <span class="eo-label">Markdown (.md)</span>
-        <span class="eo-desc">Great for notes, Obsidian, Notion</span>
-      </button>
-      <button class="export-opt" id="export-txt">
-        <span class="eo-icon">Aa</span>
-        <span class="eo-label">Plain Text (.txt)</span>
-        <span class="eo-desc">Simple and universal</span>
-      </button>
-      <button class="export-opt" id="export-json">
-        <span class="eo-icon">{}</span>
-        <span class="eo-label">JSON (.json)</span>
-        <span class="eo-desc">For developers and automation</span>
+<!-- ══════════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="settings-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 class="modal-title">Settings</h3>
+      <button class="modal-close" id="settings-close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-  </div>
-</div>
-
-
-<!-- ╔═══════════════════════════════╗
-     ║  SHARE MODAL                 ║
-     ╚═══════════════════════════════╝ -->
-<div id="share-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box sm">
-    <div class="modal-header">
-      <span class="modal-title">Share Conversation</span>
-      <button class="icon-btn" id="share-modal-close">✕</button>
-    </div>
-    <p class="modal-desc">Anyone with this link can view this conversation (read-only).</p>
-    <div class="share-link-row">
-      <input id="share-link-input" class="share-link-input" type="text" readonly/>
-      <button class="cta-primary sm" id="share-copy-btn">Copy</button>
-    </div>
-    <p class="modal-hint" id="share-hint"></p>
-  </div>
-</div>
-
-
-<!-- ╔═══════════════════════════════╗
-     ║  KEYBOARD SHORTCUTS          ║
-     ╚═══════════════════════════════╝ -->
-<div id="shortcuts-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box sm">
-    <div class="modal-header">
-      <span class="modal-title">Keyboard Shortcuts</span>
-      <button class="icon-btn" id="shortcuts-close">✕</button>
-    </div>
-    <div class="shortcuts-list">
-      <div class="sc-row"><kbd>Enter</kbd><span>Send message</span></div>
-      <div class="sc-row"><kbd>⇧ Enter</kbd><span>New line</span></div>
-      <div class="sc-row"><kbd>⌘/Ctrl K</kbd><span>Add context</span></div>
-      <div class="sc-row"><kbd>⌘/Ctrl N</kbd><span>New chat</span></div>
-      <div class="sc-row"><kbd>⌘/Ctrl E</kbd><span>Export chat</span></div>
-      <div class="sc-row"><kbd>⌘/Ctrl /</kbd><span>Toggle sidebar</span></div>
-      <div class="sc-row"><kbd>S</kbd><span>Settings</span></div>
-      <div class="sc-row"><kbd>V</kbd><span>Voice input</span></div>
-      <div class="sc-row"><kbd>T</kbd><span>Toggle theme</span></div>
-      <div class="sc-row"><kbd>?</kbd><span>This menu</span></div>
-      <div class="sc-row"><kbd>Esc</kbd><span>Close panel / Stop</span></div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ╔═══════════════════════════════╗
-     ║  AUTH MODAL                  ║
-     ╚═══════════════════════════════╝ -->
-<div id="auth-overlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
-  <div class="auth-modal">
-    <div class="auth-brand">
-      <div class="auth-brand-content">
-        <span class="logo-badge xl">CX</span>
-        <p class="auth-brand-name">CYANIX<em>AI</em></p>
-        <p class="auth-brand-desc">AI-powered internet, mapped as a galaxy.</p>
-        <p class="auth-brand-credit">Built by <strong>NixAi</strong><br/>by Sarano Smith</p>
-      </div>
-      <div class="auth-brand-grid"></div>
-      <div class="auth-brand-glow"></div>
-    </div>
-    <div class="auth-form">
-      <button id="auth-close" class="auth-close">✕</button>
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-tab="signin">Sign in</button>
-        <button class="auth-tab" data-tab="signup">Create account</button>
-      </div>
-
-      <div id="tab-signin" class="auth-panel-form active">
-        <div class="oauth-row">
-          <button class="oauth-btn" data-provider="google" id="ob-google">
-            <svg width="15" height="15" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Google
-          </button>
-          <button class="oauth-btn" data-provider="github" id="ob-github">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-            GitHub
-          </button>
-          <button class="oauth-btn" data-provider="discord" id="ob-discord">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.082.11 18.105.128 18.12a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127c-.598.349-1.22.645-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-            Discord
-          </button>
+    <div class="modal-body">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">AI Model</div>
+          <div class="setting-desc">Choose the model powering your chats</div>
         </div>
-        <div class="divider-line"><span>or email</span></div>
-        <label class="field-wrap"><span class="field-label">Email</span><input id="si-email" type="email" class="field-input" placeholder="you@example.com" autocomplete="email"/></label>
-        <label class="field-wrap"><span class="field-label">Password</span><input id="si-pass" type="password" class="field-input" placeholder="••••••••" autocomplete="current-password"/></label>
-        <div id="si-err" class="form-err" style="display:none;"></div>
-        <button id="si-btn" class="submit-btn">Sign In</button>
+        <select class="setting-select" id="model-select"></select>
       </div>
-
-      <div id="tab-signup" class="auth-panel-form" style="display:none;">
-        <div class="oauth-row">
-          <button class="oauth-btn" data-provider="google" id="ob-google-up">
-            <svg width="15" height="15" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Google
-          </button>
-          <button class="oauth-btn" data-provider="github" id="ob-github-up">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-            GitHub
-          </button>
-          <button class="oauth-btn" data-provider="discord" id="ob-discord-up">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.082.11 18.105.128 18.12a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127c-.598.349-1.22.645-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-            Discord
-          </button>
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">Streaming responses</div>
+          <div class="setting-desc">Show text as it's generated in real time</div>
         </div>
-        <div class="divider-line"><span>or email</span></div>
-        <label class="field-wrap"><span class="field-label">Email</span><input id="su-email" type="email" class="field-input" placeholder="you@example.com" autocomplete="email"/></label>
-        <label class="field-wrap"><span class="field-label">Password</span><input id="su-pass" type="password" class="field-input" placeholder="Min. 6 characters" autocomplete="new-password"/></label>
-        <label class="field-wrap"><span class="field-label">Confirm password</span><input id="su-conf" type="password" class="field-input" placeholder="••••••••" autocomplete="new-password"/></label>
-        <div id="su-err" class="form-err" style="display:none;"></div>
-        <div id="su-ok"  class="form-ok"  style="display:none;"></div>
-        <button id="su-btn" class="submit-btn">Create Account</button>
+        <label class="toggle-switch">
+          <input type="checkbox" id="streaming-toggle" checked />
+          <span class="toggle-track"></span>
+        </label>
       </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">Theme</div>
+          <div class="setting-desc">Interface appearance</div>
+        </div>
+        <select class="setting-select" id="theme-select">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div class="modal-sep"></div>
+      <button class="modal-danger-btn" id="clear-chats-btn">Clear all chats</button>
+      <button class="modal-danger-btn" id="signout-btn">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="help-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 class="modal-title">Help & Keyboard Shortcuts</h3>
+      <button class="modal-close" id="help-close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="help-row"><span>Send message</span><kbd>Enter</kbd></div>
+      <div class="help-row"><span>New line</span><kbd>Shift + Enter</kbd></div>
+      <div class="help-row"><span>New chat</span><kbd>Ctrl + Shift + N</kbd></div>
+      <div class="help-row"><span>Stop response</span><kbd>Escape</kbd></div>
+      <div class="help-row"><span>Focus input</span><kbd>/</kbd></div>
     </div>
   </div>
 </div>
 
 <!-- Toast notification -->
-<div id="toast" class="toast" style="display:none;"></div>
+<div class="toast hidden" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="JavaScript.js"></script>
 </body>
 </html>
