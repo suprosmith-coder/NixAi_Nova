@@ -19,7 +19,8 @@ const MODELS = [
   { id: 'openai/gpt-oss-120b',          name: 'GPT OSS 120B',      tag: 'POWER', desc: '128k context · Deep reasoning'         },
   { id: 'openai/gpt-oss-safeguard-20b', name: 'GPT OSS Safeguard', tag: 'SAFE',  desc: 'Moderation · Safety-filtered'          },
 ];
-const TTS_MODEL = 'canopy-labs/orpheus-english';
+// TTS voice is set server-side (Orion-PlayAI — British male)
+// Change voice in tts-edge-function.ts
 
 const SUGGESTIONS = [
   'Learn about Cyanix AI',
@@ -301,7 +302,18 @@ async function signInOAuth(provider) {
 }
 
 async function signOut() {
-  await _sb.auth.signOut();
+  // Close all overlays before state change
+  hide('settings-modal');
+  hide('help-modal');
+  hide('user-menu');
+  hide('model-dropdown');
+  try {
+    await _sb.auth.signOut();
+  } catch (err) {
+    console.error('[CyanixAI] signOut error:', err);
+  }
+  // Belt-and-suspenders: force UI reset even if onAuthStateChange is slow
+  onSignedOut();
   toast('Signed out.');
 }
 
@@ -331,7 +343,6 @@ async function onSignedIn(session) {
 
 function onSignedOut() {
   hide('view-chat');
-  hideSplash();
   show('view-auth');
   showPanel('signin');
   _session   = null;
@@ -800,34 +811,75 @@ async function sendMessage(text) {
       const { bubbleEl, msgEl } = renderMessage('ai', '', true);
       bubbleEl.innerHTML = '<span class="stream-cursor"></span>';
 
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
+      const reader     = res.body.getReader();
+      const decoder    = new TextDecoder();
+      let done         = false;
+      let lineBuffer   = '';
 
-      while (!done) {
-        const { value, done: d } = await reader.read();
-        done = d;
-        if (!value) continue;
-        const lines = decoder.decode(value, { stream: true }).split('\n');
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') { done = true; break; }
-          try {
-            const parsed = JSON.parse(data);
-            const delta  = parsed.choices?.[0]?.delta?.content || '';
-            aiText += delta;
-            bubbleEl.innerHTML = mdToHTML(aiText) + '<span class="stream-cursor"></span>';
-            scrollToBottom();
-          } catch {}
+      // 45-second hard timeout kills any hung stream
+      let streamTimedOut = false;
+      const streamTimeout = setTimeout(() => {
+        streamTimedOut = true;
+        reader.cancel('timeout');
+      }, 45000);
+
+      try {
+        while (!done) {
+          const { value, done: d } = await reader.read();
+          done = d;
+          if (!value) continue;
+
+          // Buffer to handle chunks split across mid-line
+          lineBuffer += decoder.decode(value, { stream: true });
+          const lines = lineBuffer.split('\n');
+          lineBuffer  = lines.pop() ?? '';   // last partial line stays in buffer
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data: ')) continue;
+            const data = trimmed.slice(6).trim();
+            if (data === '[DONE]') { done = true; break; }
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.error) {
+                throw new Error(parsed.error.message || 'API stream error');
+              }
+              const delta = parsed.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                aiText += delta;
+                bubbleEl.innerHTML = mdToHTML(aiText) + '<span class="stream-cursor"></span>';
+                scrollToBottom();
+              }
+            } catch (pe) {
+              if (pe.message === 'API stream error' || pe.message.includes('API')) throw pe;
+              // ignore JSON parse errors on partial/empty chunks
+            }
+          }
         }
+      } catch (streamErr) {
+        if (streamErr.message && !streamErr.message.includes('cancel')) {
+          throw streamErr; // re-throw real errors, not cancel
+        }
+      } finally {
+        clearTimeout(streamTimeout);
       }
 
-      bubbleEl.innerHTML = mdToHTML(aiText);
+      // Render final content or error
+      if (!aiText.trim()) {
+        const reason = streamTimedOut
+          ? 'Response timed out. The model may be busy — try again.'
+          : 'No response received. The model may be unavailable — try switching models in Settings.';
+        bubbleEl.innerHTML = `<span style="color:var(--red)">&#10060; ${reason}</span>`;
+        aiText = ''; // don't save empty response
+      } else {
+        bubbleEl.innerHTML = mdToHTML(aiText);
+      }
 
-      // Add feedback buttons to AI message
-      const msgId = await saveMessagesAndUpdateHistory(text, aiText);
-      if (msgId && msgEl) addFeedbackButtons(msgEl, msgId);
+      // Only save and add feedback if we have content
+      if (aiText.trim()) {
+        const msgId = await saveMessagesAndUpdateHistory(text, aiText);
+        if (msgId && msgEl) addFeedbackButtons(msgEl, msgId);
+      }
 
     } else {
       const data = await res.json();
@@ -989,41 +1041,82 @@ window.copyMsg = function(btn) {
 
 window.speakMsg = async function(btn) {
   const bubble = btn.closest('.msg-content').querySelector('.msg-bubble');
-  const text   = (bubble.innerText || bubble.textContent || '').trim().slice(0, 2000);
+  const text   = (bubble.innerText || bubble.textContent || '').trim().slice(0, 4000);
   if (!text) return;
 
+  // If already speaking — stop it
   if (_ttsSpeaking) {
-    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio.src = ''; _ttsAudio = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     _ttsSpeaking = false;
-    btn.textContent = '▶ Listen';
+    btn.innerHTML = '&#9654; Listen';
     return;
   }
 
-  btn.textContent = '◉ Stop';
-  _ttsSpeaking = true;
+  btn.innerHTML = '&#9632; Stop';
+  _ttsSpeaking  = true;
 
   try {
     const res = await fetch(TTS_URL, {
-      method: 'POST', headers: edgeHeaders(),
-      body: JSON.stringify({ text, model: TTS_MODEL }),
+      method:  'POST',
+      headers: edgeHeaders(),
+      body: JSON.stringify({ text, voice: 'Fritz-PlayAI' }),
     });
-    if (!res.ok) throw new Error('TTS unavailable');
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    _ttsAudio  = new Audio(url);
-    _ttsAudio.onended = () => { _ttsSpeaking = false; btn.textContent = '▶ Listen'; URL.revokeObjectURL(url); };
-    _ttsAudio.onerror = () => { _ttsSpeaking = false; btn.textContent = '▶ Listen'; };
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || `TTS error ${res.status}`);
+    }
+
+    // Groq returns raw WAV bytes — must specify MIME type for browser
+    const arrayBuf = await res.arrayBuffer();
+    const blob     = new Blob([arrayBuf], { type: 'audio/wav' });
+    const url      = URL.createObjectURL(blob);
+    _ttsAudio      = new Audio(url);
+
+    _ttsAudio.onended = () => {
+      _ttsSpeaking = false;
+      btn.innerHTML = '&#9654; Listen';
+      URL.revokeObjectURL(url);
+    };
+    _ttsAudio.onerror = (e) => {
+      console.error('[CyanixAI] Audio playback error:', e);
+      _ttsSpeaking = false;
+      btn.innerHTML = '&#9654; Listen';
+      URL.revokeObjectURL(url);
+      toast('Audio playback failed.');
+    };
+
     await _ttsAudio.play();
-  } catch {
+
+  } catch (err) {
+    console.error('[CyanixAI] TTS fetch error:', err);
+    _ttsSpeaking = false;
+    btn.innerHTML = '&#9654; Listen';
+    // Fallback to browser Web Speech API
     if (window.speechSynthesis) {
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = 'en-US'; utt.rate = 1.0;
-      utt.onend = () => { _ttsSpeaking = false; btn.textContent = '▶ Listen'; };
+      toast('Using browser voice as fallback.');
+      const utt   = new SpeechSynthesisUtterance(text.slice(0, 2000));
+      utt.lang    = 'en-GB';  // British English to match Orion accent
+      utt.rate    = 0.95;
+      utt.pitch   = 0.9;
+      // Try to find a male British voice
+      const voices = window.speechSynthesis.getVoices();
+      const male   = voices.find(v =>
+        v.lang.startsWith('en') &&
+        (v.name.toLowerCase().includes('male') ||
+         v.name.toLowerCase().includes('daniel') ||
+         v.name.toLowerCase().includes('oliver') ||
+         v.name.toLowerCase().includes('george'))
+      );
+      if (male) utt.voice = male;
+      btn.innerHTML = '&#9632; Stop';
+      _ttsSpeaking  = true;
+      utt.onend = () => { _ttsSpeaking = false; btn.innerHTML = '&#9654; Listen'; };
+      utt.onerror = () => { _ttsSpeaking = false; btn.innerHTML = '&#9654; Listen'; };
       window.speechSynthesis.speak(utt);
     } else {
-      _ttsSpeaking = false; btn.textContent = '▶ Listen';
-      toast('TTS not available.');
+      toast('Voice unavailable. Deploy the TTS edge function.');
     }
   }
 };
