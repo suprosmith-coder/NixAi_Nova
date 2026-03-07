@@ -634,13 +634,31 @@ async function loadChat(id) {
 
 async function createNewChatInDB(firstMessage) {
   const title = firstMessage.slice(0, 60).trim() + (firstMessage.length > 60 ? '…' : '');
+
+  // Ensure we have a fresh token before inserting
+  // (JWT can expire after ~1hr of idle — Supabase auto-refreshes but only if active)
+  const { data: { session: freshSession }, error: refreshErr } = await _sb.auth.getSession();
+  if (refreshErr || !freshSession) {
+    throw new Error('Your session expired. Please sign in again.');
+  }
+  _session = freshSession;
+
   const { data, error } = await _sb.from('chats').insert({
     user_id: _session.user.id,
     title,
-    model: _settings.model,
+    model:   _settings.model,
   }).select('id').single();
 
-  if (error) throw error;
+  if (error) {
+    // Surface the real Postgres/RLS error so it's actually debuggable
+    const detail = error.details || error.hint || error.message || String(error);
+    const code   = error.code   || '';
+    // RLS violation — user row doesn't satisfy the policy
+    if (code === '42501' || error.message?.includes('row-level security')) {
+      throw new Error('Permission denied by database (RLS). Make sure you ran the latest schema.sql in Supabase.');
+    }
+    throw new Error(`DB error ${code}: ${detail}`);
+  }
   return data.id;
 }
 
@@ -657,7 +675,12 @@ async function saveMessages(chatId, userText, aiText) {
     { chat_id: chatId, user_id: _session.user.id, role: 'assistant', content: aiText   },
   ]).select('id');
 
-  if (error) { console.error('[CyanixAI] saveMessages error:', error); return {}; }
+  if (error) {
+    console.error('[CyanixAI] saveMessages error:', error.code, error.message, error.details);
+    // Don't crash the chat — AI response already showed. Just warn.
+    toast(`Could not save messages (${error.code || error.message}). Chat history may not persist.`, 4000);
+    return {};
+  }
   return { userMsgId: data?.[0]?.id, aiMsgId: data?.[1]?.id };
 }
 
@@ -762,7 +785,16 @@ async function sendMessage(text) {
       if ($('chat-title')) $('chat-title').textContent = text.slice(0,60);
     } catch (err) {
       console.error('[CyanixAI] createNewChatInDB error:', err);
-      toast('Failed to create chat. Check your connection.');
+      const msg = err.message || 'Unknown error';
+      // Session expired — force sign out so user can log back in
+      if (msg.includes('session expired') || msg.includes('JWT')) {
+        toast('Session expired. Signing you out…');
+        setTimeout(() => signOut(), 1500);
+        _responding = false;
+        setSendBtn('send');
+        return;
+      }
+      toast(`Chat error: ${msg}`, 5000);
       _responding = false;
       setSendBtn('send');
       return;
