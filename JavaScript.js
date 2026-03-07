@@ -306,14 +306,24 @@ window.bundleCode = function(btn) {
 document.addEventListener('DOMContentLoaded', async () => {
   loadSettings();
   applyTheme(_settings.theme);
-
-  // Bind all UI immediately — no race condition
   bindAuthUI();
   bindChatUI();
   populateModels();
 
-  // Safety check
+  // ── Hard timeout: if nothing resolves in 6s, show auth screen ──
+  // This is the safety net for slow CDN, network issues, or
+  // INITIAL_SESSION never firing (happens in some environments).
+  const splashTimeout = setTimeout(() => {
+    if (!_splashHidden) {
+      console.warn('[CyanixAI] Boot timeout — forcing auth screen');
+      hideSplash();
+      show('view-auth');
+    }
+  }, 6000);
+
+  // ── Supabase SDK check ───────────────────────────────────────
   if (!window.supabase?.createClient) {
+    clearTimeout(splashTimeout);
     hideSplash();
     show('view-auth');
     toast('Service unavailable — check connection and refresh.');
@@ -323,41 +333,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  // Auth state listener — handles ALL sign in/out events including
-  // page reload, OAuth redirect, sign out, and token refresh.
-  // No boot flag needed — onSignedIn is idempotent.
+  // ── Auth state listener ──────────────────────────────────────
   _sb.auth.onAuthStateChange(async (event, session) => {
     console.log('[CyanixAI] auth event:', event, session?.user?.email);
     _session = session;
 
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      clearTimeout(splashTimeout);
       if (session) {
         await onSignedIn(session);
       } else {
-        // INITIAL_SESSION with no session = not logged in
         hideSplash();
         show('view-auth');
       }
     } else if (event === 'SIGNED_OUT') {
       onSignedOut();
     } else if (event === 'TOKEN_REFRESHED') {
-      // Token silently refreshed — just update session, no UI change needed
-      console.log('[CyanixAI] Token refreshed');
+      console.log('[CyanixAI] Token refreshed silently');
     }
   });
 
-  // Kick things off — getSession() triggers INITIAL_SESSION event above
-  // so we don't need to handle the result separately
+  // ── Explicit session check — belt-and-suspenders ─────────────
+  // Don't rely solely on INITIAL_SESSION event — also directly handle
+  // the getSession() result in case the event is late or dropped.
   try {
-    await _sb.auth.getSession();
+    const { data: { session }, error } = await _sb.auth.getSession();
+    if (error) throw error;
+
+    // Only act if splash is still showing (event hasn't fired yet)
+    if (!_splashHidden) {
+      clearTimeout(splashTimeout);
+      if (session) {
+        _session = session;
+        await onSignedIn(session);
+      } else {
+        hideSplash();
+        show('view-auth');
+      }
+    }
   } catch (err) {
     console.error('[CyanixAI] getSession error:', err);
+    clearTimeout(splashTimeout);
     hideSplash();
     show('view-auth');
   }
 });
 
+let _splashHidden = false;
 function hideSplash() {
+  if (_splashHidden) return;   // idempotent — safe to call multiple times
+  _splashHidden = true;
   const el = $('view-loading');
   if (el) {
     el.style.opacity = '0';
@@ -514,25 +539,22 @@ async function signInOAuth(provider) {
 }
 
 async function signOut() {
-  // Close all overlays immediately
+  // Close overlays immediately so it feels instant
   hide('settings-modal');
   hide('help-modal');
   hide('user-menu');
   hide('model-dropdown');
 
-  // Sign out from Supabase FIRST — this triggers onAuthStateChange(SIGNED_OUT)
-  // which calls onSignedOut() to reset UI and state.
-  // Do NOT null _session before this call — Supabase needs the token
-  // to hit the revocation endpoint, and nulling it early can prevent
-  // the SIGNED_OUT event from firing, breaking sign-back-in.
   try {
     await _sb.auth.signOut();
   } catch (err) {
     console.error('[CyanixAI] signOut error:', err);
-    // Force UI reset even if Supabase call failed
-    onSignedOut();
   }
 
+  // Always reset UI directly — never rely solely on SIGNED_OUT event.
+  // onAuthStateChange may call onSignedOut() again via SIGNED_OUT event
+  // but onSignedOut() is safe to call multiple times.
+  onSignedOut();
   toast('Signed out.');
 }
 

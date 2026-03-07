@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
 
@@ -205,8 +205,24 @@
     </div>
 
     <div class="typing-wrap hidden" id="typing-row">
-      <div class="ai-avatar-mini"><img src="cyanix_emblem.png" alt="Cyanix AI" /></div>
-      <div class="typing-dots"><span></span><span></span><span></span></div>
+      <div class="cx-thinking">
+        <!-- Pulsing emblem core -->
+        <div class="cx-think-emblem">
+          <img src="cyanix_emblem.png" alt="" />
+          <div class="cx-think-ring cx-ring-1"></div>
+          <div class="cx-think-ring cx-ring-2"></div>
+        </div>
+        <!-- Orbiting dots -->
+        <div class="cx-orbit-wrap">
+          <div class="cx-orbit cx-orbit-a"><div class="cx-orb"></div></div>
+          <div class="cx-orbit cx-orbit-b"><div class="cx-orb"></div></div>
+          <div class="cx-orbit cx-orbit-c"><div class="cx-orb"></div></div>
+        </div>
+      </div>
+      <div class="cx-think-label">
+        <span>Cyanix is thinking</span>
+        <span class="cx-think-dots"><span></span><span></span><span></span></span>
+      </div>
     </div>
 
     <div class="composer-area">
@@ -353,7 +369,7 @@
 <div class="toast hidden" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="JavaScript.js?v=5"></script>
+<script src="JavaScript.js?v=7"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

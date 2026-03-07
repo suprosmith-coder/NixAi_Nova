@@ -7,8 +7,8 @@
      • Unknown navigation requests  → Serve index.html (SPA fallback)
 ══════════════════════════════════════════════════════════════ */
 
-const CACHE_NAME    = 'cyanix-ai-v6';   // bumped — forces old cache to clear
-const RUNTIME_CACHE = 'cyanix-runtime-v6';
+const CACHE_NAME    = 'cyanix-ai-v7';   // bumped — forces old cache to clear
+const RUNTIME_CACHE = 'cyanix-runtime-v7';
 
 // Files to pre-cache on install (app shell)
 const PRECACHE_URLS = [
