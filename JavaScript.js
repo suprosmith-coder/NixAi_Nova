@@ -801,7 +801,7 @@ function renderMessage(role, content, animate = true) {
     `;
   } else {
     row.innerHTML = `
-      <div class="ai-avatar">C</div>
+      <div class="ai-avatar"><img src="cyanix_emblem.png" alt="Cyanix AI" /></div>
       <div class="msg-content">
         <div class="msg-name"><strong>Cyanix AI</strong></div>
         <div class="msg-bubble">${content ? mdToHTML(content) : ''}</div>

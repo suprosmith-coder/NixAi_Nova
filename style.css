@@ -126,9 +126,11 @@ html, body {
   margin-bottom: 36px;
 }
 .auth-emblem {
-  width: 46px;
-  height: 50px;
-  filter: drop-shadow(0 4px 12px rgba(0,128,255,0.35));
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 14px rgba(0, 232, 255, 0.40));
 }
 .auth-brand {
   font-family: var(--font-brand);
@@ -341,16 +343,18 @@ html, body {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0080ff, #7c3aed);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-brand);
-  font-weight: 900;
-  font-size: 1.1rem;
-  color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0,128,255,0.35);
+  overflow: hidden;
+  background: transparent;
+}
+.sb-emblem img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 .sb-brand {
   font-family: var(--font-brand);
@@ -663,7 +667,13 @@ html, body {
 
 .welcome-icon-wrap {
   margin-bottom: 16px;
-  filter: drop-shadow(0 4px 14px rgba(0,128,255,0.30));
+}
+.welcome-emblem {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 18px rgba(0, 232, 255, 0.35));
 }
 .welcome-title {
   font-size: 1.55rem;
@@ -723,17 +733,19 @@ html, body {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0080ff, #7c3aed);
-  color: #fff;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-top: 2px;
+  background: #0d1117;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-brand);
-  font-weight: 900;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-  margin-top: 2px;
-  box-shadow: 0 2px 8px rgba(0,128,255,0.3);
+}
+.ai-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 /* Message content */
@@ -889,15 +901,18 @@ html, body {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0080ff, #7c3aed);
-  color: #fff;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #0d1117;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-brand);
-  font-weight: 900;
-  font-size: 0.78rem;
-  flex-shrink: 0;
+}
+.ai-avatar-mini img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 .typing-dots {
   display: flex;

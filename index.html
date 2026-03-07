@@ -1,12 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="auto">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- ── Primary Meta ──────────────────────────────────── -->
   <title>Cyanix AI</title>
+  <meta name="description" content="Cyanix AI — Your intelligent assistant powered by cutting-edge models." />
+  <meta name="application-name" content="Cyanix AI" />
+  <meta name="author" content="NixAi" />
+  <meta name="generator" content="Cyanix AI" />
+
+  <!-- ── PWA / Web App ────────────────────────────────── -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="background-color" content="#3B82F6" />
+
+  <!-- ── iOS / Apple Safari ───────────────────────────── -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cyanix" />
+  <link rel="apple-touch-icon" sizes="120x120" href="./icons/ios/apple-touch-icon-120x120.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="./icons/ios/apple-touch-icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="./icons/ios/apple-touch-icon-167x167.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/ios/apple-touch-icon-180x180.png" />
+  <!-- iOS splash screens -->
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="./icons/ios/splash-1290x2796.png" />
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" href="./icons/ios/splash-1179x2556.png" />
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="./icons/ios/splash-1170x2532.png" />
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="./icons/ios/splash-1125x2436.png" />
+
+  <!-- ── TWA / Android ────────────────────────────────── -->
+  <meta name="msapplication-TileColor" content="#3B82F6" />
+  <meta name="msapplication-TileImage" content="./icons/manifest/icon-144x144.png" />
+  <meta name="msapplication-tap-highlight" content="no" />
+  <!-- Prevent address bar on TWA -->
+  <meta name="google" content="notranslate" />
+
+  <!-- ── Open Graph ───────────────────────────────────── -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://suprosmith-coder.github.io/NixAi_Nova/" />
+  <meta property="og:title"       content="Cyanix AI" />
+  <meta property="og:description" content="Your intelligent assistant powered by cutting-edge AI models." />
+  <meta property="og:image"       content="./icons/manifest/icon-512x512.png" />
+
+  <!-- ── Twitter Card ─────────────────────────────────── -->
+  <meta name="twitter:card"        content="summary" />
+  <meta name="twitter:title"       content="Cyanix AI" />
+  <meta name="twitter:description" content="Your intelligent assistant powered by cutting-edge AI models." />
+  <meta name="twitter:image"       content="./icons/manifest/icon-512x512.png" />
+
+  <!-- ── Favicon ──────────────────────────────────────── -->
+  <link rel="icon"       type="image/png" sizes="32x32" href="./icons/manifest/icon-96x96.png" />
+  <link rel="icon"       type="image/png" sizes="16x16" href="./icons/manifest/icon-48x48.png" />
+  <link rel="shortcut icon" href="./icons/manifest/icon-48x48.png" />
+
+  <!-- ── Fonts ────────────────────────────────────────── -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- ── Scripts & Styles ─────────────────────────────── -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -20,22 +75,7 @@
 
     <!-- Logo -->
     <div class="auth-logo">
-      <svg class="auth-emblem" viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="hg1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#38bdf8"/>
-            <stop offset="50%" stop-color="#0080ff"/>
-            <stop offset="100%" stop-color="#7c3aed"/>
-          </linearGradient>
-          <linearGradient id="hg2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="rgba(255,255,255,0.60)"/>
-            <stop offset="100%" stop-color="rgba(255,255,255,0.18)"/>
-          </linearGradient>
-        </defs>
-        <path d="M26 2 L49 15 L49 43 L26 56 L3 43 L3 15 Z" fill="url(#hg1)"/>
-        <path d="M26 13 L39 20 L39 33 L26 40 L13 33 L13 20 Z" fill="url(#hg2)"/>
-        <path d="M26 21 L32 24.5 L32 31.5 L26 35 L20 31.5 L20 24.5 Z" fill="rgba(5,12,50,0.30)"/>
-      </svg>
+      <img src="cyanix_emblem.png" class="auth-emblem" alt="Cyanix AI" />
       <span class="auth-brand">Cyanix <em>AI</em></span>
     </div>
 
@@ -124,7 +164,7 @@
   <aside class="sidebar" id="sidebar">
 
     <div class="sb-logo">
-      <div class="sb-emblem">C</div>
+      <div class="sb-emblem"><img src="cyanix_emblem.png" alt="Cyanix AI" /></div>
       <span class="sb-brand">Cyanix <em>AI</em></span>
     </div>
 
@@ -197,22 +237,7 @@
         <!-- Welcome screen -->
         <div class="welcome-wrap" id="welcome-state">
           <div class="welcome-icon-wrap">
-            <svg viewBox="0 0 52 58" fill="none" width="52" height="52">
-              <defs>
-                <linearGradient id="wg1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#38bdf8"/>
-                  <stop offset="50%" stop-color="#0080ff"/>
-                  <stop offset="100%" stop-color="#7c3aed"/>
-                </linearGradient>
-                <linearGradient id="wg2" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="rgba(255,255,255,0.55)"/>
-                  <stop offset="100%" stop-color="rgba(255,255,255,0.18)"/>
-                </linearGradient>
-              </defs>
-              <path d="M26 2 L49 15 L49 43 L26 56 L3 43 L3 15 Z" fill="url(#wg1)"/>
-              <path d="M26 13 L39 20 L39 33 L26 40 L13 33 L13 20 Z" fill="url(#wg2)"/>
-              <path d="M26 21 L32 24.5 L32 31.5 L26 35 L20 31.5 L20 24.5 Z" fill="rgba(5,12,50,0.30)"/>
-            </svg>
+            <img src="cyanix_emblem.png" class="welcome-emblem" alt="Cyanix AI" />
           </div>
           <h2 class="welcome-title">Welcome to Cyanix AI!</h2>
           <p class="welcome-sub">How can I assist you today?</p>
@@ -229,7 +254,7 @@
 
     <!-- Typing indicator -->
     <div class="typing-wrap hidden" id="typing-row">
-      <div class="ai-avatar-mini">C</div>
+      <div class="ai-avatar-mini"><img src="cyanix_emblem.png" alt="Cyanix AI" /></div>
       <div class="typing-dots"><span></span><span></span><span></span></div>
     </div>
 
@@ -322,5 +347,20 @@
 <div class="toast hidden" id="toast"></div>
 
 <script src="JavaScript.js"></script>
+
+<!-- ── Service Worker Registration ── -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' })
+        .then(reg => {
+          console.log('[CyanixAI] SW registered, scope:', reg.scope);
+          // Check for updates every time app loads
+          reg.update();
+        })
+        .catch(err => console.warn('[CyanixAI] SW registration failed:', err));
+    });
+  }
+</script>
 </body>
 </html>
