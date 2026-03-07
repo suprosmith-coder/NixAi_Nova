@@ -551,6 +551,118 @@ input:checked + .toggle-track::before { transform: translateX(20px); }
 .modal-danger-btn { display: block; width: 100%; padding: 10px; background: transparent; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; color: var(--red); cursor: pointer; text-align: center; transition: all 0.15s; margin-top: 8px; }
 .modal-danger-btn:hover { background: var(--red-bg); border-color: rgba(239,68,68,0.3); }
 
+/* ── Setting text input ─────────────────────────────────────── */
+.setting-text-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.87rem;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  margin-top: 8px;
+}
+.setting-text-input::placeholder { color: var(--text-4); }
+.setting-text-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-light);
+}
+
+/* ── Setting row column variant (label on top, control below) ─ */
+.setting-row--col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.setting-row--col .setting-info { width: 100%; }
+.setting-row--col .setting-text-input { max-width: 100%; }
+
+/* ── Personality chips ──────────────────────────────────────── */
+.personality-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  width: 100%;
+}
+.personality-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: 99px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.personality-chip:hover {
+  border-color: var(--blue);
+  background: var(--blue-light);
+  color: var(--blue);
+}
+.personality-chip.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+.personality-chip.active .chip-icon { opacity: 1; }
+.chip-icon { font-size: 1rem; line-height: 1; }
+.chip-label { line-height: 1; }
+
+/* ── Code block header with actions ────────────────────────── */
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--surface-3, rgba(0,0,0,0.06));
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.code-lang {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.copy-code-btn,
+.bundle-code-btn {
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.13s;
+  line-height: 1.6;
+}
+.copy-code-btn {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.copy-code-btn:hover { background: var(--blue-light); color: var(--blue); border-color: var(--blue-mid); }
+
+.bundle-code-btn {
+  background: var(--blue-light);
+  color: var(--blue);
+  border-color: var(--blue-mid);
+}
+.bundle-code-btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+
 /* Help */
 .help-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 0.86rem; color: var(--text-2); }
 .help-row:last-child { border-bottom: none; }

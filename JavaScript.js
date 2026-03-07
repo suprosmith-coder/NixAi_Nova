@@ -45,7 +45,31 @@ let _settings = {
   streaming:        true,
   theme:            'light',
   trainingConsent:  false,
+  displayName:      '',       // How Cyanix addresses the user
+  personality:      'friendly', // AI personality preset
 };
+
+// Personality system prompt snippets
+const PERSONALITIES = {
+  friendly:     'You are warm, encouraging, and conversational. Use a natural tone like talking to a friend.',
+  professional: 'You are formal, precise, and business-like. Responses are structured and thorough.',
+  creative:     'You are imaginative, expressive, and think outside the box. Use vivid language and novel ideas.',
+  concise:      'You are extremely brief. Answer in as few words as possible. No filler, no repetition.',
+  mentor:       'You are a patient teacher. Explain step-by-step, check understanding, and guide the user to learn.',
+  witty:        'You are clever and humorous. Use light wit and playful wordplay while still being helpful.',
+};
+
+function buildSystemPrompt() {
+  const personalityLine = PERSONALITIES[_settings.personality] || PERSONALITIES.friendly;
+  const nameLine = _settings.displayName
+    ? `The user's name is ${_settings.displayName}. Always address them as ${_settings.displayName}.`
+    : '';
+  return [
+    'You are Cyanix AI, a powerful and intelligent assistant.',
+    personalityLine,
+    nameLine,
+  ].filter(Boolean).join(' ');
+}
 
 /* ── DOM helpers ─────────────────────────────────────────── */
 const $    = id  => document.getElementById(id);
@@ -124,9 +148,20 @@ function mdToHTML(text) {
 
   t = t.replace(/\x00CODE(\d+)\x00/g, (_, i) => {
     const { lang, code } = codeBlocks[+i];
-    const ec = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return `<div class="code-block">
-      <div class="code-header"><span>${esc(lang)}</span><button class="copy-code-btn" onclick="copyCode(this)">Copy</button></div>
+    const ec   = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const lines = code.split('\n').length;
+    // Show Bundle button for code blocks >= 20 lines
+    const bundleBtn = lines >= 20
+      ? `<button class="bundle-code-btn" onclick="bundleCode(this)" title="Download as file">&#128230; Bundle</button>`
+      : '';
+    return `<div class="code-block" data-lang="${esc(lang)}">
+      <div class="code-header">
+        <span class="code-lang">${esc(lang)}</span>
+        <div class="code-actions">
+          ${bundleBtn}
+          <button class="copy-code-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+      </div>
       <pre><code>${ec}</code></pre>
     </div>`;
   });
@@ -139,6 +174,41 @@ window.copyCode = function(btn) {
     btn.textContent = 'Copied!';
     setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
   });
+};
+
+window.bundleCode = function(btn) {
+  const block = btn.closest('.code-block');
+  const code  = block.querySelector('code').textContent;
+  const lang  = (block.dataset.lang || 'txt').toLowerCase().trim();
+
+  // Map language name → file extension
+  const EXT_MAP = {
+    javascript: 'js', typescript: 'ts', python: 'py', py: 'py',
+    html: 'html', css: 'css', json: 'json', bash: 'sh', shell: 'sh',
+    sh: 'sh', sql: 'sql', java: 'java', kotlin: 'kt', swift: 'swift',
+    rust: 'rs', go: 'go', cpp: 'cpp', c: 'c', ruby: 'rb', php: 'php',
+    dart: 'dart', yaml: 'yaml', yml: 'yml', xml: 'xml', markdown: 'md',
+    md: 'md', r: 'r', scala: 'scala', lua: 'lua', perl: 'pl',
+  };
+  const ext  = EXT_MAP[lang] || (lang.length <= 6 && lang !== 'code' ? lang : 'txt');
+  const name = `cyanix-code.${ext}`;
+
+  const blob = new Blob([code], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Visual feedback on button
+  const orig = btn.innerHTML;
+  btn.innerHTML = '&#10003; Saved!';
+  btn.style.color = 'var(--green, #22c55e)';
+  setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
 };
 
 /* ══════════════════════════════════════════════════════════
@@ -318,18 +388,30 @@ async function signInOAuth(provider) {
 }
 
 async function signOut() {
-  // Close all overlays before state change
+  // Close all overlays immediately
   hide('settings-modal');
   hide('help-modal');
   hide('user-menu');
   hide('model-dropdown');
+
+  // Show chat is gone right away so button feels instant
+  hide('view-chat');
+  show('view-auth');
+  showPanel('signin');
+
+  // Reset state
+  _session   = null;
+  _chats     = [];
+  _currentId = null;
+  _history   = [];
+
+  // Sign out from Supabase in background (non-blocking)
   try {
     await _sb.auth.signOut();
   } catch (err) {
     console.error('[CyanixAI] signOut error:', err);
   }
-  // Belt-and-suspenders: force UI reset even if onAuthStateChange is slow
-  onSignedOut();
+
   toast('Signed out.');
 }
 
@@ -473,6 +555,24 @@ function bindChatUI() {
       ? 'Training data collection enabled. Thank you!'
       : 'Training data collection disabled.');
   });
+
+  // Display name
+  on('display-name-input', 'input', () => {
+    _settings.displayName = ($('display-name-input')?.value || '').trim();
+    saveSettings();
+    syncPreferences();
+  });
+
+  // Personality chips — delegated since chips are in static HTML
+  document.querySelectorAll('.personality-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      _settings.personality = chip.dataset.value;
+      updatePersonalityChips();
+      saveSettings();
+      syncPreferences();
+      toast('Personality: ' + chip.querySelector('.chip-label')?.textContent?.trim());
+    });
+  });
   on('delete-training-btn', 'click', async () => {
     if (!confirm('This will withdraw your anonymized contributions from future training batches. Continue?')) return;
     try {
@@ -598,10 +698,19 @@ function loadSettings() {
 }
 
 function syncSettingsToUI() {
-  if ($('streaming-toggle')) $('streaming-toggle').checked = _settings.streaming;
-  if ($('theme-select'))     $('theme-select').value       = _settings.theme;
-  if ($('consent-toggle'))   $('consent-toggle').checked   = _settings.trainingConsent;
+  if ($('streaming-toggle'))   $('streaming-toggle').checked = _settings.streaming;
+  if ($('theme-select'))       $('theme-select').value       = _settings.theme;
+  if ($('consent-toggle'))     $('consent-toggle').checked   = _settings.trainingConsent;
+  if ($('display-name-input')) $('display-name-input').value = _settings.displayName || '';
+  if ($('personality-input'))  $('personality-input').value  = _settings.personality  || 'friendly';
   updateTrainingDataRow();
+  updatePersonalityChips();
+}
+
+function updatePersonalityChips() {
+  document.querySelectorAll('.personality-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.value === _settings.personality);
+  });
 }
 
 function applyTheme(theme) {
@@ -623,6 +732,8 @@ async function loadPreferences() {
       _settings.streaming       = data.streaming       ?? _settings.streaming;
       _settings.theme           = data.theme           || _settings.theme;
       _settings.trainingConsent = data.training_consent ?? _settings.trainingConsent;
+      _settings.displayName     = data.display_name    || '';
+      _settings.personality     = data.personality     || 'friendly';
       saveSettings();
       applyTheme(_settings.theme);
       populateModels();
@@ -641,6 +752,8 @@ async function syncPreferences() {
       streaming:        _settings.streaming,
       theme:            _settings.theme,
       training_consent: _settings.trainingConsent,
+      display_name:     _settings.displayName  || null,
+      personality:      _settings.personality  || 'friendly',
       updated_at:       new Date().toISOString(),
     }, { onConflict: 'user_id' });
   } catch (err) {
@@ -906,7 +1019,7 @@ async function sendMessage(text) {
   scrollToBottom();
 
   const messages = [
-    { role: 'system', content: 'You are Cyanix AI, a helpful and intelligent assistant. Be concise, clear, and friendly.' },
+    { role: 'system', content: buildSystemPrompt() },
     ..._history.slice(-20).map(m => ({ role: m.role, content: m.content })),
   ];
 

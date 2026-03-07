@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
 
@@ -229,6 +229,58 @@
       </button>
     </div>
     <div class="modal-body">
+
+      <!-- ── Personalization ─────────────────────────────── -->
+      <div class="setting-section-title">Personalization</div>
+
+      <!-- Display name -->
+      <div class="setting-row setting-row--col">
+        <div class="setting-info">
+          <div class="setting-label">Your name</div>
+          <div class="setting-desc">How Cyanix addresses you in conversation</div>
+        </div>
+        <input
+          type="text"
+          id="display-name-input"
+          class="setting-text-input"
+          placeholder="e.g. Alex, Boss, Coach…"
+          maxlength="40"
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Personality -->
+      <div class="setting-row setting-row--col">
+        <div class="setting-info">
+          <div class="setting-label">Cyanix personality</div>
+          <div class="setting-desc">Choose how Cyanix communicates with you</div>
+        </div>
+        <div class="personality-chips">
+          <button class="personality-chip active" data-value="friendly">
+            <span class="chip-icon">😊</span><span class="chip-label">Friendly</span>
+          </button>
+          <button class="personality-chip" data-value="professional">
+            <span class="chip-icon">💼</span><span class="chip-label">Professional</span>
+          </button>
+          <button class="personality-chip" data-value="creative">
+            <span class="chip-icon">🎨</span><span class="chip-label">Creative</span>
+          </button>
+          <button class="personality-chip" data-value="concise">
+            <span class="chip-icon">⚡</span><span class="chip-label">Concise</span>
+          </button>
+          <button class="personality-chip" data-value="mentor">
+            <span class="chip-icon">🎓</span><span class="chip-label">Mentor</span>
+          </button>
+          <button class="personality-chip" data-value="witty">
+            <span class="chip-icon">😄</span><span class="chip-label">Witty</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-sep"></div>
+
+      <!-- ── Model & Display ─────────────────────────────── -->
+      <div class="setting-section-title">Model &amp; Display</div>
       <div class="setting-row">
         <div class="setting-info"><div class="setting-label">AI Model</div><div class="setting-desc">Choose the model powering your chats</div></div>
         <select class="setting-select" id="model-select"></select>
@@ -241,7 +293,10 @@
         <div class="setting-info"><div class="setting-label">Theme</div><div class="setting-desc">Interface appearance</div></div>
         <select class="setting-select" id="theme-select"><option value="light">Light</option><option value="dark">Dark</option></select>
       </div>
+
       <div class="modal-sep"></div>
+
+      <!-- ── Privacy ────────────────────────────────────── -->
       <div class="setting-section-title">Privacy &amp; Data</div>
       <div class="setting-row">
         <div class="setting-info">
@@ -254,9 +309,15 @@
         <div class="setting-info"><div class="setting-label">Withdraw training contributions</div><div class="setting-desc">Remove your anonymized data from future batches.</div></div>
         <button class="setting-link-btn" id="delete-training-btn">Withdraw</button>
       </div>
+
       <div class="modal-sep"></div>
       <button class="modal-danger-btn" id="clear-chats-btn">Clear all chats</button>
-      <button class="modal-danger-btn" id="signout-btn">Sign out</button>
+      <button class="modal-danger-btn" id="signout-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:6px;vertical-align:-2px">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sign out
+      </button>
     </div>
   </div>
 </div>
@@ -284,7 +345,7 @@
 <div class="toast hidden" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="JavaScript.js?v=4"></script>
+<script src="JavaScript.js?v=5"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
