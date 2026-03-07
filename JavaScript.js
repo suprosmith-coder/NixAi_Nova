@@ -79,8 +79,12 @@ function uid() {
 }
 
 /* ── Auth headers ────────────────────────────────────────── */
+// Edge functions are called with the anon key as the Bearer token.
+// The GROQ_API_KEY secret lives only on the server — never exposed to clients.
 function edgeHeaders() {
-  const token = _session?.access_token ?? SUPABASE_ANON;
+  // Prefer the user's live access_token — falls back to anon key.
+  // NEVER send empty Bearer string — Supabase gateway rejects it with 401.
+  const token = _session?.access_token || SUPABASE_ANON;
   return {
     'Content-Type':  'application/json',
     'Authorization': `Bearer ${token}`,
@@ -1147,8 +1151,13 @@ window.copyMsg = function(btn) {
 };
 
 window.speakMsg = async function(btn) {
-  const bubble = btn.closest('.msg-content').querySelector('.msg-bubble');
-  const text   = (bubble.innerText || bubble.textContent || '').trim().slice(0, 4000);
+  // BUG FIX #4: Clone the bubble and remove all child buttons/action elements
+  // before reading text — otherwise innerText includes "Copy", "Listen" etc.
+  const bubbleEl = btn.closest('.msg-content').querySelector('.msg-bubble');
+  if (!bubbleEl) return;
+  const clone = bubbleEl.cloneNode(true);
+  clone.querySelectorAll('button, .msg-actions, .feedback-row, .code-block-header').forEach(el => el.remove());
+  const text = (clone.innerText || clone.textContent || '').trim().slice(0, 2000);
   if (!text) return;
 
   // If already speaking — stop it
@@ -1171,13 +1180,13 @@ window.speakMsg = async function(btn) {
     });
 
     if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.error || `TTS error ${res.status}`);
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || `TTS error ${res.status}`);
     }
 
-    // Groq returns raw WAV bytes — must specify MIME type for browser
+    // BUG FIX #5: Edge function now returns mp3 — use audio/mpeg MIME type
     const arrayBuf = await res.arrayBuffer();
-    const blob     = new Blob([arrayBuf], { type: 'audio/wav' });
+    const blob     = new Blob([arrayBuf], { type: 'audio/mpeg' });
     const url      = URL.createObjectURL(blob);
     _ttsAudio      = new Audio(url);
 
