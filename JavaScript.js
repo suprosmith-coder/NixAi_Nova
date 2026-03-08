@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   CYANIX AI — JavaScript.js  v4.0
+   CYANIX AI — JavaScript.js  v12
    Supabase Auth · Supabase Chat History · Groq Streaming
    Training Consent · Feedback · Sidebar Collapse
 ══════════════════════════════════════════════════════════════ */
@@ -11,6 +11,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const CHAT_URL      = `${SUPABASE_URL}/functions/v1/cyanix-chat`;
 const TTS_URL       = `${SUPABASE_URL}/functions/v1/tts`;
 const TRAINING_URL  = `${SUPABASE_URL}/functions/v1/collect-training-data`;
+const RAG_URL       = `${SUPABASE_URL}/functions/v1/rag-search`;
 const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
 
 /* ── Models ─────────────────────────────────────────────── */
@@ -22,11 +23,31 @@ const MODELS = [
 // TTS voice is set server-side (Orion-PlayAI — British male)
 // Change voice in tts-edge-function.ts
 
-const SUGGESTIONS = [
-  'Learn about Cyanix AI',
-  'Generate a blog post about AI trends',
-  'Explain a machine learning concept',
-  'Summarize this text: [paste here]',
+/* ── Welcome randomisation data (Claude-style) ─────────── */
+const WELCOME_GREETINGS = [
+  { h: 'Good morning ☀️',          s: 'What shall we accomplish together?' },
+  { h: 'Hey, ready to create? 🚀', s: 'Drop a question or idea to get started.' },
+  { h: 'Welcome back! 👋',         s: 'Pick up where you left off, or start fresh.' },
+  { h: 'Let's get to work 💡',    s: 'I'm here and ready — what's on your mind?' },
+  { h: 'What's on your mind? 🌟', s: 'Ask me anything, from code to creativity.' },
+  { h: 'Hello! I'm Cyanix AI ✨', s: 'Intelligent answers, real-time web search, voice — all here.' },
+  { h: 'Rise and grind 💪',        s: 'Let's make something great. What are we building?' },
+  { h: 'Hi there! 🤖',             s: 'Type a question or pick a suggestion below.' },
+];
+
+const WELCOME_CARDS = [
+  { icon:'💻', title:'Write code',          sub:'Explain, debug or generate code',    prompt:'Write a Python function that' },
+  { icon:'🌐', title:'Search the web',      sub:'Get real-time answers from the web',  prompt:'Search for the latest news on' },
+  { icon:'✍️', title:'Write something',     sub:'Blog posts, emails, captions',        prompt:'Write a blog post about' },
+  { icon:'🧠', title:'Explain a concept',   sub:'Break down any complex topic',        prompt:'Explain how' },
+  { icon:'📊', title:'Analyse data',         sub:'Charts, summaries, insights',         prompt:'Help me analyse this data:' },
+  { icon:'🎨', title:'Creative ideas',      sub:'Brainstorm, scripts, stories',        prompt:'Give me 5 creative ideas for' },
+  { icon:'🔍', title:'Research a topic',    sub:'Summarise and cite sources',          prompt:'Research and summarise' },
+  { icon:'⚡', title:'Productivity boost',  sub:'Checklists, plans, time management',  prompt:'Help me plan my week for' },
+  { icon:'🗣️', title:'Translate text',      sub:'Translate to any language',           prompt:'Translate this to Spanish:' },
+  { icon:'🤖', title:'About Cyanix AI',     sub:'Discover features and capabilities',  prompt:'What can you do?' },
+  { icon:'📚', title:'Summarise content',   sub:'Paste an article or document',        prompt:'Summarise this:' },
+  { icon:'💡', title:'Problem solving',     sub:'Walk through any challenge step by step', prompt:'Help me solve this problem:' },
 ];
 
 /* ── State ──────────────────────────────────────────────── */
@@ -39,6 +60,8 @@ let _responding  = false;
 let _abortCtrl   = null;
 let _ttsAudio    = null;
 let _ttsSpeaking = false;
+let _ragEnabled  = false;  // web search RAG toggle
+let _ragAuto     = false;  // auto-detect search intent
 let _mediaRec    = null;   // MediaRecorder for voice input
 let _sttChunks   = [];     // recorded audio chunks
 let _sttActive   = false;  // recording in progress
@@ -48,8 +71,9 @@ let _settings = {
   streaming:        true,
   theme:            'light',
   trainingConsent:  false,
-  displayName:      '',       // How Cyanix addresses the user
-  personality:      'friendly', // AI personality preset
+  displayName:      '',
+  personality:      'friendly',
+  ragAuto:          false,
 };
 
 // Personality system prompt snippets
@@ -774,7 +798,7 @@ function attachRipple(el) {
 
 // Attach ripples to all interactive buttons
 function attachAllRipples() {
-  document.querySelectorAll('.btn-primary,.send-btn,.compose-icon-btn,.msg-action-btn,.auth-oauth-btn').forEach(attachRipple);
+  document.querySelectorAll('.auth-btn,.send-btn,.tool-btn,.msg-action-btn,.oauth-btn,.sb-new-btn,.p-chip,.welcome-card').forEach(attachRipple);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -841,13 +865,13 @@ function bindChatUI() {
   });
 
   // Personality chips — delegated since chips are in static HTML
-  document.querySelectorAll('.personality-chip').forEach(chip => {
+  document.querySelectorAll('.p-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       _settings.personality = chip.dataset.value;
       updatePersonalityChips();
       saveSettings();
       syncPreferences();
-      toast('Personality: ' + chip.querySelector('.chip-label')?.textContent?.trim());
+      toast('Personality: ' + chip.textContent.trim());
     });
   });
   on('delete-training-btn', 'click', async () => {
@@ -886,13 +910,7 @@ function bindChatUI() {
 
   on('model-btn', 'click', () => $('model-dropdown')?.classList.toggle('hidden'));
 
-  document.querySelectorAll('.sugg-chip').forEach((chip, i) => {
-    chip.textContent = SUGGESTIONS[i] || chip.textContent;
-    chip.addEventListener('click', () => {
-      const input = $('composer-input');
-      if (input) { input.value = chip.textContent; input.focus(); }
-    });
-  });
+  // Welcome cards are built dynamically in showWelcome()
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
@@ -904,10 +922,18 @@ function bindChatUI() {
     }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') { e.preventDefault(); newChat(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); $('sidebar')?.classList.toggle('collapsed'); }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'W') { e.preventDefault(); toggleRAG(); }
   });
 
-  on('emoji-btn',  'click', () => { const i = $('composer-input'); if (i) { i.value += '😊'; i.focus(); } });
   on('attach-btn', 'click', () => toast('File attachments coming soon.'));
+  on('rag-toggle-btn', 'click', () => { toggleRAG(); });
+  on('rag-auto-toggle', 'change', () => {
+    _settings.ragAuto = $('rag-auto-toggle').checked;
+    _ragAuto = _settings.ragAuto;
+    saveSettings();
+    syncPreferences();
+    toast(_ragAuto ? '🌐 Auto web search enabled' : 'Auto web search off');
+  });
 }
 
 function toggleUserMenu() { $('user-menu')?.classList.toggle('hidden'); }
@@ -975,17 +1001,18 @@ function loadSettings() {
 }
 
 function syncSettingsToUI() {
-  if ($('streaming-toggle'))   $('streaming-toggle').checked = _settings.streaming;
-  if ($('theme-select'))       $('theme-select').value       = _settings.theme;
-  if ($('consent-toggle'))     $('consent-toggle').checked   = _settings.trainingConsent;
-  if ($('display-name-input')) $('display-name-input').value = _settings.displayName || '';
-  if ($('personality-input'))  $('personality-input').value  = _settings.personality  || 'friendly';
+  if ($('streaming-toggle'))   $('streaming-toggle').checked   = _settings.streaming;
+  if ($('theme-select'))       $('theme-select').value         = _settings.theme;
+  if ($('consent-toggle'))     $('consent-toggle').checked     = _settings.trainingConsent;
+  if ($('display-name-input')) $('display-name-input').value   = _settings.displayName || '';
+  if ($('rag-auto-toggle'))    $('rag-auto-toggle').checked    = _settings.ragAuto || false;
+  _ragAuto = _settings.ragAuto || false;
   updateTrainingDataRow();
   updatePersonalityChips();
 }
 
 function updatePersonalityChips() {
-  document.querySelectorAll('.personality-chip').forEach(chip => {
+  document.querySelectorAll('.p-chip').forEach(chip => {
     chip.classList.toggle('active', chip.dataset.value === _settings.personality);
   });
 }
@@ -1011,6 +1038,8 @@ async function loadPreferences() {
       _settings.trainingConsent = data.training_consent ?? _settings.trainingConsent;
       _settings.displayName     = data.display_name    || '';
       _settings.personality     = data.personality     || 'friendly';
+      _settings.ragAuto         = data.rag_auto        || false;
+      _ragAuto                  = _settings.ragAuto;
       saveSettings();
       applyTheme(_settings.theme);
       populateModels();
@@ -1031,6 +1060,7 @@ async function syncPreferences() {
       training_consent: _settings.trainingConsent,
       display_name:     _settings.displayName  || null,
       personality:      _settings.personality  || 'friendly',
+      rag_auto:         _settings.ragAuto       || false,
       updated_at:       new Date().toISOString(),
     }, { onConflict: 'user_id' });
   } catch (err) {
@@ -1205,7 +1235,7 @@ function renderChatList() {
   if (!list) return;
 
   if (_chats.length === 0) {
-    list.innerHTML = `<div class="sb-list-empty">No chats yet.<br>Start a conversation!</div>`;
+    list.innerHTML = `<div class="sb-empty">No conversations yet</div>`;
     return;
   }
 
@@ -1243,6 +1273,9 @@ function newChat() {
   showWelcome();
   renderChatList();
   $('composer-input')?.focus();
+  // Turn off RAG indicator for fresh chat
+  if ($('rag-pill')) hide('rag-pill');
+  if (_ragEnabled && !_ragAuto) { _ragEnabled = false; const btn = $('rag-toggle-btn'); if (btn) btn.classList.remove('active'); }
 }
 
 async function deleteChat(id) {
@@ -1253,6 +1286,118 @@ async function deleteChat(id) {
     else renderChatList();
     toast('Chat deleted.');
   } catch { toast('Failed to delete chat.'); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RAG — RETRIEVAL-AUGMENTED GENERATION
+   DuckDuckGo search · Advanced intent detection
+══════════════════════════════════════════════════════════ */
+
+// Toggle web search RAG on/off
+function toggleRAG() {
+  _ragEnabled = !_ragEnabled;
+  const btn  = $('rag-toggle-btn');
+  const pill = $('rag-pill');
+  if (btn)  btn.classList.toggle('active', _ragEnabled);
+  if (pill) pill.classList.toggle('hidden', !_ragEnabled);
+  toast(_ragEnabled ? '🌐 Web search ON' : 'Web search off');
+}
+
+// Advanced NLP-style intent detection
+// Returns true if the query likely needs a live web search
+function needsWebSearch(text) {
+  const q = text.toLowerCase().trim();
+
+  // Explicit search commands
+  const explicit = [
+    /^(search|find|look up|google|what is the latest|show me|fetch|get me)/i,
+    /(search for|look for|find me|check if|verify)/i,
+  ];
+  if (explicit.some(r => r.test(q))) return true;
+
+  // Temporal markers — clearly needs live data
+  const temporal = [
+    /(today|tonight|this morning|right now|currently|at the moment|as of|recent|latest|new|just|freshly|this week|this month|this year|2024|2025|2026)/i,
+    /(news|breaking|update|announce|release|launch|drop|debut)/i,
+    /(live|real.?time|current|ongoing|happening)/i,
+  ];
+  if (temporal.some(r => r.test(q))) return true;
+
+  // Factual queries about people/places/prices/events
+  const factual = [
+    /(who is|who are|who was|who were)/i,
+    /(where is|where are|what is the (address|location|capital|population|price|cost|rate|temperature|weather))/i,
+    /(how much (does|is|are|cost|did)|how many (people|countries|states|miles|km))/i,
+    /(when (is|was|did|does|will)|what time|what date|what day)/i,
+    /(stock price|market cap|exchange rate|currency|crypto|bitcoin|ethereum)/i,
+    /(weather|forecast|temperature|humidity|rain|snow|wind)/i,
+    /(score|result|game|match|fixture|standings|winner|champion|record)/i,
+    /(movie|film|show|series|album|song|book|review) .*(release|out|available|premiere)/i,
+    /(president|prime minister|ceo|cto|cfo|leader|governor|mayor|senator) of/i,
+    /(phone number|email|address|hours|open|closed) of/i,
+  ];
+  if (factual.some(r => r.test(q))) return true;
+
+  // Question words + specific nouns that imply research
+  const researchy = [
+    /(statistics|statistics|data|report|study|survey|percentage|ratio)/i,
+    /(definition|meaning|what does .* mean|what is a)/i,
+    /(how to|tutorial|guide|steps to|instructions for) .*(2024|2025|2026|new|latest|updated)/i,
+    /(compare|vs|versus|difference between|better than) .*(review|rating|specs|price)/i,
+  ];
+  if (researchy.some(r => r.test(q))) return true;
+
+  // Short factual questions (< 6 words) are usually lookup queries
+  if (q.split(' ').length <= 5 && /^(what|who|where|when|how|why|which|is|are|was|were|does|did|can|will|has|have)/.test(q)) return true;
+
+  return false;
+}
+
+// Call the rag-search edge function
+async function fetchRAGContext(query) {
+  try {
+    const res = await fetch(RAG_URL, {
+      method:  'POST',
+      headers: edgeHeaders(),
+      body:    JSON.stringify({ query }),
+      signal:  AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data; // { results: [{title, snippet, url}], abstract, query }
+  } catch (err) {
+    console.warn('[CyanixAI] RAG fetch failed (non-fatal):', err.message);
+    return null;
+  }
+}
+
+// Build a context block from RAG results to inject into system prompt
+function buildRAGContext(ragData) {
+  if (!ragData) return '';
+  const parts = [];
+  if (ragData.abstract) parts.push(`Summary: ${ragData.abstract}`);
+  if (ragData.results?.length) {
+    parts.push('Search results:');
+    ragData.results.slice(0, 5).forEach((r, i) => {
+      parts.push(`[${i+1}] ${r.title} — ${r.snippet} (${r.url})`);
+    });
+  }
+  if (!parts.length) return '';
+  return '\n\n[WEB SEARCH CONTEXT]\n' + parts.join('\n') + '\n[END WEB SEARCH]';
+}
+
+// Render RAG source citations under AI message
+function appendRAGSources(bubbleEl, ragData) {
+  if (!bubbleEl || !ragData?.results?.length) return;
+  const src = document.createElement('div');
+  src.className = 'rag-sources';
+  src.innerHTML = '<div class="rag-sources-label">Sources</div>' +
+    ragData.results.slice(0, 4).map(r => `
+      <a class="rag-source-item" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">
+        <div class="rag-source-dot"></div>
+        <span>${esc(r.title)}</span>
+      </a>`).join('');
+  bubbleEl.appendChild(src);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1295,8 +1440,21 @@ async function sendMessage(text) {
   show('typing-row');
   scrollToBottom();
 
+  // ── RAG: detect search intent, fetch context ──────────────
+  let ragData = null;
+  const shouldSearch = _ragEnabled || (_ragAuto && needsWebSearch(text));
+  if (shouldSearch) {
+    if ($('thinking-text')) $('thinking-text').textContent = 'Searching the web…';
+    show('typing-row');
+    scrollToBottom();
+    ragData = await fetchRAGContext(text);
+    if ($('thinking-text')) $('thinking-text').textContent = 'Cyanix is thinking';
+    hide('typing-row');
+  }
+  const ragContext = buildRAGContext(ragData);
+
   const messages = [
-    { role: 'system', content: buildSystemPrompt() },
+    { role: 'system', content: buildSystemPrompt() + ragContext },
     ..._history.slice(-20).map(m => ({ role: m.role, content: m.content })),
   ];
 
@@ -1392,19 +1550,20 @@ async function sendMessage(text) {
         aiText = ''; // don't save empty response
       } else {
         bubbleEl.innerHTML = mdToHTML(aiText);
+        if (ragData) appendRAGSources(bubbleEl, ragData);
       }
 
       // Only save and add feedback if we have content
       if (aiText.trim()) {
         _history.push({ role: 'assistant', content: aiText });
-        // Background sync — doesn't block the UI
         bgSyncMessages(isNewChat, text, aiText, msgEl);
       }
 
     } else {
       const data = await res.json();
       aiText = data.choices?.[0]?.message?.content || 'No response received.';
-      const { msgEl } = renderMessage('ai', aiText, true);
+      const { bubbleEl: nb, msgEl } = renderMessage('ai', aiText, true);
+      if (ragData) appendRAGSources(nb, ragData);
       _history.push({ role: 'assistant', content: aiText });
       bgSyncMessages(isNewChat, text, aiText, msgEl);
     }
@@ -1918,7 +2077,34 @@ function clearMessages() {
   if (m) m.querySelectorAll('.msg-row').forEach(el => el.remove());
 }
 
-function showWelcome() { show('welcome-state'); }
+function showWelcome() {
+  show('welcome-state');
+  // Randomise heading + subtext (Claude-style — different every new chat)
+  const g = WELCOME_GREETINGS[Math.floor(Math.random() * WELCOME_GREETINGS.length)];
+  const name = _settings.displayName;
+  const heading = $('welcome-heading');
+  const sub     = $('welcome-sub');
+  if (heading) heading.textContent = name ? g.h.replace(/^(Good\s+\w+|Hey|Welcome|Let\'s|What\'s|Hello|Rise|Hi)/i, `Hi ${name}`) : g.h;
+  if (sub)     sub.textContent     = g.s;
+
+  // Render 4 random cards
+  const cards = $('welcome-cards');
+  if (!cards) return;
+  const shuffled = [...WELCOME_CARDS].sort(() => Math.random() - 0.5).slice(0, 4);
+  cards.innerHTML = shuffled.map(c => `
+    <button class="welcome-card" data-prompt="${esc(c.prompt)}">
+      <div class="wc-icon">${c.icon}</div>
+      <div class="wc-title">${esc(c.title)}</div>
+      <div class="wc-sub">${esc(c.sub)}</div>
+    </button>`).join('');
+  cards.querySelectorAll('.welcome-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const inp = $('composer-input');
+      if (inp) { inp.value = btn.dataset.prompt + ' '; inp.focus(); inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 150) + 'px'; }
+    });
+    attachRipple(btn);
+  });
+}
 
 function scrollToBottom() {
   const s = $('chat-scroll');

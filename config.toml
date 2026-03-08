@@ -1,11 +1,3 @@
-# ── Supabase Edge Function config ──────────────────────────────
-# Place this file at: supabase/functions/cyanix-chat/config.toml
-#
-# verify_jwt = false  →  Disables Supabase gateway JWT check.
-# The function does its own auth — it checks the Bearer token
-# manually and falls back gracefully instead of a hard 401.
-# This is the recommended approach when you want custom auth logic.
-
 [functions.cyanix-chat]
 verify_jwt = false
 
@@ -16,4 +8,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.whisper]
+verify_jwt = false
+
+[functions.rag-search]
 verify_jwt = false

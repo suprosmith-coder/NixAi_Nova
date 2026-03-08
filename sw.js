@@ -10,8 +10,8 @@
    ✓ Offline fallback → Cached index.html when offline
 ════════════════════════════════════════════════════════════════ */
 
-const VER   = 'cx-v11';
-const CACHE = 'cx-v11';                   // single cache name
+const VER   = 'cx-v12';
+const CACHE = 'cx-v12';                   // single cache name
 const BASE  = '/NixAi_Nova';
 
 // Assets to pre-warm on install (stable images only — no JS/CSS/HTML)

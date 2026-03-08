@@ -3,424 +3,386 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-  <!-- ── Primary ──────────────────────────────────────────── -->
   <title>Cyanix AI</title>
   <meta name="description" content="Cyanix AI — Your intelligent assistant powered by advanced language models." />
   <meta name="keywords"    content="AI, assistant, chat, GPT, Cyanix, productivity" />
   <meta name="author"      content="Cyanix AI" />
-  <meta name="robots"      content="index, follow" />
-
-  <!-- ── PWA / App ─────────────────────────────────────────── -->
-  <link rel="manifest" href="./manifest.json" />
-  <meta name="mobile-web-app-capable"                content="yes" />
-  <meta name="application-name"                      content="Cyanix AI" />
-
-  <!-- Theme colour — must match manifest theme_color -->
   <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)"  />
-
-  <!-- ── Apple / iOS ──────────────────────────────────────── -->
+  <meta name="theme-color" content="#1e3a8a" media="(prefers-color-scheme: dark)" />
+  <meta name="mobile-web-app-capable"                content="yes" />
   <meta name="apple-mobile-web-app-capable"          content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title"            content="Cyanix AI" />
-  <link rel="apple-touch-icon" sizes="120x120" href="./icons/ios/apple-touch-icon-120x120.png" />
-  <link rel="apple-touch-icon" sizes="152x152" href="./icons/ios/apple-touch-icon-152x152.png" />
-  <link rel="apple-touch-icon" sizes="167x167" href="./icons/ios/apple-touch-icon-167x167.png" />
+  <meta name="msapplication-TileColor"               content="#2563eb" />
+  <meta name="msapplication-tap-highlight"           content="no" />
+  <meta name="format-detection"                      content="telephone=no,date=no,address=no" />
+  <link rel="manifest"     href="./manifest.json" />
+  <link rel="icon"         type="image/png" sizes="32x32" href="./icons/manifest/icon-96x96.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/ios/apple-touch-icon-180x180.png" />
-  <!-- iOS splash screens -->
-  <meta name="apple-touch-startup-image" content="./icons/manifest/icon-512x512.png" />
-
-  <!-- ── Microsoft / Windows ───────────────────────────────── -->
-  <meta name="msapplication-TileColor"  content="#2563eb" />
-  <meta name="msapplication-TileImage"  content="./icons/manifest/icon-144x144.png" />
-  <meta name="msapplication-tap-highlight" content="no" />
-  <meta name="format-detection"           content="telephone=no,date=no,address=no,email=no,url=no" />
-  <meta name="HandheldFriendly"           content="True" />
-  <meta name="MobileOptimized"            content="320" />
-
-  <!-- ── Open Graph / Social ───────────────────────────────── -->
-  <meta property="og:type"        content="website" />
-  <meta property="og:site_name"   content="Cyanix AI" />
   <meta property="og:title"       content="Cyanix AI" />
   <meta property="og:description" content="Your intelligent AI assistant — chat, code, create." />
   <meta property="og:image"       content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
-  <meta property="og:url"         content="https://suprosmith-coder.github.io/NixAi_Nova/" />
-  <meta name="twitter:card"       content="summary_large_image" />
-  <meta name="twitter:title"      content="Cyanix AI" />
-  <meta name="twitter:description" content="Your intelligent AI assistant." />
-  <meta name="twitter:image"      content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
-
-  <!-- ── Favicon ───────────────────────────────────────────── -->
-  <link rel="icon"       type="image/png" sizes="32x32" href="./icons/manifest/icon-96x96.png" />
-  <link rel="icon"       type="image/png" sizes="16x16" href="./icons/manifest/icon-48x48.png" />
-  <link rel="shortcut icon"                             href="./icons/manifest/icon-96x96.png" />
-
-  <!-- ── Fonts ─────────────────────────────────────────────── -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=12" />
 
-  <link rel="stylesheet" href="style.css?v=11" />
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  EMERGENCY BOOT GUARD — inline, no dependencies     ║
-       ║  If JS crashes for ANY reason (stale SW cache,      ║
-       ║  CDN failure, parse error), this fires after 3s     ║
-       ║  and forces the auth screen. Screen CANNOT hang.    ║
-       ╚══════════════════════════════════════════════════════╝ -->
+  <!-- EMERGENCY BOOT GUARD — fires if JS crashes for any reason -->
   <script>
-    (function() {
-      'use strict';
-      // Store timer globally so JS can clear it on success
-      window._BOOT_DEADLINE = setTimeout(function() {
-        try {
-          var splash = document.getElementById('view-loading');
-          var auth   = document.getElementById('view-auth');
-          if (splash) splash.style.display = 'none';
-          if (auth)   auth.classList.remove('hidden');
-          console.error('[CyanixAI] EMERGENCY BOOT TIMEOUT fired — JS may have crashed');
-        } catch(e) { /* last resort */ }
-      }, 4000); // 4 seconds hard maximum
-    })();
+    window._BOOT_DEADLINE = setTimeout(function() {
+      try {
+        var s = document.getElementById('view-loading');
+        var a = document.getElementById('view-auth');
+        if (s) s.style.display = 'none';
+        if (a) a.classList.remove('hidden');
+      } catch(e) {}
+    }, 5000);
   </script>
 </head>
 <body>
 
-<!-- ── PWA Install Banner ──────────────────────────────────── -->
+<!-- PWA Install Banner -->
 <div id="install-banner" class="install-banner hidden">
   <img src="cyanix_emblem.png" class="install-banner-icon" alt="" />
   <div class="install-banner-text">
-    <strong>Add Cyanix AI to Home Screen</strong>
-    <span>Works offline · No app store needed</span>
+    <strong>Install Cyanix AI</strong>
+    <span>Works offline · Feels native</span>
   </div>
-  <button class="install-banner-btn" id="install-yes-btn">Install</button>
-  <button class="install-banner-dismiss" id="install-no-btn">✕</button>
+  <button class="install-banner-btn" id="install-yes-btn">Add to Home</button>
+  <button class="install-banner-x"   id="install-no-btn">✕</button>
 </div>
 
-<!-- ── Update available toast ─────────────────────────────── -->
+<!-- Update Bar -->
 <div id="update-bar" class="update-bar hidden">
-  <span>Update available</span>
+  <span>✨ Update ready</span>
   <button id="update-reload-btn">Reload</button>
 </div>
 
-<!-- LOADING SPLASH — visible by default, JS hides it -->
-<div id="view-loading" class="view loading-view">
-  <img src="cyanix_emblem.png" class="loading-emblem" alt="Cyanix AI" />
-  <div class="loading-label">Cyanix <em>AI</em></div>
-  <div class="loading-dots"><span></span><span></span><span></span></div>
-  <div class="loading-status" id="loading-status">Connecting…</div>
-  <div class="loading-error hidden" id="loading-error"></div>
+<!-- ═══════════════════════════════════════════════
+     LOADING SPLASH
+═══════════════════════════════════════════════ -->
+<div id="view-loading" class="view splash-view">
+  <div class="splash-inner">
+    <div class="splash-logo">
+      <img src="cyanix_emblem.png" class="splash-emblem" alt="Cyanix AI" />
+      <div class="splash-ring splash-ring-1"></div>
+      <div class="splash-ring splash-ring-2"></div>
+    </div>
+    <div class="splash-brand">Cyanix <em>AI</em></div>
+    <div class="splash-status" id="loading-status">Starting…</div>
+    <div class="splash-error hidden" id="loading-error"></div>
+  </div>
 </div>
 
-<!-- AUTH VIEW -->
-<div id="view-auth" class="view auth-bg hidden">
+<!-- ═══════════════════════════════════════════════
+     AUTH VIEW
+═══════════════════════════════════════════════ -->
+<div id="view-auth" class="view auth-view hidden">
+  <div class="auth-bg-blur"></div>
   <div class="auth-card">
-    <div class="auth-logo">
-      <img src="cyanix_emblem.png" class="auth-emblem" alt="Cyanix AI" />
-      <span class="auth-brand">Cyanix <em>AI</em></span>
+    <div class="auth-header">
+      <img src="cyanix_emblem.png" class="auth-logo-img" alt="" />
+      <div class="auth-logo-text">Cyanix <em>AI</em></div>
     </div>
 
     <!-- Sign In -->
     <div class="auth-panel" id="panel-signin">
-      <h2 class="auth-heading">Sign in to your account</h2>
-      <input class="auth-input" id="si-email"    type="email"    placeholder="Email"    autocomplete="email" />
-      <input class="auth-input" id="si-password" type="password" placeholder="Password" autocomplete="current-password" />
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-subtitle">Sign in to your account</p>
+      <div class="field-group">
+        <input class="auth-field" id="si-email"    type="email"    placeholder="Email" autocomplete="email" />
+        <input class="auth-field" id="si-password" type="password" placeholder="Password" autocomplete="current-password" />
+      </div>
       <div class="auth-forgot"><a id="forgot-link" href="#">Forgot password?</a></div>
       <div class="auth-msg hidden" id="si-err" data-type="err"></div>
       <div class="auth-msg hidden" id="si-ok"  data-type="ok"></div>
-      <button class="auth-submit" id="si-btn">Sign In</button>
-      <div class="auth-divider"><span>Or continue with</span></div>
-      <div class="oauth-row">
+      <button class="auth-btn" id="si-btn">
+        <span>Sign In</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+      <div class="auth-or"><span>or continue with</span></div>
+      <div class="oauth-grid">
         <button class="oauth-btn" id="si-google">
-          <svg width="17" height="17" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-          Sign in with Google
+          <svg width="16" height="16" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Google
         </button>
         <button class="oauth-btn" id="si-github">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-          Sign in with GitHub
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
         </button>
       </div>
-      <p class="auth-switch">Don't have an account? <a class="switch-link" data-to="signup" href="#">Sign up</a></p>
+      <p class="auth-switch">No account? <a class="switch-link" data-to="signup" href="#">Sign up free</a></p>
     </div>
 
     <!-- Sign Up -->
     <div class="auth-panel hidden" id="panel-signup">
-      <h2 class="auth-heading">Create your account</h2>
-      <input class="auth-input" id="su-name"     type="text"     placeholder="Full name"              autocomplete="name" />
-      <input class="auth-input" id="su-email"    type="email"    placeholder="Email"                  autocomplete="email" />
-      <input class="auth-input" id="su-password" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" />
-
-      <!-- Age verification — required, must be 13+ -->
-      <div class="auth-dob-group">
-        <label class="auth-dob-label">Date of birth <span class="auth-dob-note">(You must be 13 or older)</span></label>
-        <input class="auth-input auth-dob-input" id="su-dob" type="date" autocomplete="bday"
-               max="" placeholder="YYYY-MM-DD" />
+      <h2 class="auth-title">Create account</h2>
+      <p class="auth-subtitle">Start chatting with Cyanix AI</p>
+      <div class="field-group">
+        <input class="auth-field" id="su-name"     type="text"     placeholder="Full name" autocomplete="name" />
+        <input class="auth-field" id="su-email"    type="email"    placeholder="Email" autocomplete="email" />
+        <input class="auth-field" id="su-password" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+        <div class="dob-row">
+          <label class="dob-label">Date of birth <span>(must be 13+)</span></label>
+          <input class="auth-field" id="su-dob" type="date" autocomplete="bday" max="" />
+        </div>
       </div>
-
       <div class="auth-msg hidden" id="su-err" data-type="err"></div>
       <div class="auth-msg hidden" id="su-ok"  data-type="ok"></div>
-      <button class="auth-submit" id="su-btn">Create Account</button>
-      <div class="auth-divider"><span>Or continue with</span></div>
-      <div class="oauth-row">
+      <button class="auth-btn" id="su-btn">
+        <span>Create Account</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+      <div class="auth-or"><span>or</span></div>
+      <div class="oauth-grid">
         <button class="oauth-btn" id="su-google">
-          <svg width="17" height="17" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-          Continue with Google
+          <svg width="16" height="16" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Google
         </button>
         <button class="oauth-btn" id="su-github">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-          Continue with GitHub
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
         </button>
       </div>
-      <p class="auth-switch">Already have an account? <a class="switch-link" data-to="signin" href="#">Sign in</a></p>
+      <p class="auth-switch">Have an account? <a class="switch-link" data-to="signin" href="#">Sign in</a></p>
     </div>
 
     <!-- Forgot Password -->
     <div class="auth-panel hidden" id="panel-forgot">
-      <h2 class="auth-heading">Reset your password</h2>
-      <p class="auth-sub">Enter your email and we will send a reset link.</p>
-      <input class="auth-input" id="fp-email" type="email" placeholder="Email" />
+      <h2 class="auth-title">Reset password</h2>
+      <p class="auth-subtitle">We'll send you a reset link</p>
+      <div class="field-group">
+        <input class="auth-field" id="fp-email" type="email" placeholder="Email" />
+      </div>
       <div class="auth-msg hidden" id="fp-err" data-type="err"></div>
       <div class="auth-msg hidden" id="fp-ok"  data-type="ok"></div>
-      <button class="auth-submit" id="fp-btn">Send Reset Link</button>
-      <p class="auth-switch"><a class="switch-link" data-to="signin" href="#">Back to Sign In</a></p>
+      <button class="auth-btn" id="fp-btn"><span>Send Reset Link</span></button>
+      <p class="auth-switch"><a class="switch-link" data-to="signin" href="#">← Back to Sign In</a></p>
     </div>
   </div>
 </div>
 
-<!-- CHAT VIEW -->
+<!-- ═══════════════════════════════════════════════
+     CHAT VIEW  (Gemini-style layout)
+═══════════════════════════════════════════════ -->
 <div id="view-chat" class="view chat-view hidden">
 
+  <!-- LEFT SIDEBAR -->
   <aside class="sidebar" id="sidebar">
-    <div class="sb-header">
-      <div class="sb-logo">
-        <div class="sb-emblem"><img src="cyanix_emblem.png" alt="Cyanix AI" /></div>
+    <div class="sb-top">
+      <div class="sb-logo-row">
+        <img src="cyanix_emblem.png" class="sb-emblem" alt="" />
         <span class="sb-brand">Cyanix <em>AI</em></span>
       </div>
-      <button class="sb-collapse-btn" id="sb-collapse-btn" title="Collapse sidebar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      <button class="sb-new-btn" id="new-chat-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New chat
       </button>
     </div>
 
-    <button class="new-chat-btn" id="new-chat-btn">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      New chat
-    </button>
-
-    <div class="sb-section-label">Recent</div>
+    <div class="sb-section">Recent</div>
     <div class="sb-list" id="chat-list">
-      <div class="sb-list-empty">No chats yet</div>
+      <div class="sb-empty">No conversations yet</div>
     </div>
 
-    <div class="sb-footer">
-      <button class="sb-footer-btn" id="help-btn">
+    <div class="sb-bottom">
+      <button class="sb-nav-btn" id="help-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
         Help
       </button>
-      <button class="sb-footer-btn" id="settings-btn">
+      <button class="sb-nav-btn" id="settings-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
       </button>
       <button class="sb-user-btn" id="user-btn">
         <div class="user-avatar" id="user-avatar">?</div>
-        <span class="user-name" id="user-name">Loading</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <span class="user-name"  id="user-name">Loading…</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
     </div>
   </aside>
 
-  <!-- User menu popup -->
+  <!-- User popup menu -->
   <div class="user-menu hidden" id="user-menu">
     <button class="um-item" id="um-settings">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Settings
     </button>
-    <div class="um-sep"></div>
-    <button class="um-item danger" id="um-signout">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    <div class="um-divider"></div>
+    <button class="um-item um-danger" id="um-signout">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Sign out
     </button>
   </div>
 
+  <!-- MAIN CHAT AREA -->
   <main class="chat-main">
-    <div class="chat-topbar">
-      <div class="ct-left">
-        <button class="tb-icon-btn" id="sidebar-toggle" title="Toggle sidebar">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="topbar-icon" id="sidebar-toggle">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <span class="chat-title-label" id="chat-title">New chat</span>
+        <span class="chat-title" id="chat-title">New chat</span>
       </div>
-      <div class="ct-right">
+      <div class="topbar-right">
+        <!-- RAG indicator -->
+        <div class="rag-pill hidden" id="rag-pill" title="Web search active">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Web
+        </div>
+        <!-- Model picker -->
         <div class="model-picker" id="model-picker">
           <button class="model-pill" id="model-btn">
             <span id="model-name-label">GPT OSS 20B</span>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="model-dropdown hidden" id="model-dropdown"></div>
         </div>
-        <button class="tb-icon-btn" id="new-chat-top" title="New chat">
+        <button class="topbar-icon" id="new-chat-top" title="New chat">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </div>
-    </div>
+    </header>
 
+    <!-- Messages -->
     <div class="chat-scroll" id="chat-scroll">
       <div class="messages" id="messages">
-        <div class="welcome-wrap" id="welcome-state">
-          <div class="welcome-icon-wrap">
+
+        <!-- Welcome state — randomised on every new chat -->
+        <div class="welcome" id="welcome-state">
+          <div class="welcome-glow"></div>
+          <div class="welcome-logo">
             <img src="cyanix_emblem.png" class="welcome-emblem" alt="Cyanix AI" />
           </div>
-          <h2 class="welcome-title">Welcome to Cyanix AI!</h2>
-          <p class="welcome-sub">How can I assist you today?</p>
-          <div class="suggestion-grid" id="suggestion-grid">
-            <button class="sugg-chip">Learn about Cyanix AI</button>
-            <button class="sugg-chip">Generate a blog post</button>
-            <button class="sugg-chip">Explain a machine learning concept</button>
-            <button class="sugg-chip">Summarize this text</button>
-          </div>
+          <h1 class="welcome-heading" id="welcome-heading">Good morning</h1>
+          <p  class="welcome-sub"     id="welcome-sub">What's on your mind today?</p>
+          <div class="welcome-cards" id="welcome-cards"></div>
         </div>
+
       </div>
     </div>
 
-    <div class="typing-wrap hidden" id="typing-row">
+    <!-- Thinking indicator -->
+    <div class="thinking-row hidden" id="typing-row">
       <div class="cx-thinking">
-        <!-- Pulsing emblem core -->
         <div class="cx-think-emblem">
           <img src="cyanix_emblem.png" alt="" />
           <div class="cx-think-ring cx-ring-1"></div>
           <div class="cx-think-ring cx-ring-2"></div>
         </div>
-        <!-- Orbiting dots -->
         <div class="cx-orbit-wrap">
           <div class="cx-orbit cx-orbit-a"><div class="cx-orb"></div></div>
           <div class="cx-orbit cx-orbit-b"><div class="cx-orb"></div></div>
           <div class="cx-orbit cx-orbit-c"><div class="cx-orb"></div></div>
         </div>
       </div>
-      <div class="cx-think-label">
-        <span>Cyanix is thinking</span>
-        <span class="cx-think-dots"><span></span><span></span><span></span></span>
+      <div class="thinking-label">
+        <span id="thinking-text">Cyanix is thinking</span>
+        <span class="thinking-dots"><span></span><span></span><span></span></span>
       </div>
     </div>
 
+    <!-- Composer -->
     <div class="composer-area">
       <div class="composer-box" id="composer-box">
-        <button class="compose-icon-btn" id="emoji-btn" title="Emoji">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3"/><line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3"/></svg>
-        </button>
-        <textarea id="composer-input" class="composer-input" placeholder="Message Cyanix AI..." rows="1"></textarea>
-        <button class="compose-icon-btn" id="attach-btn" title="Attach file">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        </button>
-        <button class="compose-icon-btn mic-btn" id="mic-btn" title="Voice input">
-          <svg id="mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </button>
-        <button class="send-btn" id="send-btn">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </button>
+        <div class="composer-tools">
+          <button class="tool-btn" id="rag-toggle-btn" title="Toggle web search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <button class="tool-btn" id="attach-btn" title="Attach file">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+        </div>
+        <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything…" rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
+        <div class="composer-actions">
+          <button class="mic-btn" id="mic-btn" title="Voice input">
+            <svg id="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+          <button class="send-btn" id="send-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
       </div>
-      <p class="composer-hint">Cyanix AI can make mistakes. Verify important information.</p>
+      <p class="composer-hint">Cyanix AI can make mistakes. Verify important info.</p>
     </div>
+
   </main>
 </div>
 
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay hidden" id="settings-modal">
-  <div class="modal-card">
+  <div class="modal-sheet">
+    <div class="modal-drag-handle"></div>
     <div class="modal-head">
       <h3 class="modal-title">Settings</h3>
       <button class="modal-close" id="settings-close">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <div class="modal-body">
 
-      <!-- ── Personalization ─────────────────────────────── -->
-      <div class="setting-section-title">Personalization</div>
-
-      <!-- Display name -->
-      <div class="setting-row setting-row--col">
+      <div class="setting-section">Personalization</div>
+      <div class="setting-row col">
         <div class="setting-info">
           <div class="setting-label">Your name</div>
-          <div class="setting-desc">How Cyanix addresses you in conversation</div>
+          <div class="setting-desc">How Cyanix addresses you</div>
         </div>
-        <input
-          type="text"
-          id="display-name-input"
-          class="setting-text-input"
-          placeholder="e.g. Alex, Boss, Coach…"
-          maxlength="40"
-          autocomplete="off"
-        />
+        <input type="text" id="display-name-input" class="setting-input" placeholder="e.g. Alex, Boss…" maxlength="40" autocomplete="off" />
       </div>
-
-      <!-- Personality -->
-      <div class="setting-row setting-row--col">
+      <div class="setting-row col">
         <div class="setting-info">
-          <div class="setting-label">Cyanix personality</div>
-          <div class="setting-desc">Choose how Cyanix communicates with you</div>
+          <div class="setting-label">Personality</div>
+          <div class="setting-desc">How Cyanix communicates</div>
         </div>
         <div class="personality-chips">
-          <button class="personality-chip active" data-value="friendly">
-            <span class="chip-icon">😊</span><span class="chip-label">Friendly</span>
-          </button>
-          <button class="personality-chip" data-value="professional">
-            <span class="chip-icon">💼</span><span class="chip-label">Professional</span>
-          </button>
-          <button class="personality-chip" data-value="creative">
-            <span class="chip-icon">🎨</span><span class="chip-label">Creative</span>
-          </button>
-          <button class="personality-chip" data-value="concise">
-            <span class="chip-icon">⚡</span><span class="chip-label">Concise</span>
-          </button>
-          <button class="personality-chip" data-value="mentor">
-            <span class="chip-icon">🎓</span><span class="chip-label">Mentor</span>
-          </button>
-          <button class="personality-chip" data-value="witty">
-            <span class="chip-icon">😄</span><span class="chip-label">Witty</span>
-          </button>
+          <button class="p-chip active" data-value="friendly">😊 Friendly</button>
+          <button class="p-chip" data-value="professional">💼 Pro</button>
+          <button class="p-chip" data-value="creative">🎨 Creative</button>
+          <button class="p-chip" data-value="concise">⚡ Concise</button>
+          <button class="p-chip" data-value="mentor">🎓 Mentor</button>
+          <button class="p-chip" data-value="witty">😄 Witty</button>
         </div>
       </div>
 
       <div class="modal-sep"></div>
-
-      <!-- ── Model & Display ─────────────────────────────── -->
-      <div class="setting-section-title">Model &amp; Display</div>
+      <div class="setting-section">Model &amp; Display</div>
       <div class="setting-row">
-        <div class="setting-info"><div class="setting-label">AI Model</div><div class="setting-desc">Choose the model powering your chats</div></div>
+        <div class="setting-info"><div class="setting-label">AI Model</div></div>
         <select class="setting-select" id="model-select"></select>
       </div>
       <div class="setting-row">
-        <div class="setting-info"><div class="setting-label">Streaming responses</div><div class="setting-desc">Show text as it generates in real time</div></div>
-        <label class="toggle-switch"><input type="checkbox" id="streaming-toggle" checked /><span class="toggle-track"></span></label>
+        <div class="setting-info"><div class="setting-label">Streaming</div><div class="setting-desc">Show text as it generates</div></div>
+        <label class="toggle"><input type="checkbox" id="streaming-toggle" checked /><span class="track"></span></label>
       </div>
       <div class="setting-row">
-        <div class="setting-info"><div class="setting-label">Theme</div><div class="setting-desc">Interface appearance</div></div>
+        <div class="setting-info"><div class="setting-label">Theme</div></div>
         <select class="setting-select" id="theme-select"><option value="light">Light</option><option value="dark">Dark</option></select>
       </div>
 
       <div class="modal-sep"></div>
-
-      <!-- ── Privacy ────────────────────────────────────── -->
-      <div class="setting-section-title">Privacy &amp; Data</div>
+      <div class="setting-section">Web Search (RAG)</div>
       <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-label">Help improve Cyanix AI</div>
-          <div class="setting-desc">Allow anonymized messages to train future models. No personal data stored. You can withdraw any time.</div>
-        </div>
-        <label class="toggle-switch"><input type="checkbox" id="consent-toggle" /><span class="toggle-track"></span></label>
+        <div class="setting-info"><div class="setting-label">Auto web search</div><div class="setting-desc">Automatically search when questions need current info</div></div>
+        <label class="toggle"><input type="checkbox" id="rag-auto-toggle" /><span class="track"></span></label>
+      </div>
+
+      <div class="modal-sep"></div>
+      <div class="setting-section">Privacy &amp; Data</div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Help improve Cyanix AI</div><div class="setting-desc">Allow anonymized training. Withdraw anytime.</div></div>
+        <label class="toggle"><input type="checkbox" id="consent-toggle" /><span class="track"></span></label>
       </div>
       <div class="setting-row hidden" id="training-data-row">
-        <div class="setting-info"><div class="setting-label">Withdraw training contributions</div><div class="setting-desc">Remove your anonymized data from future batches.</div></div>
+        <div class="setting-info"><div class="setting-label">Withdraw contributions</div></div>
         <button class="setting-link-btn" id="delete-training-btn">Withdraw</button>
       </div>
 
       <div class="modal-sep"></div>
-      <button class="modal-danger-btn" id="clear-chats-btn">Clear all chats</button>
-      <button class="modal-danger-btn" id="signout-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:6px;vertical-align:-2px">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
+      <button class="danger-btn" id="clear-chats-btn">Clear all chats</button>
+      <button class="danger-btn" id="signout-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Sign out
       </button>
     </div>
@@ -429,139 +391,92 @@
 
 <!-- HELP MODAL -->
 <div class="modal-overlay hidden" id="help-modal">
-  <div class="modal-card">
+  <div class="modal-sheet">
+    <div class="modal-drag-handle"></div>
     <div class="modal-head">
       <h3 class="modal-title">Help &amp; Shortcuts</h3>
       <button class="modal-close" id="help-close">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <div class="modal-body">
       <div class="help-row"><span>Send message</span><kbd>Enter</kbd></div>
-      <div class="help-row"><span>New line</span><kbd>Shift + Enter</kbd></div>
-      <div class="help-row"><span>New chat</span><kbd>Ctrl + Shift + N</kbd></div>
+      <div class="help-row"><span>New line</span><kbd>Shift+Enter</kbd></div>
+      <div class="help-row"><span>New chat</span><kbd>Ctrl+Shift+N</kbd></div>
+      <div class="help-row"><span>Toggle web search</span><kbd>Ctrl+Shift+W</kbd></div>
       <div class="help-row"><span>Stop response</span><kbd>Escape</kbd></div>
       <div class="help-row"><span>Focus input</span><kbd>/</kbd></div>
-      <div class="help-row"><span>Toggle sidebar</span><kbd>Ctrl + B</kbd></div>
+      <div class="help-row"><span>Toggle sidebar</span><kbd>Ctrl+B</kbd></div>
     </div>
   </div>
 </div>
 
-<div class="toast hidden" id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="JavaScript.js?v=11"></script>
+<script src="JavaScript.js?v=12"></script>
 <script>
-/* ══════════════════════════════════════════════════════════
-   SERVICE WORKER + PWA — Native App Bootstrap
-══════════════════════════════════════════════════════════ */
-
-// ── Share target / shortcut params (read before anything else) ─
-(function() {
-  const p = new URLSearchParams(location.search);
-  const action = p.get('action');
-  const text   = p.get('text') || p.get('url') || p.get('title');
-  if (action) window._startAction = action;
-  if (text)   window._sharedText  = text;
+(function(){
+  var p=new URLSearchParams(location.search);
+  var a=p.get('action'),t=p.get('text')||p.get('url')||p.get('title');
+  if(a) window._startAction=a;
+  if(t) window._sharedText=t;
 })();
 
-// ── Service Worker ─────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  // Register SW
-  navigator.serviceWorker.register('./sw.js', { scope: './' })
-    .then(function(reg) {
-      console.log('[SW] registered:', reg.scope);
-      reg.update(); // force version check on every load
-
-      reg.addEventListener('updatefound', function() {
-        var newSW = reg.installing;
-        if (!newSW) return;
-        newSW.addEventListener('statechange', function() {
-          // New SW installed & waiting — send SKIP_WAITING
-          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-            newSW.postMessage({ type: 'SKIP_WAITING' });
-          }
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+    .then(function(r){
+      r.update();
+      r.addEventListener('updatefound',function(){
+        var n=r.installing;
+        if(!n) return;
+        n.addEventListener('statechange',function(){
+          if(n.state==='installed'&&navigator.serviceWorker.controller)
+            n.postMessage({type:'SKIP_WAITING'});
         });
       });
-    })
-    .catch(function(e) { console.warn('[SW] registration failed:', e); });
+    }).catch(function(e){console.warn('[SW]',e);});
 
-  // When new SW takes control → reload for fresh code
-  var _reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', function() {
-    if (!_reloading) {
-      _reloading = true;
-      window.location.reload();
-    }
+  var _rel=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    if(!_rel){_rel=true;location.reload();}
   });
-
-  // SW messages
-  navigator.serviceWorker.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'SW_UPDATED') {
-      // Show a gentle "update available" bar instead of silent reload
-      var bar = document.getElementById('update-bar');
-      if (bar) bar.classList.remove('hidden');
+  navigator.serviceWorker.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='SW_UPDATED'){
+      var b=document.getElementById('update-bar');
+      if(b) b.classList.remove('hidden');
     }
   });
 }
 
-// ── Update bar reload button ───────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  var btn = document.getElementById('update-reload-btn');
-  if (btn) btn.addEventListener('click', function() { location.reload(); });
+var _ip=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault(); _ip=e;
+  if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone) return;
+  if(sessionStorage.getItem('cx-no-install')) return;
+  setTimeout(function(){
+    var b=document.getElementById('install-banner');
+    if(b) b.classList.remove('hidden');
+  },4000);
 });
 
-// ── PWA Install Prompt (Add to Home Screen) ────────────────────
-var _installPrompt = null;
-
-window.addEventListener('beforeinstallprompt', function(e) {
-  e.preventDefault();
-  _installPrompt = e;
-
-  // Only show if not already installed
-  var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                     window.navigator.standalone;
-  if (isStandalone) return;
-
-  // Show install banner after 3s if user hasn't dismissed it
-  var dismissed = sessionStorage.getItem('cx-install-dismissed');
-  if (dismissed) return;
-
-  setTimeout(function() {
-    var banner = document.getElementById('install-banner');
-    if (banner) banner.classList.remove('hidden');
-  }, 3000);
+document.addEventListener('DOMContentLoaded',function(){
+  var yes=document.getElementById('install-yes-btn');
+  var no=document.getElementById('install-no-btn');
+  var rb=document.getElementById('update-reload-btn');
+  if(yes) yes.onclick=function(){
+    document.getElementById('install-banner').classList.add('hidden');
+    if(_ip){_ip.prompt();_ip.userChoice.then(function(){_ip=null;});}
+  };
+  if(no) no.onclick=function(){
+    document.getElementById('install-banner').classList.add('hidden');
+    sessionStorage.setItem('cx-no-install','1');
+  };
+  if(rb) rb.onclick=function(){location.reload();};
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-  var yesBtn = document.getElementById('install-yes-btn');
-  var noBtn  = document.getElementById('install-no-btn');
-
-  if (yesBtn) yesBtn.addEventListener('click', function() {
-    var banner = document.getElementById('install-banner');
-    if (banner) banner.classList.add('hidden');
-    if (_installPrompt) {
-      _installPrompt.prompt();
-      _installPrompt.userChoice.then(function(r) {
-        console.log('[PWA] install choice:', r.outcome);
-        _installPrompt = null;
-      });
-    }
-  });
-
-  if (noBtn) noBtn.addEventListener('click', function() {
-    var banner = document.getElementById('install-banner');
-    if (banner) banner.classList.add('hidden');
-    sessionStorage.setItem('cx-install-dismissed', '1');
-  });
-});
-
-// ── App display mode detection ─────────────────────────────────
-(function() {
-  var isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
-                    window.navigator.standalone;
-  if (isInstalled) document.documentElement.classList.add('pwa-mode');
-})();
+if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone)
+  document.documentElement.classList.add('pwa-mode');
 </script>
 </body>
 </html>
