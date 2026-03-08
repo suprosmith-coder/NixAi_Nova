@@ -1,10 +1,10 @@
-/* ══════════════════════════════════════════════════════════════
-   CYANIX AI — style.css  v13  (comprehensive bug fix)
+/* ==============================================================
+   CYANIX AI -- style.css  v13  (comprehensive bug fix)
    Fixes: #1 button color inherit  #2 a-tag reset  #3 input color
           #4 flex min-height        #5 chat-main overflow
           #6 sidebar collapse       #7 gradient text fallback
           #8 duplicate toast rule   #9+ remaining button types
-══════════════════════════════════════════════════════════════ */
+============================================================== */
 
 /* ── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -58,7 +58,7 @@ a:hover { text-decoration: underline; }
 
 /* ── Exclusive Supporter Themes ───────────────────────────── */
 
-/* ⭐ Founder Theme — deep space with electric blue accents */
+/* ⭐ Founder Theme -- deep space with electric blue accents */
 [data-theme="founder"] {
   --bg:#050a14; --surface:#0a1628; --surface-2:#0d1e35; --surface-3:#112442;
   --border:#1a3a5c; --border-2:#1e4a73;
@@ -84,7 +84,7 @@ a:hover { text-decoration: underline; }
   color: #00c8ff;
 }
 
-/* 🌆 Dark Neon Theme — cyberpunk purple/pink */
+/* 🌆 Dark Neon Theme -- cyberpunk purple/pink */
 [data-theme="neon"] {
   --bg:#0d0014; --surface:#140020; --surface-2:#18002a; --surface-3:#1f0035;
   --border:#3a0060; --border-2:#4d0080;
@@ -110,7 +110,7 @@ a:hover { text-decoration: underline; }
   color: #c840ff;
 }
 
-/* 🌙 Midnight Theme — deep navy calm */
+/* 🌙 Midnight Theme -- deep navy calm */
 [data-theme="midnight"] {
   --bg:#080c18; --surface:#0e1422; --surface-2:#111828; --surface-3:#162030;
   --border:#1e2d45; --border-2:#263858;
@@ -171,7 +171,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
   user-select:none;-webkit-user-select:none;
 }
 
-/* ═══ SPLASH ══════════════════════════════════════════════ */
+/* === SPLASH ============================================== */
 .splash-view{display:flex;align-items:center;justify-content:center;background:var(--surface);z-index:9999;}
 .splash-inner{display:flex;flex-direction:column;align-items:center;gap:16px;}
 .splash-logo{position:relative;width:88px;height:88px;display:flex;align-items:center;justify-content:center;}
@@ -189,7 +189,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .splash-error{font-size:.82rem;color:var(--red);text-align:center;max-width:300px;}
 @media(prefers-color-scheme:dark){.splash-view{background:#0f172a;}}
 
-/* ═══ AUTH ════════════════════════════════════════════════ */
+/* === AUTH ================================================ */
 .auth-view{display:flex;align-items:center;justify-content:center;
   background:var(--bg);padding:20px;z-index:10;overflow-y:auto;overflow-x:hidden;}
 .auth-bg-blur{position:absolute;inset:0;pointer-events:none;
@@ -249,7 +249,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .auth-switch a{color:var(--blue);font-weight:500;}
 .auth-switch a:hover{text-decoration:underline;}
 
-/* ═══ CHAT LAYOUT ════════════════════════════════════════ */
+/* === CHAT LAYOUT ======================================== */
 .chat-view{display:flex;background:var(--bg);z-index:10;height:100%;overflow:hidden;}
 
 /* Sidebar */
@@ -361,7 +361,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .chat-scroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;position:relative;z-index:0;} /* FIX #4 */
 .messages{max-width:var(--msg-max);margin:0 auto;padding:24px 20px 8px;display:flex;flex-direction:column;gap:4px;}
 
-/* ═══ WELCOME ══════════════════════════════════════════════ */
+/* === WELCOME ============================================== */
 .welcome{display:flex;flex-direction:column;align-items:center;padding:40px 0 32px;
   animation:fadeUp .4s var(--ease);position:relative;width:100%;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
@@ -374,7 +374,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 @keyframes welcomePulse{
   0%,100%{filter:drop-shadow(0 6px 24px rgba(37,99,235,.30));}
   50%{filter:drop-shadow(0 8px 32px rgba(37,99,235,.52));}}
-/* FIX #7 — gradient text with fallback so it's never invisible */
+/* FIX #7 -- gradient text with fallback so it's never invisible */
 .welcome-heading{font-size:2rem;font-weight:800;text-align:center;letter-spacing:-.5px;line-height:1.2;
   margin-bottom:8px;position:relative;z-index:1;
   color:var(--blue); /* solid fallback */
@@ -395,7 +395,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .wc-title{font-size:.85rem;font-weight:600;color:var(--text-1);line-height:1.35;}
 .wc-sub{font-size:.77rem;color:var(--text-4);line-height:1.35;}
 
-/* ═══ MESSAGES ════════════════════════════════════════════ */
+/* === MESSAGES ============================================ */
 .msg-row{display:flex;align-items:flex-start;gap:10px;padding:4px 0;animation:msgIn .22s var(--ease);}
 @keyframes msgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 .msg-row.user{flex-direction:row-reverse;}
@@ -465,7 +465,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .edit-send-btn:hover{background:var(--blue-dark);box-shadow:var(--sh-blue);transform:translateY(-1px);}
 .edit-send-btn:active{transform:scale(.95);box-shadow:none;}
 
-/* ═══ THINKING ANIMATION ══════════════════════════════════ */
+/* === THINKING ANIMATION ================================== */
 .thinking-row{display:flex;align-items:center;gap:12px;padding:10px 20px;max-width:var(--msg-max);margin:0 auto;width:100%;position:relative;z-index:1;}
 .cx-thinking{position:relative;width:48px;height:48px;flex-shrink:0;}
 .cx-think-emblem{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;}
@@ -489,7 +489,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .thinking-dots span:nth-child(2){animation-delay:.2s;}.thinking-dots span:nth-child(3){animation-delay:.4s;}
 @keyframes thinkDot{0%,60%,100%{transform:scale(.5);opacity:.4;}30%{transform:scale(1);opacity:1;}}
 
-/* ═══ COMPOSER ════════════════════════════════════════════ */
+/* === COMPOSER ============================================ */
 .composer-area{padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);flex-shrink:0;position:relative;z-index:2;}
 .composer-box{max-width:var(--msg-max);margin:0 auto;background:var(--surface);
   border:1.5px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--sh-lg);
@@ -519,7 +519,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .send-btn.stop:hover{background:#dc2626;box-shadow:0 4px 16px rgba(239,68,68,.35);}
 .composer-hint{text-align:center;font-size:.72rem;color:var(--text-4);padding-top:6px;max-width:var(--msg-max);margin:0 auto;}
 
-/* ═══ MODALS ══════════════════════════════════════════════ */
+/* === MODALS ============================================== */
 .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.42);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px;animation:modalFadeIn .18s var(--ease);}
 @keyframes modalFadeIn{from{opacity:0;}to{opacity:1;}}
 .modal-sheet{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--sh-xl);width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;animation:sheetIn .28s var(--ease);}
@@ -563,12 +563,12 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 .help-row:last-child{border-bottom:none;}
 kbd{display:inline-flex;align-items:center;padding:3px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:.74rem;font-weight:600;color:var(--text-3);white-space:nowrap;}
 
-/* ═══ TOAST — FIX #8 de-duplicated ══════════════════════ */
+/* === TOAST -- FIX #8 de-duplicated ====================== */
 .toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(0);background:var(--text-1);color:#ffffff;padding:10px 20px;border-radius:var(--r-full);font-size:.85rem;font-weight:500;z-index:9000;box-shadow:var(--sh-lg);pointer-events:none;white-space:nowrap;display:none;animation:toastIn .22s var(--ease-spring);}
 .toast:not(.hidden){display:block;}
 @keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0;}to{transform:translateX(-50%) translateY(0);opacity:1;}}
 
-/* ═══ PWA BANNERS ═════════════════════════════════════════ */
+/* === PWA BANNERS ========================================= */
 .install-banner{position:fixed;top:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));background:var(--text-1);color:#ffffff;box-shadow:var(--sh-lg);animation:slideDown .3s var(--ease);}
 @keyframes slideDown{from{transform:translateY(-100%);}to{transform:none;}}
 .install-banner-icon{width:34px;height:34px;border-radius:8px;object-fit:contain;flex-shrink:0;background:rgba(255,255,255,.1);padding:4px;}
@@ -584,17 +584,17 @@ kbd{display:inline-flex;align-items:center;padding:3px 8px;background:var(--surf
 @keyframes slideUp{from{transform:translateX(-50%) translateY(16px);opacity:0;}to{transform:translateX(-50%) translateY(0);opacity:1;}}
 #update-reload-btn{padding:4px 12px;background:var(--blue);color:#ffffff;border-radius:var(--r-full);font-size:.79rem;font-weight:700;}
 
-/* ═══ RIPPLE ══════════════════════════════════════════════ */
+/* === RIPPLE ============================================== */
 .cx-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.22);transform:scale(0);animation:cxRipple .5s linear;pointer-events:none;z-index:0;}
 @keyframes cxRipple{to{transform:scale(1);opacity:0;}}
 .welcome-card .cx-ripple,.msg-action-btn .cx-ripple,.tool-btn .cx-ripple{background:rgba(37,99,235,.12);}
 
-/* ═══ PWA MODE ════════════════════════════════════════════ */
+/* === PWA MODE ============================================ */
 .pwa-mode .topbar{padding-top:max(8px,env(safe-area-inset-top,0px));height:calc(var(--topbar-h) + env(safe-area-inset-top,0px));}
 .pwa-mode .composer-area{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));}
 .pwa-mode .sidebar{padding-top:env(safe-area-inset-top,0px);}
 
-/* ═══ RESPONSIVE ══════════════════════════════════════════ */
+/* === RESPONSIVE ========================================== */
 @media(max-width:700px){
   /* Mobile: sidebar is a fixed overlay, not in flex flow */
   .sidebar{position:fixed;top:0;bottom:0;left:0;z-index:100;

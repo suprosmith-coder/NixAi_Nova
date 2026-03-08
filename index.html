@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Cyanix AI</title>
-  <meta name="description" content="Cyanix AI — Your intelligent assistant powered by advanced language models." />
+  <meta name="description" content="Cyanix AI -- Your intelligent assistant powered by advanced language models." />
   <meta name="keywords"    content="AI, assistant, chat, GPT, Cyanix, productivity" />
   <meta name="author"      content="Cyanix AI" />
   <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
@@ -20,12 +20,12 @@
   <link rel="icon"         type="image/png" sizes="32x32" href="./icons/manifest/icon-96x96.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/ios/apple-touch-icon-180x180.png" />
   <meta property="og:title"       content="Cyanix AI" />
-  <meta property="og:description" content="Your intelligent AI assistant — chat, code, create." />
+  <meta property="og:description" content="Your intelligent AI assistant -- chat, code, create." />
   <meta property="og:image"       content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=15" />
 
   <!-- Boot guard: catches JS crashes and blank screen on mobile -->
   <script>
@@ -37,7 +37,7 @@
       var authVisible = auth && !auth.classList.contains('hidden');
       var chatVisible = chat && !chat.classList.contains('hidden');
       if (!authVisible && !chatVisible) {
-        // Page is blank — force show auth
+        // Page is blank -- force show auth
         if (auth) {
           auth.classList.remove('hidden');
           auth.style.display = 'flex';
@@ -45,7 +45,7 @@
       }
     }, 4000);
 
-    // Global error handler — shows visible banner (works on mobile)
+    // Global error handler -- shows visible banner (works on mobile)
     function showErrorBanner(msg) {
       try {
         var banner = document.getElementById('js-error-banner');
@@ -79,21 +79,21 @@
   <img src="cyanix_emblem.png" class="install-banner-icon" alt="" />
   <div class="install-banner-text">
     <strong>Install Cyanix AI</strong>
-    <span>Works offline · Feels native</span>
+    <span>Works offline * Feels native</span>
   </div>
   <button type="button" class="install-banner-btn" id="install-yes-btn">Add to Home</button>
-  <button type="button" class="install-banner-x"   id="install-no-btn">✕</button>
+  <button type="button" class="install-banner-x"   id="install-no-btn">x</button>
 </div>
 
 <!-- Update Bar -->
 <div id="update-bar" class="update-bar hidden">
-  <span>✨ Update ready</span>
+  <span>* Update ready</span>
   <button type="button" id="update-reload-btn">Reload</button>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     AUTH VIEW — shown immediately, no splash
-═══════════════════════════════════════════════ -->
+<!-- ===============================================
+     AUTH VIEW -- shown immediately, no splash
+=============================================== -->
 <div id="view-auth" class="view auth-view">
   <div class="auth-bg-blur"></div>
   <div class="auth-card">
@@ -179,9 +179,9 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
+<!-- ===============================================
      CHAT VIEW  (Gemini-style layout)
-═══════════════════════════════════════════════ -->
+=============================================== -->
 <div id="view-chat" class="view chat-view hidden">
 
   <!-- LEFT SIDEBAR -->
@@ -214,7 +214,7 @@
       <button type="button" class="sb-user-btn" id="user-btn">
         <div class="user-avatar" id="user-avatar">?</div>
         <div class="user-name-row">
-          <span class="user-name" id="user-name">Loading…</span>
+          <span class="user-name" id="user-name">Loading...</span>
           <span id="supporter-badge" class="supporter-badge" style="display:none;">⭐</span>
         </div>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -270,7 +270,7 @@
     <div class="chat-scroll" id="chat-scroll">
       <div class="messages" id="messages">
 
-        <!-- Welcome state — randomised on every new chat -->
+        <!-- Welcome state -- randomised on every new chat -->
         <div class="welcome" id="welcome-state">
           <div class="welcome-glow"></div>
           <div class="welcome-logo">
@@ -315,7 +315,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
         </div>
-        <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything…" rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
+        <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything..." rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
         <div class="composer-actions">
           <button type="button" class="mic-btn" id="mic-btn" title="Voice input">
             <svg id="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -349,7 +349,7 @@
           <div class="setting-label">Your name</div>
           <div class="setting-desc">How Cyanix addresses you</div>
         </div>
-        <input type="text" id="display-name-input" class="setting-input" placeholder="e.g. Alex, Boss…" maxlength="40" autocomplete="off" />
+        <input type="text" id="display-name-input" class="setting-input" placeholder="e.g. Alex, Boss..." maxlength="40" autocomplete="off" />
       </div>
       <div class="setting-row col">
         <div class="setting-info">
@@ -360,7 +360,7 @@
           <button type="button" class="p-chip active" data-value="friendly">😊 Friendly</button>
           <button type="button" class="p-chip" data-value="professional">💼 Pro</button>
           <button type="button" class="p-chip" data-value="creative">🎨 Creative</button>
-          <button type="button" class="p-chip" data-value="concise">⚡ Concise</button>
+          <button type="button" class="p-chip" data-value="concise">! Concise</button>
           <button type="button" class="p-chip" data-value="mentor">🎓 Mentor</button>
           <button type="button" class="p-chip" data-value="witty">😄 Witty</button>
         </div>
@@ -409,12 +409,12 @@
         <div class="setting-row">
           <div class="setting-info">
             <div class="setting-label">Daily usage</div>
-            <div class="setting-desc" id="usage-display">Loading…</div>
+            <div class="setting-desc" id="usage-display">Loading...</div>
           </div>
         </div>
         <div class="setting-row" id="early-access-row" style="display:none;">
           <div class="setting-info">
-            <div class="setting-label">⚡ Early Access</div>
+            <div class="setting-label">! Early Access</div>
             <div class="setting-desc">You have access to beta features before other users</div>
           </div>
           <span class="perk-on">Active</span>
@@ -436,7 +436,7 @@
         <div class="setting-row">
           <div class="setting-info">
             <div class="setting-label">🏆 Permanent Free Premium</div>
-            <div class="setting-desc">Free premium access forever — thank you for your support</div>
+            <div class="setting-desc">Free premium access forever -- thank you for your support</div>
           </div>
           <span class="perk-on">Granted</span>
         </div>
@@ -477,7 +477,7 @@
 <div class="toast hidden" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="JavaScript.js?v=14"></script>
+<script src="JavaScript.js?v=15"></script>
 <script>
 (function(){
   var p=new URLSearchParams(location.search);
@@ -487,7 +487,7 @@
 })();
 
 if('serviceWorker' in navigator){
-  // Absolute scope matching GitHub Pages path — avoids scope mismatch on mobile
+  // Absolute scope matching GitHub Pages path -- avoids scope mismatch on mobile
   navigator.serviceWorker.register('./sw.js', { scope: '/NixAi_Nova/' })
     .then(function(r){
       r.update();
@@ -495,7 +495,7 @@ if('serviceWorker' in navigator){
         var n = r.installing;
         if (!n) return;
         n.addEventListener('statechange', function(){
-          // New SW ready — show update bar only, NO auto-reload
+          // New SW ready -- show update bar only, NO auto-reload
           // Auto-reload on controllerchange causes blank screens on mobile
           if (n.state === 'installed') {
             var b = document.getElementById('update-bar');
