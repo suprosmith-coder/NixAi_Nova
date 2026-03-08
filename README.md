@@ -96,8 +96,8 @@ Your PWA is configured with:
 - **Display Mode:** fullscreen
 - **Theme Color:** #3B82F6
 - **Background Color:** #3B82F6
-- **Start URL:** https://suprosmith-coder.github.io/NixAi_Nova/
-- **Scope:** https://suprosmith-coder.github.io/NixAi_Nova/
+- **Start URL:** /NixAi_Nova/
+- **Scope:** /NixAi_Nova/
 - **Orientation:** any
 - **Language:** en
 - **Text Direction:** auto
