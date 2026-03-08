@@ -61,7 +61,7 @@ let _ragAuto     = false;
 let _mediaRec    = null;
 let _sttChunks   = [];
 let _sttActive   = false;
-let _splashHidden = false;
+// no splash state needed
 let _signedInUser = null;
 
 let _settings = {
@@ -200,9 +200,12 @@ window.copyCode = function(btn) {
 };
 
 /* ══════════════════════════════════════════════════════════
-   BOOT
+   BOOT — no splash, instant render
 ══════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async function() {
+  // Reveal app instantly — body was hidden to prevent FOUC
+  document.documentElement.style.visibility = '';
+
   loadSettings();
   applyTheme(_settings.theme);
   bindAuthUI();
@@ -211,34 +214,18 @@ document.addEventListener('DOMContentLoaded', async function() {
   handleStartActions();
   setTimeout(attachAllRipples, 150);
 
-  function splashMsg(msg) {
-    const el = $('loading-status');
-    if (el) el.textContent = msg;
-  }
-  function splashFail(msg) {
-    const er = $('loading-error');
-    const st = $('loading-status');
-    if (er) { er.textContent = msg; er.classList.remove('hidden'); }
-    if (st) st.classList.add('hidden');
-    setTimeout(function() { hideSplash(); show('view-auth'); }, 4000);
+  // Auth view is already visible in HTML — no splash to remove.
+  // If Supabase is misconfigured, auth view is already showing so user sees the form.
+  if (!SUPABASE_URL.startsWith('https://') || SUPABASE_ANON.length < 40) {
+    console.error('[CyanixAI] Supabase not configured.');
+    return; // auth view already visible
   }
 
-  splashMsg('Starting\u2026');
-
-  if (!SUPABASE_URL.startsWith('https://')) {
-    splashFail('SUPABASE_URL not configured.'); return;
-  }
-  if (SUPABASE_ANON.length < 40) {
-    splashFail('SUPABASE_ANON key missing.'); return;
-  }
-
-  splashMsg('Loading\u2026');
   if (!window.supabase || !window.supabase.createClient) {
-    splashFail('Could not load Supabase SDK. Check connection and refresh.');
-    return;
+    console.error('[CyanixAI] Supabase SDK failed to load.');
+    return; // auth view already visible
   }
 
-  splashMsg('Connecting\u2026');
   _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
     auth: {
       persistSession:     true,
@@ -250,52 +237,21 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   _sb.auth.onAuthStateChange(function(event, session) {
     _session = session;
-    if (!_splashHidden) return;
     if (event === 'SIGNED_IN')  onSignedIn(session);
     if (event === 'SIGNED_OUT') onSignedOut();
   });
 
-  splashMsg('Checking sign-in\u2026');
-
-  const deadline = setTimeout(function() {
-    if (_splashHidden) return;
-    hideSplash();
-    show('view-auth');
-  }, 8000);
-
+  // Check for existing session — if found, jump straight to chat
   try {
     const result = await _sb.auth.getSession();
-    clearTimeout(deadline);
-    if (result.error) {
-      hideSplash(); show('view-auth'); return;
-    }
-    const session = result.data && result.data.session;
-    if (session) {
-      _session = session;
-      splashMsg('Loading your chats\u2026');
-      await onSignedIn(session);
-    } else {
-      hideSplash(); show('view-auth');
-    }
+    if (result.error || !result.data || !result.data.session) return; // stay on auth
+    _session = result.data.session;
+    await onSignedIn(_session);
   } catch (err) {
-    clearTimeout(deadline);
     console.error('[CyanixAI] boot:', err);
-    hideSplash(); show('view-auth');
+    // auth view already visible, nothing to do
   }
 });
-
-function hideSplash() {
-  if (_splashHidden) return;
-  _splashHidden = true;
-  clearTimeout(window._BOOT_DEADLINE);
-  const el = $('view-loading');
-  if (el) {
-    el.style.pointerEvents = 'none'; // stop intercepting clicks immediately
-    el.style.opacity    = '0';
-    el.style.transition = 'opacity 0.35s ease';
-    setTimeout(function() { hide(el); }, 380);
-  }
-}
 
 function handleStartActions() {
   const action     = window._startAction;
@@ -462,7 +418,7 @@ async function onSignedIn(session) {
   _session = session;
   _chats = []; _currentId = null; _history = [];
 
-  hide('view-auth'); hideSplash(); show('view-chat');
+  hide('view-auth'); show('view-chat');
 
   const user = session.user;
   const name = (user.user_metadata && user.user_metadata.full_name) ? user.user_metadata.full_name : user.email;

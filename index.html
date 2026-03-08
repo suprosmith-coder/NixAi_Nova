@@ -27,18 +27,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=13" />
 
-  <!-- EMERGENCY BOOT GUARD — fires if JS crashes for any reason -->
+  <!-- Boot guard: show app instantly, catch any JS crashes -->
   <script>
-    window._BOOT_DEADLINE = setTimeout(function() {
-      try {
-        var s = document.getElementById('view-loading');
-        var a = document.getElementById('view-auth');
-        if (s) s.style.display = 'none';
-        if (a) a.classList.remove('hidden');
-      } catch(e) {}
-    }, 5000);
+    // Hide body until DOM is ready — prevents flash of unstyled content
+    document.documentElement.style.visibility = 'hidden';
 
-    // Global error handler — shows a visible banner if JS crashes
+    // Global error handler — shows a red banner if JS crashes
     window.onerror = function(msg, src, line, col, err) {
       try {
         var banner = document.getElementById('js-error-banner');
@@ -52,16 +46,13 @@
         var msgEl = document.getElementById('js-error-msg');
         if (msgEl) msgEl.textContent = msg + ' (' + (src||'').split('/').pop() + ':' + line + ')';
         banner.style.display = 'flex';
-        // Still show auth if not yet shown
-        var s2 = document.getElementById('view-loading');
-        var a2 = document.getElementById('view-auth');
-        if (s2) s2.style.display = 'none';
-        if (a2) a2.classList.remove('hidden');
+        // Emergency: show auth if somehow not visible
+        var a = document.getElementById('view-auth');
+        if (a) a.classList.remove('hidden');
       } catch(e2) {}
-      return false; // don't suppress
+      return false;
     };
 
-    // Catch unhandled promise rejections too
     window.addEventListener('unhandledrejection', function(e) {
       var msg = (e.reason && (e.reason.message || String(e.reason))) || 'Unhandled promise rejection';
       window.onerror(msg, '', 0, 0, e.reason);
@@ -88,25 +79,9 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════
-     LOADING SPLASH
+     AUTH VIEW — shown immediately, no splash
 ═══════════════════════════════════════════════ -->
-<div id="view-loading" class="view splash-view">
-  <div class="splash-inner">
-    <div class="splash-logo">
-      <img src="cyanix_emblem.png" class="splash-emblem" alt="Cyanix AI" />
-      <div class="splash-ring splash-ring-1"></div>
-      <div class="splash-ring splash-ring-2"></div>
-    </div>
-    <div class="splash-brand">Cyanix <em>AI</em></div>
-    <div class="splash-status" id="loading-status">Starting…</div>
-    <div class="splash-error hidden" id="loading-error"></div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     AUTH VIEW
-═══════════════════════════════════════════════ -->
-<div id="view-auth" class="view auth-view hidden">
+<div id="view-auth" class="view auth-view">
   <div class="auth-bg-blur"></div>
   <div class="auth-card">
     <div class="auth-header">
