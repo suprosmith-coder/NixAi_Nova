@@ -13,8 +13,8 @@
    ✓ Offline fallback → Cached index.html
 ════════════════════════════════════════════════════════════════ */
 
-var VER   = 'cx-v13';
-var CACHE = 'cx-v13';
+var VER   = 'cx-v14';
+var CACHE = 'cx-v14';
 var BASE  = '/NixAi_Nova';
 
 var PREWARM = [
