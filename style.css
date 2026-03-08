@@ -56,6 +56,96 @@ a:hover { text-decoration: underline; }
   --sh-lg:0 12px 36px rgba(0,0,0,.38);
 }
 
+/* ── Exclusive Supporter Themes ───────────────────────────── */
+
+/* ⭐ Founder Theme — deep space with electric blue accents */
+[data-theme="founder"] {
+  --bg:#050a14; --surface:#0a1628; --surface-2:#0d1e35; --surface-3:#112442;
+  --border:#1a3a5c; --border-2:#1e4a73;
+  --text-1:#e8f4ff; --text-2:#b8d4f0; --text-3:#6a9ec5; --text-4:#3d6a8a;
+  --blue:#00c8ff; --blue-dark:#00a0d0; --blue-glow:rgba(0,200,255,0.20);
+  --blue-50:rgba(0,200,255,.10); --blue-100:rgba(0,200,255,.18); --blue-200:rgba(0,200,255,.28);
+  --red-bg:rgba(239,68,68,.12); --green-bg:rgba(34,197,94,.12);
+  --sh-sm:0 1px 4px rgba(0,0,0,.50); --sh:0 4px 14px rgba(0,0,0,.50);
+  --sh-lg:0 12px 36px rgba(0,200,255,.08);
+  --sh-blue:0 4px 20px rgba(0,200,255,.30);
+}
+[data-theme="founder"] .auth-btn,
+[data-theme="founder"] .send-btn {
+  background: linear-gradient(135deg, #0090c0, #00c8ff);
+}
+[data-theme="founder"] .welcome-heading {
+  background: linear-gradient(135deg, #00c8ff, #7ee8ff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+[data-theme="founder"] .supporter-badge {
+  background: linear-gradient(135deg, #00c8ff22, #00c8ff44);
+  border-color: #00c8ff55;
+  color: #00c8ff;
+}
+
+/* 🌆 Dark Neon Theme — cyberpunk purple/pink */
+[data-theme="neon"] {
+  --bg:#0d0014; --surface:#140020; --surface-2:#18002a; --surface-3:#1f0035;
+  --border:#3a0060; --border-2:#4d0080;
+  --text-1:#f5e8ff; --text-2:#d4a8ff; --text-3:#9060c0; --text-4:#5a3080;
+  --blue:#c840ff; --blue-dark:#a020e0; --blue-glow:rgba(200,64,255,0.20);
+  --blue-50:rgba(200,64,255,.10); --blue-100:rgba(200,64,255,.18); --blue-200:rgba(200,64,255,.28);
+  --red-bg:rgba(239,68,68,.12); --green-bg:rgba(34,197,94,.12);
+  --sh-sm:0 1px 4px rgba(0,0,0,.60); --sh:0 4px 14px rgba(0,0,0,.55);
+  --sh-lg:0 12px 36px rgba(200,64,255,.10);
+  --sh-blue:0 4px 20px rgba(200,64,255,.35);
+}
+[data-theme="neon"] .auth-btn,
+[data-theme="neon"] .send-btn {
+  background: linear-gradient(135deg, #8000c0, #c840ff);
+}
+[data-theme="neon"] .welcome-heading {
+  background: linear-gradient(135deg, #c840ff, #ff40c0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+[data-theme="neon"] .supporter-badge {
+  background: linear-gradient(135deg, #c840ff22, #c840ff44);
+  border-color: #c840ff55;
+  color: #c840ff;
+}
+
+/* 🌙 Midnight Theme — deep navy calm */
+[data-theme="midnight"] {
+  --bg:#080c18; --surface:#0e1422; --surface-2:#111828; --surface-3:#162030;
+  --border:#1e2d45; --border-2:#263858;
+  --text-1:#dce8ff; --text-2:#a8b8d8; --text-3:#5870a0; --text-4:#344060;
+  --blue:#4488ff; --blue-dark:#2266dd; --blue-glow:rgba(68,136,255,0.18);
+  --blue-50:rgba(68,136,255,.10); --blue-100:rgba(68,136,255,.18); --blue-200:rgba(68,136,255,.28);
+  --red-bg:rgba(239,68,68,.12); --green-bg:rgba(34,197,94,.12);
+  --sh-sm:0 1px 4px rgba(0,0,0,.50); --sh:0 4px 14px rgba(0,0,0,.45);
+  --sh-lg:0 12px 36px rgba(0,0,0,.50);
+  --sh-blue:0 4px 20px rgba(68,136,255,.28);
+}
+[data-theme="midnight"] .welcome-heading {
+  background: linear-gradient(135deg, #4488ff, #88bbff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+/* ── Supporter badge + perk indicators ───────────────────── */
+.supporter-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  padding: 1px 6px; border-radius: var(--r-full);
+  background: rgba(255,180,0,.12); border: 1px solid rgba(255,180,0,.30);
+  color: #d4a017; line-height: 1.6; flex-shrink: 0;
+}
+.user-name-row {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 1px; overflow: hidden; flex: 1; min-width: 0;
+}
+.user-name-row .user-name { width: 100%; }
+.perk-on {
+  font-size: 11px; font-weight: 600; color: var(--green);
+  padding: 2px 8px; border-radius: var(--r-full);
+  background: var(--green-bg); flex-shrink: 0;
+}
+
 /* ── Base ─────────────────────────────────────────────────── */
 html {
   height:100%; overscroll-behavior:none;

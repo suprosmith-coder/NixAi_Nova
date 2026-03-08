@@ -213,7 +213,10 @@
       </button>
       <button type="button" class="sb-user-btn" id="user-btn">
         <div class="user-avatar" id="user-avatar">?</div>
-        <span class="user-name"  id="user-name">Loading…</span>
+        <div class="user-name-row">
+          <span class="user-name" id="user-name">Loading…</span>
+          <span id="supporter-badge" class="supporter-badge" style="display:none;">⭐</span>
+        </div>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
     </div>
@@ -394,6 +397,49 @@
       <div class="setting-row hidden" id="training-data-row">
         <div class="setting-info"><div class="setting-label">Withdraw contributions</div></div>
         <button type="button" class="setting-link-btn" id="delete-training-btn">Withdraw</button>
+      </div>
+
+      <div class="modal-sep"></div>
+
+      <!-- ── Supporter Perks (hidden unless granted by admin) ── -->
+      <div id="supporter-section" style="display:none;">
+        <div class="setting-section">
+          <span>⭐ Supporter Perks</span>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Daily usage</div>
+            <div class="setting-desc" id="usage-display">Loading…</div>
+          </div>
+        </div>
+        <div class="setting-row" id="early-access-row" style="display:none;">
+          <div class="setting-info">
+            <div class="setting-label">⚡ Early Access</div>
+            <div class="setting-desc">You have access to beta features before other users</div>
+          </div>
+          <span class="perk-on">Active</span>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">🎨 Exclusive Themes</div>
+            <div class="setting-desc">Unlocked in the Theme selector above</div>
+          </div>
+          <span class="perk-on">Unlocked</span>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">🧠 Memory Priority</div>
+            <div class="setting-desc">500 saved conversations vs 100 for regular users</div>
+          </div>
+          <span class="perk-on">Active</span>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">🏆 Permanent Free Premium</div>
+            <div class="setting-desc">Free premium access forever — thank you for your support</div>
+          </div>
+          <span class="perk-on">Granted</span>
+        </div>
       </div>
 
       <div class="modal-sep"></div>
