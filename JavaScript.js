@@ -204,6 +204,9 @@ window.copyCode = function(btn) {
    BOOT — no splash, instant render
 ══════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async function() {
+  // Clear the blank-screen safety net — page loaded successfully
+  if (window._safetyTimer) clearTimeout(window._safetyTimer);
+
   loadSettings();
   applyTheme(_settings.theme);
   bindAuthUI();
