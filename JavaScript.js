@@ -313,6 +313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindChatUI();
   populateModels();
   handleStartActions(); // PWA shortcuts + share target
+  // Attach ripple effect after a tick so all buttons exist
+  setTimeout(attachAllRipples, 100);
 
   // ── Splash helpers ───────────────────────────────────────────
   function splashMsg(msg) {
@@ -339,12 +341,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     splashFail('⚠️ SUPABASE_ANON key is missing. Check JavaScript.js'); return;
   }
 
-  // ── Step 2: Wait for Supabase SDK ───────────────────────────
+  // ── Step 2: Supabase SDK check ──────────────────────────────
+  // The SDK <script> tag is synchronous — it loads before JavaScript.js runs.
+  // If it's missing it means the CDN failed. Show error immediately.
   splashMsg('Loading…');
-  for (let i = 0; i < 40; i++) {
-    if (window.supabase?.createClient) break;
-    await new Promise(r => setTimeout(r, 125));
-  }
   if (!window.supabase?.createClient) {
     splashFail('⚠️ Could not load Supabase SDK. Check your connection and refresh.');
     return;
@@ -438,13 +438,15 @@ function handleStartActions() {
 }
 let _splashHidden = false;
 function hideSplash() {
-  if (_splashHidden) return;   // idempotent — safe to call multiple times
+  if (_splashHidden) return;
   _splashHidden = true;
+  // Clear the emergency deadline set in <head> — we made it on time
+  clearTimeout(window._BOOT_DEADLINE);
   const el = $('view-loading');
   if (el) {
     el.style.opacity = '0';
-    el.style.transition = 'opacity 0.3s ease';
-    setTimeout(() => hide(el), 320);
+    el.style.transition = 'opacity 0.35s ease';
+    setTimeout(() => { el.style.display = 'none'; hide(el); }, 380);
   }
 }
 
@@ -658,6 +660,8 @@ async function onSignedIn(session) {
   if (_chats.length === 0) showWelcome();
   else await loadChat(_chats[0].id);
 
+  // Attach ripples to any new buttons in chat view
+  setTimeout(attachAllRipples, 100);
   // Fire ready event — PWA shortcuts and share target use this
   window.dispatchEvent(new CustomEvent('cyanix:ready'));
 }
@@ -719,6 +723,61 @@ function onSignedOut() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   NATIVE APP FEEL — haptics, transitions, safe areas
+══════════════════════════════════════════════════════════ */
+
+// Haptic feedback (vibration API)
+function haptic(pattern = 10) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// App-style view transitions
+function transitionTo(hideId, showId, direction = 'forward') {
+  const hideEl = $(hideId);
+  const showEl = $(showId);
+  if (!showEl) return;
+
+  if (hideEl) {
+    hideEl.style.transform = direction === 'forward' ? 'translateX(-100%)' : 'translateX(100%)';
+    hideEl.style.opacity   = '0';
+    hideEl.style.transition = 'transform 0.28s var(--ease), opacity 0.28s var(--ease)';
+    setTimeout(() => hide(hideEl), 290);
+  }
+
+  showEl.style.transform  = direction === 'forward' ? 'translateX(100%)' : 'translateX(-100%)';
+  showEl.style.opacity    = '0';
+  show(showEl);
+  requestAnimationFrame(() => {
+    showEl.style.transition = 'transform 0.28s var(--ease), opacity 0.28s var(--ease)';
+    showEl.style.transform  = 'translateX(0)';
+    showEl.style.opacity    = '1';
+  });
+  setTimeout(() => {
+    if (showEl) { showEl.style.transform = ''; showEl.style.opacity = ''; showEl.style.transition = ''; }
+  }, 320);
+}
+
+// Bounce-ripple on button tap (native feel)
+function attachRipple(el) {
+  if (!el || el._hasRipple) return;
+  el._hasRipple = true;
+  el.addEventListener('pointerdown', function(e) {
+    const r = document.createElement('span');
+    r.className = 'cx-ripple';
+    const rect = el.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 2;
+    r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+    el.appendChild(r);
+    setTimeout(() => r.remove(), 550);
+  });
+}
+
+// Attach ripples to all interactive buttons
+function attachAllRipples() {
+  document.querySelectorAll('.btn-primary,.send-btn,.compose-icon-btn,.msg-action-btn,.auth-oauth-btn').forEach(attachRipple);
+}
+
+/* ══════════════════════════════════════════════════════════
    CHAT UI BINDING
 ══════════════════════════════════════════════════════════ */
 function bindChatUI() {
@@ -731,8 +790,8 @@ function bindChatUI() {
   on('new-chat-btn', 'click', newChat);
   on('new-chat-top', 'click', newChat);
 
-  on('send-btn', 'click', handleSend);
-  on('mic-btn',  'click', toggleVoiceInput);
+  on('send-btn', 'click', () => { haptic(8); handleSend(); });
+  on('mic-btn',  'click', () => { haptic([8,50,8]); toggleVoiceInput(); });
   on('composer-input', 'keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   });

@@ -35,6 +35,9 @@
   <meta name="msapplication-TileColor"  content="#2563eb" />
   <meta name="msapplication-TileImage"  content="./icons/manifest/icon-144x144.png" />
   <meta name="msapplication-tap-highlight" content="no" />
+  <meta name="format-detection"           content="telephone=no,date=no,address=no,email=no,url=no" />
+  <meta name="HandheldFriendly"           content="True" />
+  <meta name="MobileOptimized"            content="320" />
 
   <!-- ── Open Graph / Social ───────────────────────────────── -->
   <meta property="og:type"        content="website" />
@@ -58,9 +61,48 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
+
+  <!-- ╔══════════════════════════════════════════════════════╗
+       ║  EMERGENCY BOOT GUARD — inline, no dependencies     ║
+       ║  If JS crashes for ANY reason (stale SW cache,      ║
+       ║  CDN failure, parse error), this fires after 3s     ║
+       ║  and forces the auth screen. Screen CANNOT hang.    ║
+       ╚══════════════════════════════════════════════════════╝ -->
+  <script>
+    (function() {
+      'use strict';
+      // Store timer globally so JS can clear it on success
+      window._BOOT_DEADLINE = setTimeout(function() {
+        try {
+          var splash = document.getElementById('view-loading');
+          var auth   = document.getElementById('view-auth');
+          if (splash) splash.style.display = 'none';
+          if (auth)   auth.classList.remove('hidden');
+          console.error('[CyanixAI] EMERGENCY BOOT TIMEOUT fired — JS may have crashed');
+        } catch(e) { /* last resort */ }
+      }, 4000); // 4 seconds hard maximum
+    })();
+  </script>
 </head>
 <body>
+
+<!-- ── PWA Install Banner ──────────────────────────────────── -->
+<div id="install-banner" class="install-banner hidden">
+  <img src="cyanix_emblem.png" class="install-banner-icon" alt="" />
+  <div class="install-banner-text">
+    <strong>Add Cyanix AI to Home Screen</strong>
+    <span>Works offline · No app store needed</span>
+  </div>
+  <button class="install-banner-btn" id="install-yes-btn">Install</button>
+  <button class="install-banner-dismiss" id="install-no-btn">✕</button>
+</div>
+
+<!-- ── Update available toast ─────────────────────────────── -->
+<div id="update-bar" class="update-bar hidden">
+  <span>Update available</span>
+  <button id="update-reload-btn">Reload</button>
+</div>
 
 <!-- LOADING SPLASH — visible by default, JS hides it -->
 <div id="view-loading" class="view loading-view">
@@ -408,66 +450,118 @@
 <div class="toast hidden" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="JavaScript.js?v=10"></script>
+<script src="JavaScript.js?v=11"></script>
 <script>
-/* ── Service Worker registration + auto-reload on update ── */
+/* ══════════════════════════════════════════════════════════
+   SERVICE WORKER + PWA — Native App Bootstrap
+══════════════════════════════════════════════════════════ */
+
+// ── Share target / shortcut params (read before anything else) ─
+(function() {
+  const p = new URLSearchParams(location.search);
+  const action = p.get('action');
+  const text   = p.get('text') || p.get('url') || p.get('title');
+  if (action) window._startAction = action;
+  if (text)   window._sharedText  = text;
+})();
+
+// ── Service Worker ─────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
+  // Register SW
   navigator.serviceWorker.register('./sw.js', { scope: './' })
-    .then(reg => {
-      console.log('[CyanixAI] SW registered scope:', reg.scope);
+    .then(function(reg) {
+      console.log('[SW] registered:', reg.scope);
+      reg.update(); // force version check on every load
 
-      // Force immediate check for SW update
-      reg.update();
-
-      // When a new SW installs, prompt it to activate immediately
-      reg.addEventListener('updatefound', () => {
-        const newSW = reg.installing;
+      reg.addEventListener('updatefound', function() {
+        var newSW = reg.installing;
         if (!newSW) return;
-        newSW.addEventListener('statechange', () => {
+        newSW.addEventListener('statechange', function() {
+          // New SW installed & waiting — send SKIP_WAITING
           if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-            console.log('[CyanixAI] New SW installed — activating');
             newSW.postMessage({ type: 'SKIP_WAITING' });
           }
         });
       });
     })
-    .catch(e => console.warn('[CyanixAI] SW registration failed:', e));
+    .catch(function(e) { console.warn('[SW] registration failed:', e); });
 
-  // When the SW controller changes (new SW took over) — reload for fresh code
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      console.log('[CyanixAI] New SW active — reloading for fresh code');
+  // When new SW takes control → reload for fresh code
+  var _reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (!_reloading) {
+      _reloading = true;
       window.location.reload();
     }
   });
 
-  // Listen for SW_UPDATED message (sent by activate handler in sw.js)
-  navigator.serviceWorker.addEventListener('message', event => {
-    if (event.data?.type === 'SW_UPDATED') {
-      console.log('[CyanixAI] SW updated to', event.data.version);
+  // SW messages
+  navigator.serviceWorker.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'SW_UPDATED') {
+      // Show a gentle "update available" bar instead of silent reload
+      var bar = document.getElementById('update-bar');
+      if (bar) bar.classList.remove('hidden');
     }
   });
 }
 
-// ── Share Target handler ─────────────────────────────────────
-// Handles text/URL shared to the app via the Web Share Target API
-window.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const action = params.get('action');
-  const sharedText = params.get('text') || params.get('url') || params.get('title');
-
-  if (action === 'new-chat') {
-    // App shortcut: start a new chat
-    window._startAction = 'new-chat';
-  } else if (action === 'settings') {
-    window._startAction = 'settings';
-  } else if (sharedText) {
-    // Web Share Target: inject shared content into composer
-    window._sharedText = sharedText;
-  }
+// ── Update bar reload button ───────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('update-reload-btn');
+  if (btn) btn.addEventListener('click', function() { location.reload(); });
 });
+
+// ── PWA Install Prompt (Add to Home Screen) ────────────────────
+var _installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _installPrompt = e;
+
+  // Only show if not already installed
+  var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                     window.navigator.standalone;
+  if (isStandalone) return;
+
+  // Show install banner after 3s if user hasn't dismissed it
+  var dismissed = sessionStorage.getItem('cx-install-dismissed');
+  if (dismissed) return;
+
+  setTimeout(function() {
+    var banner = document.getElementById('install-banner');
+    if (banner) banner.classList.remove('hidden');
+  }, 3000);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  var yesBtn = document.getElementById('install-yes-btn');
+  var noBtn  = document.getElementById('install-no-btn');
+
+  if (yesBtn) yesBtn.addEventListener('click', function() {
+    var banner = document.getElementById('install-banner');
+    if (banner) banner.classList.add('hidden');
+    if (_installPrompt) {
+      _installPrompt.prompt();
+      _installPrompt.userChoice.then(function(r) {
+        console.log('[PWA] install choice:', r.outcome);
+        _installPrompt = null;
+      });
+    }
+  });
+
+  if (noBtn) noBtn.addEventListener('click', function() {
+    var banner = document.getElementById('install-banner');
+    if (banner) banner.classList.add('hidden');
+    sessionStorage.setItem('cx-install-dismissed', '1');
+  });
+});
+
+// ── App display mode detection ─────────────────────────────────
+(function() {
+  var isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
+                    window.navigator.standalone;
+  if (isInstalled) document.documentElement.classList.add('pwa-mode');
+})();
 </script>
 </body>
 </html>

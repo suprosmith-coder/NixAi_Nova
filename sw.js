@@ -1,142 +1,164 @@
 /* ════════════════════════════════════════════════════════════════
-   CYANIX AI — Service Worker v10
-   GitHub Pages scope: /NixAi_Nova/
+   CYANIX AI — Service Worker v11
+   GitHub Pages: /NixAi_Nova/
 
-   KEY CHANGE v10:
-   • index.html → NETWORK-FIRST (never serve stale HTML from cache)
-     This ensures users always get fresh HTML → fresh JS version →
-     fresh code, even if the previous SW cached an old version.
-   • JS/CSS  → stale-while-revalidate (fast + always refreshes background)
-   • Supabase/Groq → network-only (auth data must be live)
-   • Images  → cache-first (icons/emblems don't change often)
-   • Auto-reload message sent when new SW takes over
+   CRITICAL CHANGES v11:
+   ✓ HTML + JS + CSS  → NETWORK-FIRST (never serve stale code)
+   ✓ Nuclear cache clear on activate (wipes ALL old cache names)
+   ✓ Images / icons   → Cache-first (stable assets)
+   ✓ Supabase / Groq  → Bypass entirely (never cache)
+   ✓ Offline fallback → Cached index.html when offline
 ════════════════════════════════════════════════════════════════ */
 
-const VER           = 'v10';
-const SHELL_CACHE   = `cyanix-shell-${VER}`;
-const RUNTIME_CACHE = `cyanix-runtime-${VER}`;
-const BASE          = '/NixAi_Nova';
+const VER   = 'cx-v11';
+const CACHE = 'cx-v11';                   // single cache name
+const BASE  = '/NixAi_Nova';
 
-// Pre-cache on install — only stable assets, NOT index.html
-const PRECACHE = [
+// Assets to pre-warm on install (stable images only — no JS/CSS/HTML)
+const PREWARM = [
   `${BASE}/cyanix_emblem.png`,
   `${BASE}/icons/manifest/icon-192x192.png`,
   `${BASE}/icons/manifest/icon-512x512.png`,
 ];
 
-// Always go straight to network — never cache
-const NETWORK_ONLY_HOSTS = ['supabase.co', 'supabase.in', 'api.groq.com'];
+// Never intercept these origins
+const BYPASS_HOSTS = [
+  'supabase.co', 'supabase.in',
+  'api.groq.com',
+  'playai.com',
+];
 
 // ── Install ────────────────────────────────────────────────────
 self.addEventListener('install', event => {
-  console.log('[SW] Installing', VER);
+  console.log('[SW] install', VER);
   event.waitUntil(
-    caches.open(SHELL_CACHE)
-      .then(c => c.addAll(PRECACHE))
-      .catch(e => console.warn('[SW] precache partial fail:', e))
+    caches.open(CACHE)
+      .then(c => c.addAll(PREWARM))
+      .catch(e => console.warn('[SW] prewarm failed (non-fatal):', e))
   );
-  self.skipWaiting(); // take control immediately
+  // Take control immediately — don't wait for old SW to die
+  self.skipWaiting();
 });
 
-// ── Activate: prune all old caches ───────────────────────────
+// ── Activate: NUCLEAR wipe of ALL old caches ──────────────────
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating', VER);
+  console.log('[SW] activate', VER);
   event.waitUntil(
+    // Delete EVERY cache that isn't the current one
     caches.keys()
-      .then(keys => Promise.all(
-        keys
-          .filter(k => k !== SHELL_CACHE && k !== RUNTIME_CACHE)
-          .map(k => { console.log('[SW] Deleting old cache:', k); return caches.delete(k); })
-      ))
+      .then(keys => {
+        console.log('[SW] existing caches:', keys);
+        return Promise.all(
+          keys
+            .filter(k => k !== CACHE)
+            .map(k => { console.log('[SW] WIPING:', k); return caches.delete(k); })
+        );
+      })
       .then(() => self.clients.claim())
       .then(() => {
-        // Tell all open tabs to reload so they get fresh code
-        self.clients.matchAll({ type: 'window' }).then(clients => {
-          clients.forEach(c => c.postMessage({ type: 'SW_UPDATED', version: VER }));
-        });
+        // Notify all open tabs that SW updated
+        return self.clients.matchAll({ type: 'window' })
+          .then(clients => clients.forEach(c =>
+            c.postMessage({ type: 'SW_UPDATED', version: VER })
+          ));
       })
   );
 });
 
-// ── Fetch routing ──────────────────────────────────────────────
+// ── Fetch router ───────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const req = event.request;
+  if (req.method !== 'GET') return;           // let POST through
+
   const url = new URL(req.url);
 
-  // Non-GET — pass through (POST to Supabase, etc.)
-  if (req.method !== 'GET') return;
+  // 1. Bypass: Supabase, Groq — always network, never cache
+  if (BYPASS_HOSTS.some(h => url.hostname.includes(h))) return;
 
-  // Network-only origins — Supabase, Groq
-  if (NETWORK_ONLY_HOSTS.some(h => url.hostname.includes(h))) return;
-
-  // Fonts — stale-while-revalidate
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(swr(req, RUNTIME_CACHE)); return;
-  }
-
-  // CDN (Supabase JS SDK) — stale-while-revalidate
-  if (url.hostname === 'cdn.jsdelivr.net') {
-    event.respondWith(swr(req, RUNTIME_CACHE)); return;
+  // 2. Google Fonts CDN — stale-while-revalidate (never blocks render)
+  if (url.hostname === 'fonts.googleapis.com' ||
+      url.hostname === 'fonts.gstatic.com' ||
+      url.hostname === 'cdn.jsdelivr.net') {
+    event.respondWith(swr(req)); return;
   }
 
   const p = url.pathname;
 
-  // HTML / navigation — ALWAYS network-first so users get fresh code
-  if (req.mode === 'navigate' || p.endsWith('.html') || p === `${BASE}/` || p === `${BASE}`) {
-    event.respondWith(
-      fetch(req)
-        .then(res => {
-          // Cache a fresh copy in background
-          if (res && res.status === 200) {
-            caches.open(SHELL_CACHE).then(c => c.put(req, res.clone()));
-          }
-          return res;
-        })
-        .catch(() =>
-          // Offline fallback — serve cached version if network unavailable
-          caches.match(`${BASE}/index.html`) ||
-          caches.match(`${BASE}/`) ||
-          new Response('<h1>Cyanix AI is offline</h1>', { headers: { 'Content-Type': 'text/html' } })
-        )
-    );
-    return;
+  // 3. HTML, JS, CSS → NETWORK-FIRST
+  //    Ensures users always get the latest code.
+  //    Falls back to cache ONLY if truly offline.
+  if (
+    req.mode === 'navigate' ||
+    p.endsWith('.html')     ||
+    p.endsWith('.js')       ||
+    p.endsWith('.css')      ||
+    p === `${BASE}/`        ||
+    p === `${BASE}`
+  ) {
+    event.respondWith(networkFirst(req)); return;
   }
 
-  // JS / CSS — stale-while-revalidate (fast first paint, fresh in background)
-  if (p.endsWith('.js') || p.endsWith('.css')) {
-    event.respondWith(swr(req, RUNTIME_CACHE)); return;
+  // 4. Images, icons, manifest → cache-first (stable, rarely change)
+  if (
+    p.endsWith('.png')  || p.endsWith('.jpg') || p.endsWith('.webp') ||
+    p.endsWith('.svg')  || p.endsWith('.ico') || p.endsWith('.json') ||
+    p.endsWith('.woff') || p.endsWith('.woff2')
+  ) {
+    event.respondWith(cacheFirst(req)); return;
   }
 
-  // Images, icons, manifest — cache-first (stable assets)
-  if (p.endsWith('.png') || p.endsWith('.jpg') || p.endsWith('.webp') ||
-      p.endsWith('.svg') || p.endsWith('.ico') || p.endsWith('.json')) {
-    event.respondWith(cacheFirst(req, SHELL_CACHE)); return;
-  }
-
-  // Everything else — network with cache fallback
-  event.respondWith(swr(req, RUNTIME_CACHE));
+  // 5. Everything else → network with cache fallback
+  event.respondWith(swr(req));
 });
 
-// ── Cache strategies ───────────────────────────────────────────
+// ── Strategies ─────────────────────────────────────────────────
 
-async function cacheFirst(req, cacheName) {
-  const cached = await caches.match(req);
-  if (cached) return cached;
+// Network-first: try network, fall back to cache on failure
+async function networkFirst(req) {
+  const cache = await caches.open(CACHE);
   try {
     const res = await fetch(req);
     if (res && res.status === 200) {
-      caches.open(cacheName).then(c => c.put(req, res.clone()));
+      cache.put(req, res.clone()); // update cache in background
     }
     return res;
   } catch {
-    return caches.match(`${BASE}/index.html`);
+    // Offline — serve from cache
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    // Last resort: serve the app shell
+    const shell = await cache.match(`${BASE}/index.html`) ||
+                  await cache.match(`${BASE}/`);
+    return shell || new Response(
+      '<html><body style="font-family:sans-serif;padding:40px;text-align:center">'
+      + '<h2>You\'re offline</h2>'
+      + '<p>Reconnect to use Cyanix AI.</p>'
+      + '<button onclick="location.reload()">Retry</button>'
+      + '</body></html>',
+      { headers: { 'Content-Type': 'text/html' } }
+    );
   }
 }
 
-async function swr(req, cacheName) {
-  const cache = await caches.open(cacheName);
+// Cache-first: return cached if exists, else fetch + cache
+async function cacheFirst(req) {
+  const cache  = await caches.open(CACHE);
   const cached = await cache.match(req);
-  const net = fetch(req).then(res => {
+  if (cached) return cached;
+  try {
+    const res = await fetch(req);
+    if (res && res.status === 200) cache.put(req, res.clone());
+    return res;
+  } catch {
+    return cached || new Response('', { status: 404 });
+  }
+}
+
+// Stale-while-revalidate: return cached, update in background
+async function swr(req) {
+  const cache  = await caches.open(CACHE);
+  const cached = await cache.match(req);
+  const net    = fetch(req).then(res => {
     if (res && res.status === 200) cache.put(req, res.clone());
     return res;
   }).catch(() => cached);
@@ -150,11 +172,11 @@ self.addEventListener('push', event => {
   try { p = event.data.json(); } catch { p.body = event.data.text(); }
   event.waitUntil(
     self.registration.showNotification(p.title || 'Cyanix AI', {
-      body:    p.body  || '',
+      body:    p.body || '',
       icon:    `${BASE}/icons/manifest/icon-192x192.png`,
       badge:   `${BASE}/icons/manifest/icon-96x96.png`,
       vibrate: [100, 50, 100],
-      data:    p.data  || {},
+      data:    p.data || {},
     })
   );
 });
@@ -162,27 +184,23 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const c of list) {
-        if (c.url.includes(BASE) && 'focus' in c) return c.focus();
-      }
-      return clients.openWindow(`${BASE}/`);
-    })
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(list => {
+        for (const c of list) {
+          if (c.url.includes(BASE) && 'focus' in c) return c.focus();
+        }
+        return clients.openWindow(`${BASE}/`);
+      })
   );
 });
 
-// ── Background sync (ready for future use) ────────────────────
-self.addEventListener('sync', event => {
-  if (event.tag === 'sync-messages') {
-    event.waitUntil(Promise.resolve()); // wire to IDB queue later
-  }
-});
-
-// ── Messages from page ─────────────────────────────────────────
+// ── Messages ───────────────────────────────────────────────────
 self.addEventListener('message', event => {
-  if (event.data?.type === 'SKIP_WAITING')  self.skipWaiting();
-  if (event.data?.type === 'GET_VERSION')   event.ports[0]?.postMessage({ version: VER });
-  if (event.data?.type === 'CLEAR_CACHE') {
-    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+  if (!event.data) return;
+  if (event.data.type === 'SKIP_WAITING')  self.skipWaiting();
+  if (event.data.type === 'GET_VERSION')   event.ports[0]?.postMessage({ version: VER });
+  if (event.data.type === 'CLEAR_CACHE') {
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => event.ports[0]?.postMessage({ ok: true }));
   }
 });
