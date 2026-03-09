@@ -4,7 +4,7 @@
 ============================================================== */
 'use strict';
 
-/*    Config                                                  */
+/* -- Config ------------------------------------------------ */
 const SUPABASE_URL  = 'https://tdbgpvscwaysndrloltl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
 const CHAT_URL      = SUPABASE_URL + '/functions/v1/cyanix-chat';
@@ -14,14 +14,17 @@ const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
 const WHISPER_URL   = SUPABASE_URL + '/functions/v1/whisper';
 const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
 
-/*    Models                                                  */
+/* -- Models ------------------------------------------------ */
 const MODELS = [
-  { id: 'openai/gpt-oss-20b',           name: 'GPT OSS 20B',       tag: 'FAST',  desc: '128k context * Fast everyday tasks'  },
-  { id: 'openai/gpt-oss-120b',          name: 'GPT OSS 120B',      tag: 'POWER', desc: '128k context * Deep reasoning'        },
-  { id: 'openai/gpt-oss-safeguard-20b', name: 'GPT OSS Safeguard', tag: 'SAFE',  desc: 'Moderation * Safety-filtered'         },
+  { id: 'openai/gpt-oss-20b',           name: 'GPT OSS 20B',       tag: 'FAST',   desc: '128k context * Fast everyday tasks'           },
+  { id: 'openai/gpt-oss-120b',          name: 'GPT OSS 120B',      tag: 'POWER',  desc: '128k context * Deep reasoning + code'         },
+  { id: 'openai/gpt-oss-safeguard-20b', name: 'GPT OSS Safeguard', tag: 'SAFE',   desc: 'Moderation * Safety-filtered responses'       },
+  { id: 'deepseek-r1-distill-llama-70b',name: 'DeepSeek R1',       tag: 'REASON', desc: 'Step-by-step reasoning * Hard problems'       },
+  { id: 'groq/compound',                name: 'Compound',           tag: 'SEARCH', desc: 'Built-in web search * Always up to date'      },
+  { id: 'groq/compound-mini',           name: 'Compound Mini',      tag: 'FAST+',  desc: 'Web search * 3x faster * Single query'        },
 ];
 
-/*    Welcome data                                            */
+/* -- Welcome data ------------------------------------------ */
 const WELCOME_GREETINGS = [
   { h: "Good morning",          s: "What shall we accomplish together?" },
   { h: "Hey, ready to create?", s: "Drop a question or idea to get started." },
@@ -34,19 +37,19 @@ const WELCOME_GREETINGS = [
 ];
 
 const WELCOME_CARDS = [
-  { icon: ' ', title: 'Write code',         sub: 'Explain, debug or generate code',        prompt: 'Write a Python function that' },
-  { icon: ' ', title: 'Search the web',      sub: 'Get real-time answers from the web',     prompt: 'Search for the latest news on' },
-  { icon: '  ', title: 'Write something',    sub: 'Blog posts, emails, captions',            prompt: 'Write a blog post about' },
-  { icon: ' ', title: 'Explain a concept',  sub: 'Break down any complex topic',            prompt: 'Explain how' },
-  { icon: ' ', title: 'Analyse data',        sub: 'Charts, summaries, insights',             prompt: 'Help me analyse this data:' },
-  { icon: ' ', title: 'Creative ideas',      sub: 'Brainstorm, scripts, stories',            prompt: 'Give me 5 creative ideas for' },
-  { icon: ' ', title: 'Research a topic',    sub: 'Summarise and cite sources',              prompt: 'Research and summarise' },
-  { icon: ' ', title: 'Productivity boost',  sub: 'Checklists, plans, time management',      prompt: 'Help me plan my week for' },
-  { icon: ' ', title: 'Summarise content',   sub: 'Paste an article or document',            prompt: 'Summarise this:' },
-  { icon: ' ', title: 'Problem solving',     sub: 'Walk through any challenge step by step', prompt: 'Help me solve this problem:' },
+  { icon: '', title: 'Write code',         sub: 'Explain, debug or generate code',        prompt: 'Write a Python function that' },
+  { icon: '', title: 'Search the web',      sub: 'Get real-time answers from the web',     prompt: 'Search for the latest news on' },
+  { icon: '', title: 'Write something',    sub: 'Blog posts, emails, captions',            prompt: 'Write a blog post about' },
+  { icon: '', title: 'Explain a concept',  sub: 'Break down any complex topic',            prompt: 'Explain how' },
+  { icon: '', title: 'Analyse data',        sub: 'Charts, summaries, insights',             prompt: 'Help me analyse this data:' },
+  { icon: '', title: 'Creative ideas',      sub: 'Brainstorm, scripts, stories',            prompt: 'Give me 5 creative ideas for' },
+  { icon: '', title: 'Research a topic',    sub: 'Summarise and cite sources',              prompt: 'Research and summarise' },
+  { icon: '', title: 'Productivity boost',  sub: 'Checklists, plans, time management',      prompt: 'Help me plan my week for' },
+  { icon: '', title: 'Summarise content',   sub: 'Paste an article or document',            prompt: 'Summarise this:' },
+  { icon: '', title: 'Problem solving',     sub: 'Walk through any challenge step by step', prompt: 'Help me solve this problem:' },
 ];
 
-/*    State                                                   */
+/* -- State ------------------------------------------------- */
 let _sb          = null;
 let _session     = null;
 let _chats       = [];
@@ -63,7 +66,13 @@ let _sttChunks   = [];
 let _sttActive   = false;
 // no splash state needed
 let _signedInUser = null;
-let _syncPending  = false;  // FIX: prevents race condition on rapid sends
+let _syncPending  = false; // race condition guard
+let _supporter = {
+  isActive:false, earlyAccess:false, premiumForever:false,
+  memoryPriority:false, dailyLimit:50, unlockedThemes:[],
+};
+let _usageToday = 0;
+// _syncPending declared above
 
 let _settings = {
   model:           MODELS[0].id,
@@ -84,7 +93,7 @@ const PERSONALITIES = {
   witty:        'You are clever and humorous. Use light wit and playful wordplay while still being helpful.',
 };
 
-/*    DOM helpers                                              */
+/* -- DOM helpers -------------------------------------------- */
 const $    = id => document.getElementById(id);
 const show = el => { if (typeof el === 'string') el = $(el); if (el) el.classList.remove('hidden'); };
 const hide = el => { if (typeof el === 'string') el = $(el); if (el) el.classList.add('hidden'); };
@@ -204,7 +213,7 @@ window.copyCode = function(btn) {
    BOOT -- no splash, instant render
 ========================================================== */
 document.addEventListener('DOMContentLoaded', async function() {
-  // Clear the blank-screen safety net -- page loaded successfully
+  // Clear safety net timer if set
   if (window._safetyTimer) clearTimeout(window._safetyTimer);
 
   loadSettings();
@@ -215,48 +224,38 @@ document.addEventListener('DOMContentLoaded', async function() {
   handleStartActions();
   setTimeout(attachAllRipples, 150);
 
-  // Auth view is already visible in HTML -- no splash to remove.
-  // If Supabase is misconfigured, auth view is already showing so user sees the form.
   if (!SUPABASE_URL.startsWith('https://') || SUPABASE_ANON.length < 40) {
     console.error('[CyanixAI] Supabase not configured.');
-    return; // auth view already visible
+    return;
   }
-
   if (!window.supabase || !window.supabase.createClient) {
-    console.error('[CyanixAI] Supabase SDK failed to load.');
-    return; // auth view already visible
+    console.error('[CyanixAI] Supabase SDK not loaded.');
+    return;
   }
 
   _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
     auth: {
-      persistSession:     true,
-      autoRefreshToken:   true,
-      detectSessionInUrl: true,
-      storageKey:         'cyanix-auth',
+      persistSession: true, autoRefreshToken: true,
+      detectSessionInUrl: true, storageKey: 'cyanix-auth',
     },
   });
 
   _sb.auth.onAuthStateChange(function(event, session) {
     _session = session;
-    // SIGNED_IN fires on: new login, OAuth redirect, AND token refresh.
-    // Guard: only run onSignedIn for a genuinely new user session,
-    // not for silent token refreshes while already in chat.
     if (event === 'SIGNED_IN') {
-      if (_signedInUser && session && _signedInUser === session.user.id) return; // already loaded
+      if (_signedInUser && session && _signedInUser === session.user.id) return;
       onSignedIn(session);
     }
     if (event === 'SIGNED_OUT') onSignedOut();
   });
 
-  // Check for existing session -- if found, jump straight to chat
   try {
-    const result = await _sb.auth.getSession();
-    if (result.error || !result.data || !result.data.session) return; // stay on auth
+    var result = await _sb.auth.getSession();
+    if (result.error || !result.data || !result.data.session) return;
     _session = result.data.session;
     await onSignedIn(_session);
   } catch (err) {
     console.error('[CyanixAI] boot:', err);
-    // auth view already visible, nothing to do
   }
 });
 
@@ -447,8 +446,7 @@ async function onSignedIn(session) {
 function onSignedOut() {
   _session = null; _signedInUser = null;
   _chats = []; _currentId = null; _history = [];
-  _supporter = { isActive:false, earlyAccess:false, premiumForever:false,
-                 memoryPriority:false, dailyLimit:50, unlockedThemes:[] };
+  _supporter = { isActive:false, earlyAccess:false, premiumForever:false, memoryPriority:false, dailyLimit:50, unlockedThemes:[] };
   _usageToday = 0;
   if ($('user-avatar')) $('user-avatar').textContent = '?';
   if ($('user-name'))   $('user-name').textContent   = 'Loading\u2026';
@@ -521,6 +519,15 @@ function bindChatUI() {
   on('um-settings', 'click', function() { closeUserMenu(); show('settings-modal'); });
   on('um-signout',  'click', function() { closeUserMenu(); signOut(); });
   on('model-btn',   'click', function() { const d=$('model-dropdown'); if(d) d.classList.toggle('hidden'); });
+  on('model-select', 'change', function() {
+    const isCompound = _settings.model && _settings.model.startsWith('groq/compound');
+    const ragRow = $('rag-toggle-row');
+    if (ragRow) ragRow.style.opacity = isCompound ? '0.4' : '1';
+    const ragDesc = $('rag-auto-desc');
+    if (ragDesc) ragDesc.textContent = isCompound
+      ? 'Built-in search active (Compound model)'
+      : 'Automatically search when questions need current info';
+  });
 
   on('streaming-toggle',   'change', function() { _settings.streaming = !!$('streaming-toggle').checked; saveSettings(); syncPreferences(); });
   on('theme-select',       'change', function() { _settings.theme = $('theme-select').value; applyTheme(_settings.theme); saveSettings(); syncPreferences(); });
@@ -534,7 +541,7 @@ function bindChatUI() {
     _settings.ragAuto = !!$('rag-auto-toggle').checked;
     _ragAuto = _settings.ragAuto;
     saveSettings(); syncPreferences();
-    toast(_ragAuto ? '  Auto web search enabled' : 'Auto web search off');
+    toast(_ragAuto ? ' Auto web search enabled' : 'Auto web search off');
   });
   on('display-name-input', 'input', function() {
     const el = $('display-name-input');
@@ -656,9 +663,8 @@ function loadSettings() {
 }
 
 function syncSettingsToUI() {
-  populateThemeSelect(); // refresh theme options (includes exclusive if supporter loaded)
   if ($('streaming-toggle'))   $('streaming-toggle').checked   = !!_settings.streaming;
-  // theme-select populated dynamically by populateThemeSelect()
+  if ($('theme-select'))       $('theme-select').value         = _settings.theme || 'light';
   if ($('consent-toggle'))     $('consent-toggle').checked     = !!_settings.trainingConsent;
   if ($('display-name-input')) $('display-name-input').value   = _settings.displayName || '';
   if ($('rag-auto-toggle'))    $('rag-auto-toggle').checked    = !!_settings.ragAuto;
@@ -669,21 +675,14 @@ function syncSettingsToUI() {
 
 function applyTheme(theme) { document.documentElement.dataset.theme = theme || 'light'; }
 
-/* ==========================================================
-   SUPPORTER PERKS
-   Only you can grant these via Supabase dashboard.
-   Users cannot write to user_supporter -- RLS blocks all client writes.
-========================================================== */
+
+/* == SUPPORTER PERKS == */
 async function loadSupporter() {
   if (!_session) return;
   try {
-    const res = await _sb.from('user_supporter')
-      .select('*')
-      .eq('user_id', _session.user.id)
-      .single();
-
+    var res = await _sb.from('user_supporter').select('*').eq('user_id', _session.user.id).single();
     if (res.data && res.data.is_active) {
-      const d = res.data;
+      var d = res.data;
       _supporter.isActive       = true;
       _supporter.earlyAccess    = !!d.early_access;
       _supporter.premiumForever = !!d.premium_forever;
@@ -691,27 +690,18 @@ async function loadSupporter() {
       _supporter.dailyLimit     = (d.daily_limit === null || d.daily_limit === undefined) ? null : d.daily_limit;
       _supporter.unlockedThemes = d.unlocked_themes || [];
     } else {
-      // No supporter row or inactive -- use defaults
-      _supporter = { isActive:false, earlyAccess:false, premiumForever:false,
-                     memoryPriority:false, dailyLimit:50, unlockedThemes:[] };
+      _supporter = { isActive:false, earlyAccess:false, premiumForever:false, memoryPriority:false, dailyLimit:50, unlockedThemes:[] };
     }
     await loadUsageToday();
     applySupporter();
-  } catch (e) {
-    // Table may not exist yet or no row -- silently use defaults
-    console.log('[CyanixAI] Supporter data not found, using defaults.');
-  }
+  } catch (e) { /* no row yet or table missing */ }
 }
 
 async function loadUsageToday() {
   if (!_session) return;
   try {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const res = await _sb.from('user_usage')
-      .select('prompt_count')
-      .eq('user_id', _session.user.id)
-      .eq('usage_date', today)
-      .single();
+    var today = new Date().toISOString().slice(0, 10);
+    var res = await _sb.from('user_usage').select('prompt_count').eq('user_id', _session.user.id).eq('usage_date', today).single();
     _usageToday = (res.data && res.data.prompt_count) ? res.data.prompt_count : 0;
   } catch (e) { _usageToday = 0; }
 }
@@ -720,85 +710,53 @@ async function incrementUsage() {
   if (!_session) return;
   _usageToday++;
   try {
-    const today = new Date().toISOString().slice(0, 10);
-    await _sb.from('user_usage').upsert({
-      user_id:      _session.user.id,
-      usage_date:   today,
-      prompt_count: _usageToday,
-    }, { onConflict: 'user_id,usage_date' });
+    var today = new Date().toISOString().slice(0, 10);
+    await _sb.from('user_usage').upsert({ user_id: _session.user.id, usage_date: today, prompt_count: _usageToday }, { onConflict: 'user_id,usage_date' });
   } catch (e) {}
 }
 
 function checkDailyLimit() {
-  // null daily_limit means unlimited (supporter perk)
   if (_supporter.dailyLimit === null) return true;
   if (_usageToday >= _supporter.dailyLimit) {
-    const lim = _supporter.dailyLimit;
-    toast('Daily limit of ' + lim + ' prompts reached. ' +
-          (_supporter.isActive ? '' : 'Upgrade to supporter for unlimited access.'));
+    toast('Daily limit of ' + _supporter.dailyLimit + ' prompts reached.');
     return false;
   }
   return true;
 }
 
 function applySupporter() {
-  // Badge in settings
-  const badge = $('supporter-badge');
-  if (badge) badge.style.display = _supporter.isActive ? 'flex' : 'none';
-
-  // Supporter section in settings
-  const section = $('supporter-section');
+  var badge = $('supporter-badge');
+  if (badge) badge.style.display = _supporter.isActive ? 'inline-flex' : 'none';
+  var section = $('supporter-section');
   if (section) section.style.display = _supporter.isActive ? 'block' : 'none';
-
-  // Early access feature panel
-  const eaRow = $('early-access-row');
+  var eaRow = $('early-access-row');
   if (eaRow) eaRow.style.display = _supporter.earlyAccess ? '' : 'none';
-
-  // Usage counter
   updateUsageDisplay();
-
-  // Unlock exclusive themes in theme selector
   populateThemeSelect();
-
-  // Memory limit: supporters get 500 chats, regular gets 100
-  // (applied in loadChats via _chatHistoryLimit)
   window._chatHistoryLimit = _supporter.memoryPriority ? 500 : 100;
 }
 
 function updateUsageDisplay() {
-  const el = $('usage-display');
+  var el = $('usage-display');
   if (!el) return;
-  if (_supporter.dailyLimit === null) {
-    el.textContent = _usageToday + ' prompts today (unlimited)';
-  } else {
-    el.textContent = _usageToday + ' / ' + _supporter.dailyLimit + ' prompts today';
-  }
+  el.textContent = _supporter.dailyLimit === null
+    ? _usageToday + ' prompts today (unlimited)'
+    : _usageToday + ' / ' + _supporter.dailyLimit + ' prompts today';
 }
 
 function populateThemeSelect() {
-  const sel = $('theme-select');
+  var sel = $('theme-select');
   if (!sel) return;
-
-  // Base themes always available
-  const baseThemes = [
-    { value: 'light',    label: 'Light' },
-    { value: 'dark',     label: 'Dark' },
+  var base = [{value:'light',label:'Light'},{value:'dark',label:'Dark'}];
+  var exclusive = [
+    {value:'founder',  label:'Founder',  key:'founder'},
+    {value:'neon',     label:'Dark Neon', key:'neon'},
+    {value:'midnight', label:'Midnight',  key:'midnight'},
   ];
-
-  // Exclusive themes -- only shown if unlocked
-  const exclusiveThemes = [
-    { value: 'founder',   label: '  Founder',        requires: 'founder' },
-    { value: 'neon',      label: '  Dark Neon',      requires: 'neon' },
-    { value: 'midnight',  label: '  Midnight',       requires: 'midnight' },
-  ];
-
-  const available = baseThemes.concat(
-    exclusiveThemes.filter(function(t) {
-      return _supporter.unlockedThemes.indexOf(t.requires) !== -1;
-    })
-  );
-
-  const current = sel.value || _settings.theme || 'light';
+  var available = base.concat(exclusive.filter(function(t) {
+    return _supporter.unlockedThemes.indexOf(t.key) !== -1;
+  }));
+  var current = _settings.theme || 'light';
   sel.innerHTML = available.map(function(t) {
     return '<option value="' + t.value + '"' + (t.value === current ? ' selected' : '') + '>' + t.label + '</option>';
   }).join('');
@@ -869,9 +827,10 @@ async function syncChatToDB(localId, title) {
   if (!_sb || !_session) { console.error('[CyanixAI] syncChatToDB: no session'); return null; }
   try {
     const result = await _sb.from('chats').insert({
-      user_id: _session.user.id,
-      title:   title,
-      model:   _settings.model
+      user_id:    _session.user.id,
+      title:      title,
+      model:      _settings.model,
+      updated_at: new Date().toISOString(),
     }).select('id').single();
     if (result.error) {
       console.error('[CyanixAI] syncChatToDB error:', result.error.message, result.error.details, result.error.hint);
@@ -900,26 +859,38 @@ async function syncMessagesToDB(chatId, userText, aiText) {
       return null;
     }
     console.log('[CyanixAI] messages saved for chat:', chatId);
+    // Bump chat updated_at so it rises to top of sidebar
+    // (fallback in case trg_messages_bump_chat trigger was not deployed)
+    await _sb.from('chats')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', chatId)
+      .eq('user_id', _session.user.id);
     return result.data && result.data[1] ? result.data[1].id : null;
   } catch (e) { console.error('[CyanixAI] syncMessagesToDB exception:', e); return null; }
 }
 
 async function bgSyncMessages(isNewChat, localChatId, userText, aiText, msgEl) {
-  // FIX: use localChatId param (captured at send time) -- not _currentId which
-  // may have been updated by a parallel sync completing first.
   let chatId = localChatId;
   try {
     if (isNewChat) {
-      // Prevent concurrent new-chat syncs from creating duplicate rows
       if (_syncPending) {
-        // Wait for the in-flight sync to finish and reuse its chat ID
-        await new Promise(function(res) { setTimeout(res, 600); });
-        chatId = _currentId; // pick up the real ID after the wait
+        // Another sync is in flight -- poll until it finishes (max 3s)
+        let waited = 0;
+        while (_syncPending && waited < 3000) {
+          await new Promise(function(res) { setTimeout(res, 100); });
+          waited += 100;
+        }
+        // Use whatever real ID the first sync landed on
+        chatId = _currentId;
       } else {
         _syncPending = true;
-        const realId = await syncChatToDB(chatId, userText.slice(0, 60).trim());
-        _syncPending = false;
-        if (realId) chatId = realId;
+        try {
+          const realId = await syncChatToDB(chatId, userText.slice(0, 60).trim());
+          if (realId) chatId = realId;
+        } finally {
+          // ALWAYS reset -- even if syncChatToDB throws
+          _syncPending = false;
+        }
       }
     }
     const aiMsgId = await syncMessagesToDB(chatId, userText, aiText);
@@ -928,6 +899,7 @@ async function bgSyncMessages(isNewChat, localChatId, userText, aiText, msgEl) {
     await loadChats();
   } catch (e) {
     _syncPending = false;
+    console.error('[CyanixAI] bgSyncMessages failed:', e);
   }
 }
 
@@ -997,7 +969,7 @@ function toggleRAG() {
   const btn = $('rag-toggle-btn'); const pill = $('rag-pill');
   if (btn)  btn.classList.toggle('active', _ragEnabled);
   if (pill) pill.classList.toggle('hidden', !_ragEnabled);
-  toast(_ragEnabled ? '  Web search ON' : 'Web search off');
+  toast(_ragEnabled ? ' Web search ON' : 'Web search off');
 }
 
 function needsWebSearch(text) {
@@ -1061,7 +1033,6 @@ function handleSend() {
 async function sendMessage(text) {
   if (!_session) { toast('Please sign in to chat.'); return; }
   if (_responding) return;
-  // Daily limit check -- supporters may have unlimited or higher limit
   if (!checkDailyLimit()) return;
   _responding = true;
   setSendBtn('stop');
@@ -1082,11 +1053,17 @@ async function sendMessage(text) {
   scrollToBottom();
 
   let ragData = null;
-  if (_ragEnabled || (_ragAuto && needsWebSearch(text))) {
+  const isCompound = _settings.model.startsWith('groq/compound');
+  if (!isCompound && (_ragEnabled || (_ragAuto && needsWebSearch(text)))) {
+    // Skip manual RAG when Compound is selected -- it has built-in web search
     const tl = $('thinking-text');
-    if (tl) tl.textContent = 'Searching the web\u2026';
+    if (tl) tl.textContent = 'Searching the web...';
     ragData = await fetchRAGContext(text);
     if (tl) tl.textContent = 'Cyanix is thinking';
+  }
+  if (isCompound) {
+    const tl = $('thinking-text');
+    if (tl) tl.textContent = 'Cyanix is searching the web...';
   }
 
   const messages = [{ role: 'system', content: buildSystemPrompt() + buildRAGContext(ragData) }]
@@ -1159,7 +1136,6 @@ async function sendMessage(text) {
       }
       if (aiText.trim()) {
         _history.push({ role: 'assistant', content: aiText });
-        incrementUsage(); updateUsageDisplay();
         bgSyncMessages(isNewChat, _currentId, text, aiText, msgEl);
       }
 
@@ -1169,7 +1145,6 @@ async function sendMessage(text) {
       const rendered = renderMessage('ai', aiText, true);
       if (ragData && rendered.bubbleEl) appendRAGSources(rendered.bubbleEl, ragData);
       _history.push({ role: 'assistant', content: aiText });
-      incrementUsage(); updateUsageDisplay();
       bgSyncMessages(isNewChat, _currentId, text, aiText, rendered.msgEl);
     }
 
@@ -1178,7 +1153,7 @@ async function sendMessage(text) {
   } catch (err) {
     hide('typing-row');
     if (err && err.name !== 'AbortError') {
-      renderMessage('ai', '  Error: ' + esc(err.message), true);
+      renderMessage('ai', ' Error: ' + esc(err.message), true);
     }
   } finally {
     _responding = false;
@@ -1234,7 +1209,7 @@ function renderMessage(role, content, animate, msgId) {
         '<div class="msg-ts">' + timeStr() + '</div>' +
         '<div class="msg-actions">' +
           '<button type="button" class="msg-action-btn" onclick="copyMsg(this)">Copy</button>' +
-          '<button type="button" class="msg-action-btn" onclick="editMessage(this)">   Edit</button>' +
+          '<button type="button" class="msg-action-btn" onclick="editMessage(this)"> Edit</button>' +
         '</div>' +
       '</div>';
   } else {
@@ -1261,7 +1236,7 @@ function addFeedbackButtons(msgEl, messageId) {
   const actions = msgEl.querySelector('.msg-actions'); if (!actions) return;
   const up = document.createElement('button'); const down = document.createElement('button');
   up.className = 'msg-action-btn'; down.className = 'msg-action-btn';
-  up.textContent = ' '; down.textContent = ' ';
+  up.textContent = ''; down.textContent = '';
   up.addEventListener('click',   function() { submitFeedback(messageId,  1, up,   down); });
   down.addEventListener('click', function() { submitFeedback(messageId, -1, down, up);   });
   actions.appendChild(up); actions.appendChild(down);
