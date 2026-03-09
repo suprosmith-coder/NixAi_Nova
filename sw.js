@@ -13,8 +13,8 @@
    v Offline fallback -> Cached index.html
 ================================================================ */
 
-var VER   = 'cx-v15';
-var CACHE = 'cx-v15';
+var VER   = 'cx-v16';
+var CACHE = 'cx-v16';
 var BASE  = '/NixAi_Nova';
 
 var PREWARM = [
