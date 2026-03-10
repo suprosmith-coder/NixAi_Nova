@@ -68,6 +68,7 @@ let _signedInUser = null;
 let _syncPending  = false; // race condition guard
 let _memories  = [];        // cross-chat memories loaded on sign-in
 let _memoriesLoaded = false;
+let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
   memoryPriority:false, dailyLimit:50, unlockedThemes:[],
@@ -532,7 +533,18 @@ function bindChatUI() {
   });
 
   on('rag-toggle-btn', 'click', toggleRAG);
-  on('attach-btn',     'click', function() { toast('File attachments coming soon.'); });
+  on('attach-btn', 'click', function() {
+    var inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,text/markdown,.md,.js,.ts,.py,.html,.css,.json,.txt,.csv,.xml,.yaml,.yml,.sh,.rb,.go,.rs,.cpp,.c,.java,.kt,.swift';
+    inp.onchange = function() {
+      var file = inp.files && inp.files[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) { toast('File too large. Max 10MB.'); return; }
+      handleAttachment(file);
+    };
+    inp.click();
+  });
 
   on('settings-btn',   'click', function() { show('settings-modal'); closeUserMenu(); });
   on('settings-close', 'click', function() { hide('settings-modal'); });
@@ -935,6 +947,80 @@ async function syncMessagesToDB(chatId, userText, aiText) {
   }
 }
 
+function handleAttachment(file) {
+  var reader = new FileReader();
+  var isImage = file.type.startsWith('image/');
+  var isPDF   = file.type === 'application/pdf';
+  var isText  = !isImage && !isPDF; // treat everything else as text
+
+  reader.onload = function(e) {
+    var result = e.target.result;
+    if (isImage || isPDF) {
+      // result is data URL like "data:image/png;base64,xxxx"
+      var parts = result.split(',');
+      var b64   = parts[1];
+      _attachment = { type: isImage ? 'image' : 'pdf', name: file.name, data: b64, mediaType: file.type };
+    } else {
+      // Text/code -- store as plain text
+      _attachment = { type: 'text', name: file.name, data: result, mediaType: file.type };
+    }
+    showAttachPreview();
+    toast('Attached: ' + file.name);
+  };
+
+  if (isImage || isPDF) {
+    reader.readAsDataURL(file);
+  } else {
+    reader.readAsText(file);
+  }
+}
+
+function showAttachPreview() {
+  var existing = document.getElementById('attach-preview');
+  if (existing) existing.remove();
+  if (!_attachment) return;
+
+  var box = document.getElementById('composer-box');
+  if (!box) return;
+
+  var preview = document.createElement('div');
+  preview.id = 'attach-preview';
+  preview.className = 'attach-preview';
+
+  var icon = _attachment.type === 'image'
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+    : _attachment.type === 'pdf'
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+  preview.innerHTML = '<div class="attach-chip">' +
+    '<span class="attach-chip-icon">' + icon + '</span>' +
+    '<span class="attach-chip-name">' + esc(_attachment.name) + '</span>' +
+    '<button class="attach-chip-remove" title="Remove attachment">' +
+      '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '</button></div>';
+
+  preview.querySelector('.attach-chip-remove').addEventListener('click', function() {
+    clearAttachment();
+  });
+
+  // Insert before textarea
+  var textarea = document.getElementById('composer-input');
+  if (textarea) box.insertBefore(preview, textarea);
+
+  // Highlight attach button
+  var btn = document.getElementById('attach-btn');
+  if (btn) btn.classList.add('active');
+}
+
+function clearAttachment() {
+  _attachment = null;
+  var existing = document.getElementById('attach-preview');
+  if (existing) existing.remove();
+  var btn = document.getElementById('attach-btn');
+  if (btn) btn.classList.remove('active');
+}
+
 async function generateChatTitle(userText, aiText) {
   try {
     var res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1276,8 +1362,10 @@ async function sendMessage(text) {
   }
 
   hide('welcome-state');
-  _history.push({ role: 'user', content: text });
-  renderMessage('user', text, true);
+  _history.push({ role: 'user', content: typeof userContent === 'string' ? userContent : text });
+  renderMessage('user', text, true, null, _attachment && _attachment.type === 'image' ? _attachment.data : null);
+  var pendingAttachment = _attachment;
+  clearAttachment();
   show('typing-row');
   scrollToBottom();
 
@@ -1295,8 +1383,34 @@ async function sendMessage(text) {
     if (tl) tl.textContent = 'Cyanix is searching the web...';
   }
 
+  // Build user content -- plain text or multipart if attachment present
+  var userContent;
+  if (_attachment) {
+    if (_attachment.type === 'image') {
+      userContent = [
+        { type: 'image_url', image_url: { url: 'data:' + _attachment.mediaType + ';base64,' + _attachment.data } },
+        { type: 'text', text: text }
+      ];
+    } else if (_attachment.type === 'pdf') {
+      // Send PDF as text note -- Groq doesn't support PDF natively, extract as base64 note
+      userContent = text + '\n\n[Attached PDF: ' + _attachment.name + ']\nNote: PDF content attached as base64. Please analyze it.' + _attachment.data.slice(0, 4000);
+    } else {
+      // Text/code file -- inject as code block
+      var ext = _attachment.name.split('.').pop() || 'text';
+      userContent = text + '\n\n**Attached file: ' + _attachment.name + '**\n```' + ext + '\n' + _attachment.data.slice(0, 12000) + '\n```';
+    }
+  } else {
+    userContent = text;
+  }
+
   const messages = [{ role: 'system', content: buildSystemPrompt() + buildRAGContext(ragData) }]
-    .concat(_history.slice(-20).map(function(m) { return { role: m.role, content: m.content }; }));
+    .concat(_history.slice(-(window._chatHistoryLimit || 100)).map(function(m, idx, arr) {
+      // For last user message: use multipart content if attachment was present
+      if (idx === arr.length - 1 && m.role === 'user' && typeof userContent !== 'string') {
+        return { role: 'user', content: userContent };
+      }
+      return { role: m.role, content: m.content };
+    }));
 
   _abortCtrl = new AbortController();
   let aiText = '';
@@ -1421,7 +1535,7 @@ function setSendBtn(state) {
 /* ==========================================================
    RENDER MESSAGES
 ========================================================== */
-function renderMessage(role, content, animate, msgId) {
+function renderMessage(role, content, animate, msgId, imageData) {
   hide('welcome-state');
   const container = $('messages');
   if (!container) return { msgEl: null, bubbleEl: null };
@@ -1432,9 +1546,12 @@ function renderMessage(role, content, animate, msgId) {
   if (!animate) row.style.animation = 'none';
 
   if (role === 'user') {
+    var imgHTML = imageData
+      ? '<img src="data:image/jpeg;base64,' + imageData + '" class="attach-img-preview" alt="attached image">'
+      : '';
     row.innerHTML =
       '<div class="msg-content">' +
-        '<div class="msg-bubble" data-raw="' + esc(content) + '">' + esc(content) + '</div>' +
+        '<div class="msg-bubble" data-raw="' + esc(content) + '">' + imgHTML + (content ? esc(content) : '') + '</div>' +
         '<div class="msg-ts">' + timeStr() + '</div>' +
         '<div class="msg-actions">' +
           '<button type="button" class="msg-action-btn" onclick="copyMsg(this)">Copy</button>' +
