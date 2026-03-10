@@ -439,7 +439,7 @@
 <div class="toast hidden" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3&t=20260309"></script>
 <script>
 (function(){
   var p=new URLSearchParams(location.search);
@@ -448,10 +448,16 @@
   if(t) window._sharedText=t;
 })();
 
+// Clean up any old service workers and caches
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js')
-    .then(function(r){ r.update(); })
-    .catch(function(e){ console.warn('[SW]',e); });
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister(); });
+  });
+}
+if(window.caches){
+  caches.keys().then(function(keys){
+    keys.forEach(function(k){ caches.delete(k); });
+  });
 }
 
 var _ip=null;
