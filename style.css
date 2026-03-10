@@ -6,7 +6,7 @@
           #8 duplicate toast rule   #9+ remaining button types
 ============================================================== */
 
-/* ── Reset ────────────────────────────────────────────────── */
+/* -- Reset -------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 button {
   font: inherit; cursor: pointer; border: none; background: none;
@@ -21,7 +21,7 @@ input, textarea, select {
 a { color: var(--blue); text-decoration: none; } /* FIX #2 */
 a:hover { text-decoration: underline; }
 
-/* ── Design tokens ────────────────────────────────────────── */
+/* -- Design tokens ------------------------------------------ */
 :root {
   --blue-50:  #eff6ff; --blue-100: #dbeafe; --blue-200: #bfdbfe;
   --blue-400: #60a5fa; --blue-500: #3b82f6; --blue-600: #2563eb;
@@ -59,9 +59,9 @@ a:hover { text-decoration: underline; }
   --sh-lg:0 12px 36px rgba(0,0,0,.38);
 }
 
-/* ── Exclusive Supporter Themes ───────────────────────────── */
+/* -- Exclusive Supporter Themes ----------------------------- */
 
-/* ⭐ Founder Theme -- deep space with electric blue accents */
+/* * Founder Theme -- deep space with electric blue accents */
 [data-theme="founder"] {
   --bg:#050a14; --surface:#0a1628; --surface-2:#0d1e35; --surface-3:#112442;
   --border:#1a3a5c; --border-2:#1e4a73;
@@ -87,7 +87,7 @@ a:hover { text-decoration: underline; }
   color: #00c8ff;
 }
 
-/* 🌆 Dark Neon Theme -- cyberpunk purple/pink */
+/*  Dark Neon Theme -- cyberpunk purple/pink */
 [data-theme="neon"] {
   --bg:#0d0014; --surface:#140020; --surface-2:#18002a; --surface-3:#1f0035;
   --border:#3a0060; --border-2:#4d0080;
@@ -113,7 +113,7 @@ a:hover { text-decoration: underline; }
   color: #c840ff;
 }
 
-/* 🌙 Midnight Theme -- deep navy calm */
+/*  Midnight Theme -- deep navy calm */
 [data-theme="midnight"] {
   --bg:#080c18; --surface:#0e1422; --surface-2:#111828; --surface-3:#162030;
   --border:#1e2d45; --border-2:#263858;
@@ -130,7 +130,7 @@ a:hover { text-decoration: underline; }
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 
-/* ── Supporter badge + perk indicators ───────────────────── */
+/* -- Supporter badge + perk indicators --------------------- */
 .supporter-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 700; letter-spacing: .04em;
@@ -165,7 +165,7 @@ a:hover { text-decoration: underline; }
   background: rgba(37,99,235,.12); border-color: rgba(37,99,235,.3); color: #60a5fa;
 }
 
-/* ── Base ─────────────────────────────────────────────────── */
+/* -- Base --------------------------------------------------- */
 html {
   height:100%; overscroll-behavior:none;
   padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0)
@@ -557,6 +557,7 @@ button,label,kbd,.sidebar,.topbar,.sb-brand,.chat-title,.ci-label,.msg-name,.msg
 @keyframes orbitC{from{transform:rotate(240deg);}to{transform:rotate(600deg);}}
 .cx-orb{position:absolute;top:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--blue);box-shadow:0 0 6px rgba(37,99,235,.6);}
 .thinking-label{display:flex;align-items:center;gap:4px;font-size:.83rem;color:var(--text-4);font-weight:500;}
+#thinking-text{transition:opacity .18s var(--ease),transform .18s var(--ease-spring);}
 .thinking-dots{display:flex;gap:3px;margin-left:2px;}
 .thinking-dots span{width:4px;height:4px;border-radius:50%;background:var(--text-4);animation:thinkDot 1.2s ease-in-out infinite;}
 .thinking-dots span:nth-child(2){animation-delay:.2s;}.thinking-dots span:nth-child(3){animation-delay:.4s;}
@@ -789,3 +790,76 @@ kbd{display:inline-flex;align-items:center;padding:3px 8px;background:var(--surf
   .messages{padding:10px 8px 6px;}
   .composer-area{padding:4px 6px calc(10px + env(safe-area-inset-bottom,0px));}
 }
+
+
+/* === SETTINGS CARDS (native-app layout) ========================= */
+.settings-group-label{
+  font-size:.68rem;font-weight:700;letter-spacing:.1em;
+  color:var(--text-4);text-transform:uppercase;
+  padding:18px 4px 6px;
+}
+.settings-card{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  margin-bottom:4px;
+}
+.settings-card-row{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 16px;
+  transition:background .15s;
+}
+.settings-card-row.col{ flex-direction:column; align-items:stretch; gap:10px; }
+.settings-card-row--danger:active{ background:rgba(239,68,68,.06); }
+.settings-card-divider{ height:1px; background:var(--border); margin:0 16px; }
+.scr-icon{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--surface-2);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;color:var(--text-2);
+}
+.scr-icon--danger{ background:rgba(239,68,68,.10);color:#ef4444; }
+.scr-body{ flex:1;min-width:0; }
+.scr-label{ font-size:.9rem;font-weight:500;color:var(--text-1);line-height:1.3; }
+.scr-label--danger{ color:#ef4444; }
+.scr-desc{ font-size:.78rem;color:var(--text-4);margin-top:1px; }
+.scr-select{
+  font-size:.82rem;color:var(--text-2);background:transparent;
+  border:none;outline:none;cursor:pointer;
+  padding:2px 0;text-align:right;max-width:130px;
+  appearance:none;-webkit-appearance:none;
+}
+.scr-inline-input{
+  border:none;outline:none;background:transparent;
+  font-size:.88rem;color:var(--text-1);text-align:right;
+  width:120px;flex-shrink:0;
+  font-family:var(--font);
+}
+.scr-inline-input::placeholder{ color:var(--text-4); }
+.scr-link-btn{
+  font-size:.82rem;color:var(--blue);background:none;
+  border:none;cursor:pointer;font-weight:500;padding:0;flex-shrink:0;
+}
+.scr-row-top{ display:flex;align-items:center;gap:12px; }
+/* Font size stepper */
+.font-size-stepper{ display:flex;align-items:center;gap:6px;flex-shrink:0; }
+.fss-btn{
+  width:28px;height:28px;border-radius:50%;
+  border:1.5px solid var(--border);
+  background:var(--surface-2);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--text-2);
+  transition:background .15s,border-color .15s;
+}
+.fss-btn:hover{ background:var(--blue);border-color:var(--blue);color:#fff; }
+.fss-val{ font-size:.85rem;font-weight:600;color:var(--text-1);min-width:24px;text-align:center; }
+/* Back button */
+.modal-back-btn{
+  width:32px;height:32px;border-radius:50%;border:none;
+  background:var(--surface-2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-2);flex-shrink:0;
+  transition:background .15s;
+}
+.modal-back-btn:hover{ background:var(--border); }

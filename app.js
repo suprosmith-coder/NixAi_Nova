@@ -85,6 +85,8 @@ let _settings = {
   personality:     'friendly',
   ragAuto:         false,
   contextDepth:    'light',  // light=5 | standard=15 | deep=30
+  fontStyle:       'inter',  // inter | space-grotesk | syne | orbitron
+  fontSize:        15,       // 12-20px
 };
 
 const PERSONALITIES = {
@@ -667,6 +669,25 @@ function bindChatUI() {
   on('streaming-toggle',   'change', function() { _settings.streaming = !!$('streaming-toggle').checked; saveSettings(); syncPreferences(); });
   on('theme-select',       'change', function() { _settings.theme = $('theme-select').value; applyTheme(_settings.theme); saveSettings(); syncPreferences(); });
   on('model-select',       'change', function() { _settings.model = $('model-select').value; saveSettings(); syncPreferences(); updateModelLabel(); });
+  on('font-style-select', 'change', function() {
+    var sel = $('font-style-select');
+    if (!sel) return;
+    _settings.fontStyle = sel.value;
+    applyFontStyle(_settings.fontStyle);
+    saveSettings();
+  });
+  on('font-size-up', 'click', function() {
+    _settings.fontSize = Math.min(20, (_settings.fontSize || 15) + 1);
+    applyFontSize(_settings.fontSize);
+    updateFontSizeUI();
+    saveSettings();
+  });
+  on('font-size-down', 'click', function() {
+    _settings.fontSize = Math.max(12, (_settings.fontSize || 15) - 1);
+    applyFontSize(_settings.fontSize);
+    updateFontSizeUI();
+    saveSettings();
+  });
   on('context-depth-select','change', function() {
     var sel = $('context-depth-select');
     if (!sel) return;
@@ -819,9 +840,41 @@ function syncSettingsToUI() {
   updateTrainingDataRow();
   updatePersonalityChips();
   updateContextDepthUI();
+  // Apply font settings
+  var fontSel = $('font-style-select');
+  if (fontSel) fontSel.value = _settings.fontStyle || 'inter';
+  applyFontStyle(_settings.fontStyle || 'inter');
+  applyFontSize(_settings.fontSize || 15);
+  updateFontSizeUI();
 }
 
 function applyTheme(theme) { document.documentElement.dataset.theme = theme || 'light'; }
+
+var FONT_FAMILIES = {
+  'inter':        "'Inter', system-ui, sans-serif",
+  'space-grotesk':"'Space Grotesk', system-ui, sans-serif",
+  'syne':         "'Syne', system-ui, sans-serif",
+  'orbitron':     "'Orbitron', system-ui, sans-serif",
+};
+var FONT_NAMES = { 'inter':'Inter', 'space-grotesk':'Space Grotesk', 'syne':'Syne', 'orbitron':'Orbitron' };
+var FONT_SIZE_LABELS = { 12:'XS', 13:'Small', 14:'Small+', 15:'Medium', 16:'Medium+', 17:'Large', 18:'Large+', 19:'XL', 20:'XXL' };
+
+function applyFontStyle(style) {
+  var fam = FONT_FAMILIES[style] || FONT_FAMILIES.inter;
+  document.documentElement.style.setProperty('--font', fam);
+}
+
+function applyFontSize(size) {
+  document.body.style.fontSize = size + 'px';
+}
+
+function updateFontSizeUI() {
+  var size = _settings.fontSize || 15;
+  var val = document.getElementById('font-size-val');
+  var desc = document.getElementById('font-size-desc');
+  if (val) val.textContent = size;
+  if (desc) desc.textContent = FONT_SIZE_LABELS[size] || size + 'px';
+}
 
 function updateContextDepthUI() {
   var sel  = $('context-depth-select');

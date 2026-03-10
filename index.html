@@ -44,7 +44,7 @@
   <link rel="apple-touch-icon"            href="https://suprosmith-coder.github.io/NixAi_Nova/icons/ios/apple-touch-icon-180x180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;800;900&family=Orbitron:wght@400;600;700;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=14" />
 
     <!-- Error banner for debugging -->
@@ -332,128 +332,218 @@
   <div class="modal-sheet">
     <div class="modal-drag-handle"></div>
     <div class="modal-head">
-      <h3 class="modal-title">Settings</h3>
-      <button type="button" class="modal-close" id="settings-close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <button type="button" class="modal-back-btn" id="settings-close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
+      <h3 class="modal-title">Settings</h3>
+      <div style="width:32px"></div>
     </div>
     <div class="modal-body">
 
-      <div class="setting-section">Personalization</div>
-      <div class="setting-row col">
-        <div class="setting-info">
-          <div class="setting-label">Your name</div>
-          <div class="setting-desc">How Cyanix addresses you</div>
+      <!-- ── PERSONALIZATION ── -->
+      <div class="settings-group-label">PERSONALIZATION</div>
+      <div class="settings-card">
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="scr-body">
+            <div class="scr-label">Your Name</div>
+            <div class="scr-desc">How Cyanix addresses you</div>
+          </div>
+          <input type="text" id="display-name-input" class="scr-inline-input" placeholder="e.g. Alex…" maxlength="40" autocomplete="off" />
         </div>
-        <input type="text" id="display-name-input" class="setting-input" placeholder="e.g. Alex, Boss…" maxlength="40" autocomplete="off" />
-      </div>
-      <div class="setting-row col">
-        <div class="setting-info">
-          <div class="setting-label">Personality</div>
-          <div class="setting-desc">How Cyanix communicates</div>
-        </div>
-        <div class="personality-chips">
-          <button type="button" class="p-chip active" data-value="friendly">😊 Friendly</button>
-          <button type="button" class="p-chip" data-value="professional">💼 Pro</button>
-          <button type="button" class="p-chip" data-value="creative">🎨 Creative</button>
-          <button type="button" class="p-chip" data-value="concise">⚡ Concise</button>
-          <button type="button" class="p-chip" data-value="mentor">🎓 Mentor</button>
-          <button type="button" class="p-chip" data-value="witty">😄 Witty</button>
-        </div>
-      </div>
-
-      <div class="modal-sep"></div>
-      <div class="setting-section">Model &amp; Display</div>
-      <div class="setting-row">
-        <div class="setting-info"><div class="setting-label">AI Model</div></div>
-        <select class="setting-select" id="model-select"></select>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info"><div class="setting-label">Streaming</div><div class="setting-desc">Show text as it generates</div></div>
-        <label class="toggle"><input type="checkbox" id="streaming-toggle" checked /><span class="track"></span></label>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info"><div class="setting-label">Theme</div></div>
-        <select class="setting-select" id="theme-select"><option value="light">Light</option><option value="dark">Dark</option></select>
-      </div>
-      <div class="setting-row" id="context-depth-row">
-        <div class="setting-info">
-          <div class="setting-label">Memory Recall</div>
-          <div class="setting-desc" id="context-depth-desc">How much past context Cyanix recalls per message</div>
-        </div>
-        <select class="setting-select" id="context-depth-select">
-          <option value="light">Light &mdash; 5 memories</option>
-          <option value="standard">Standard &mdash; 15 memories</option>
-          <option value="deep">Deep &mdash; 30 memories</option>
-        </select>
-      </div>
-
-      <div class="modal-sep"></div>
-      <div class="setting-section">Web Search (RAG)</div>
-      <div class="setting-row" id="rag-toggle-row">
-        <div class="setting-info"><div class="setting-label">Auto web search</div><div class="setting-desc" id="rag-auto-desc">Automatically search when questions need current info</div></div>
-        <label class="toggle"><input type="checkbox" id="rag-auto-toggle" /><span class="track"></span></label>
-      </div>
-
-      <div class="modal-sep"></div>
-      <div class="setting-section">Privacy &amp; Data</div>
-      <div class="setting-row">
-        <div class="setting-info"><div class="setting-label">Help improve Cyanix AI</div><div class="setting-desc">Allow anonymized training. Withdraw anytime.</div></div>
-        <label class="toggle"><input type="checkbox" id="consent-toggle" /><span class="track"></span></label>
-      </div>
-      <div class="setting-row hidden" id="training-data-row">
-        <div class="setting-info"><div class="setting-label">Withdraw contributions</div></div>
-        <button type="button" class="setting-link-btn" id="delete-training-btn">Withdraw</button>
-      </div>
-
-
-      <div class="modal-sep"></div>
-
-      <!-- Memory row — visible to ALL users, locked for free -->
-      <div class="setting-section">Storage &amp; Memory</div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-label">Memory slots</div>
-          <div class="setting-desc">How many facts Cyanix remembers about you</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-          <span class="perk-value" id="memory-perk-value">50 slots</span>
-          <span class="perk-lock" id="memory-perk-lock" title="Upgrade to unlock more">&#128274;</span>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row col">
+          <div class="scr-row-top">
+            <div class="scr-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Personality</div>
+              <div class="scr-desc">How Cyanix communicates</div>
+            </div>
+          </div>
+          <div class="personality-chips">
+            <button type="button" class="p-chip active" data-value="friendly">😊 Friendly</button>
+            <button type="button" class="p-chip" data-value="professional">💼 Pro</button>
+            <button type="button" class="p-chip" data-value="creative">🎨 Creative</button>
+            <button type="button" class="p-chip" data-value="concise">⚡ Concise</button>
+            <button type="button" class="p-chip" data-value="mentor">🎓 Mentor</button>
+            <button type="button" class="p-chip" data-value="witty">😄 Witty</button>
+          </div>
         </div>
       </div>
 
-      <!-- Supporter-only perks section -->
+      <!-- ── APPEARANCE ── -->
+      <div class="settings-group-label">APPEARANCE</div>
+      <div class="settings-card">
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Theme</div></div>
+          <select class="scr-select" id="theme-select"><option value="light">Light</option><option value="dark">Dark</option></select>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Font Style</div></div>
+          <select class="scr-select" id="font-style-select">
+            <option value="inter">Inter</option>
+            <option value="space-grotesk">Space Grotesk</option>
+            <option value="syne">Syne</option>
+            <option value="orbitron">Orbitron</option>
+          </select>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><text x="7" y="16" font-size="10" fill="currentColor" stroke="none">A</text></svg>
+          </div>
+          <div class="scr-body">
+            <div class="scr-label">Font Size</div>
+            <div class="scr-desc" id="font-size-desc">Medium</div>
+          </div>
+          <div class="font-size-stepper">
+            <button type="button" class="fss-btn" id="font-size-down">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <span class="fss-val" id="font-size-val">15</span>
+            <button type="button" class="fss-btn" id="font-size-up">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── AI MODEL ── -->
+      <div class="settings-group-label">AI MODEL</div>
+      <div class="settings-card">
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Model</div></div>
+          <select class="scr-select" id="model-select"></select>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Streaming</div><div class="scr-desc">Show text as it generates</div></div>
+          <label class="toggle"><input type="checkbox" id="streaming-toggle" checked /><span class="track"></span></label>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row" id="rag-toggle-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Auto Web Search</div><div class="scr-desc" id="rag-auto-desc">Search when questions need current info</div></div>
+          <label class="toggle"><input type="checkbox" id="rag-auto-toggle" /><span class="track"></span></label>
+        </div>
+      </div>
+
+      <!-- ── MEMORY ── -->
+      <div class="settings-group-label">MEMORY</div>
+      <div class="settings-card">
+        <div class="settings-card-row" id="context-depth-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Memory Recall</div><div class="scr-desc" id="context-depth-desc">Past context injected per message</div></div>
+          <select class="scr-select" id="context-depth-select">
+            <option value="light">Light (5)</option>
+            <option value="standard">Standard (15)</option>
+            <option value="deep">Deep (30)</option>
+          </select>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Memory Slots</div><div class="scr-desc">Facts Cyanix knows about you</div></div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span class="perk-value" id="memory-perk-value">50 slots</span>
+            <span class="perk-lock" id="memory-perk-lock" title="Upgrade to unlock more">&#128274;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PRIVACY ── -->
+      <div class="settings-group-label">PRIVACY &amp; DATA</div>
+      <div class="settings-card">
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Help Improve Cyanix</div><div class="scr-desc">Allow anonymized training. Withdraw anytime.</div></div>
+          <label class="toggle"><input type="checkbox" id="consent-toggle" /><span class="track"></span></label>
+        </div>
+        <div class="settings-card-row hidden" id="training-data-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label">Withdraw Contributions</div></div>
+          <button type="button" class="scr-link-btn" id="delete-training-btn">Withdraw</button>
+        </div>
+      </div>
+
+      <!-- ── SUPPORTER PERKS ── -->
       <div id="supporter-section" style="display:none">
-        <div class="modal-sep"></div>
-        <div class="setting-section">&#9889; Supporter Perks</div>
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-label">Usage this window</div>
-            <div class="setting-desc" id="usage-display">-</div>
+        <div class="settings-group-label">&#9889; SUPPORTER PERKS</div>
+        <div class="settings-card">
+          <div class="settings-card-row">
+            <div class="scr-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div class="scr-body"><div class="scr-label">Usage This Window</div><div class="scr-desc" id="usage-display">-</div></div>
+            <span class="perk-on">Unlimited</span>
           </div>
-          <span class="perk-on">Unlimited</span>
-        </div>
-        <div class="setting-row" id="early-access-row" style="display:none">
-          <div class="setting-info">
-            <div class="setting-label">Early Access</div>
-            <div class="setting-desc">Beta features before anyone else</div>
+          <div class="settings-card-divider" id="early-access-row" style="display:none"></div>
+          <div class="settings-card-row" id="early-access-row-inner" style="display:none">
+            <div class="scr-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="scr-body"><div class="scr-label">Early Access</div><div class="scr-desc">Beta features before anyone else</div></div>
+            <span class="perk-on">Active</span>
           </div>
-          <span class="perk-on">Active</span>
-        </div>
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-label">Exclusive Themes</div>
-            <div class="setting-desc">Founder, Neon &amp; Midnight unlocked</div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row">
+            <div class="scr-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div class="scr-body"><div class="scr-label">Exclusive Themes</div><div class="scr-desc">Founder, Neon &amp; Midnight unlocked</div></div>
+            <span class="perk-on">On</span>
           </div>
-          <span class="perk-on">On</span>
         </div>
       </div>
-      <div class="modal-sep"></div>
-      <button type="button" class="danger-btn" id="clear-chats-btn">Clear all chats</button>
-      <button type="button" class="danger-btn" id="signout-btn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Sign out
-      </button>
+
+      <!-- ── DANGER ZONE ── -->
+      <div class="settings-group-label">ACCOUNT</div>
+      <div class="settings-card">
+        <div class="settings-card-row settings-card-row--danger" id="clear-chats-btn" style="cursor:pointer">
+          <div class="scr-icon scr-icon--danger">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label scr-label--danger">Clear All Chats</div></div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row settings-card-row--danger" id="signout-btn" style="cursor:pointer">
+          <div class="scr-icon scr-icon--danger">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </div>
+          <div class="scr-body"><div class="scr-label scr-label--danger">Sign Out</div></div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
+      <div style="height:24px"></div>
     </div>
   </div>
 </div>
