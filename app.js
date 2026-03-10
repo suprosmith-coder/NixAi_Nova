@@ -1,5 +1,5 @@
 /* ==============================================================
-   
+   CYANIX AI -- JavaScript.js  v12
    Supabase Auth * Chat History * Groq Streaming * RAG * TTS * STT
 ============================================================== */
 'use strict';
@@ -66,6 +66,8 @@ let _sttActive   = false;
 // no splash state needed
 let _signedInUser = null;
 let _syncPending  = false; // race condition guard
+let _memories  = [];        // cross-chat memories loaded on sign-in
+let _memoriesLoaded = false;
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
   memoryPriority:false, dailyLimit:50, unlockedThemes:[],
@@ -132,11 +134,25 @@ function localUUID() {
 }
 
 function buildSystemPrompt() {
-  const p = PERSONALITIES[_settings.personality] || PERSONALITIES.friendly;
-  const n = _settings.displayName
+  var p = PERSONALITIES[_settings.personality] || PERSONALITIES.friendly;
+  var n = _settings.displayName
     ? 'The user' + String.fromCharCode(39) + 's name is ' + _settings.displayName + '. Always address them as ' + _settings.displayName + '.'
     : '';
-  return ['You are Cyanix AI, a powerful and intelligent assistant.', p, n].filter(Boolean).join(' ');
+  var memBlock = '';
+  if (_memories && _memories.length > 0) {
+    var grouped = {};
+    _memories.forEach(function(m) {
+      if (!grouped[m.category]) grouped[m.category] = [];
+      grouped[m.category].push(m.memory);
+    });
+    var parts = [];
+    var labels = { personal: 'About the user', preference: 'User preferences', project: 'User projects', technical: 'Technical context' };
+    Object.keys(grouped).forEach(function(cat) {
+      parts.push((labels[cat] || cat) + ': ' + grouped[cat].join('; '));
+    });
+    memBlock = 'Here is what you already know about this user from past conversations: ' + parts.join('. ') + '. Use this context naturally without explicitly mentioning that you remember it.';
+  }
+  return ['You are Cyanix AI, a powerful and intelligent assistant.', p, n, memBlock].filter(Boolean).join(' ');
 }
 
 function edgeHeaders() {
@@ -436,6 +452,7 @@ async function onSignedIn(session) {
 
   await loadPreferences();
   await loadSupporter();
+  await loadMemories();
   await loadChats();
 
   if (_chats.length > 0) await loadChat(_chats[0].id);
@@ -967,11 +984,103 @@ async function bgSyncMessages(isNewChat, localChatId, userText, aiText, msgEl) {
     const aiMsgId = await syncMessagesToDB(chatId, userText, aiText);
     if (aiMsgId && msgEl) addFeedbackButtons(msgEl, aiMsgId);
     await maybeCollectTraining(userText, aiText);
+    // Extract memories silently in background (don't await -- truly background)
+    extractAndSaveMemories(_history, _currentId).catch(function() {});
     await loadChats();
   } catch (e) {
     _syncPending = false;
     console.error('[CyanixAI] bgSyncMessages failed:', e);
     toast('Message not saved -- check connection.');
+  }
+}
+
+async function loadMemories() {
+  if (!_sb || !_session) return;
+  try {
+    var limit = _supporter.memoryPriority ? 500 : 50;
+    var res = await _sb.from('user_memories')
+      .select('id,memory,category,created_at')
+      .eq('user_id', _session.user.id)
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+    if (res.error) { console.error('[CyanixAI] loadMemories:', res.error.message); return; }
+    _memories = res.data || [];
+    _memoriesLoaded = true;
+    console.log('[CyanixAI] Loaded', _memories.length, 'memories');
+  } catch (e) { console.error('[CyanixAI] loadMemories exception:', e); }
+}
+
+async function extractAndSaveMemories(messages, sourceId) {
+  if (!_sb || !_session) return;
+  if (!messages || messages.length < 2) return;
+  try {
+    // Build a short context for extraction (last 6 messages max)
+    var ctx = messages.slice(-6).map(function(m) {
+      return (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content.slice(0, 400);
+    }).join('\n');
+
+    var extractPrompt = 'Extract factual memories about the user from this conversation. ' +
+      'Return ONLY a JSON array, no other text, no markdown. Each item: ' +
+      '{"memory":"fact about user","category":"personal|preference|project|technical"} ' +
+      'Categories: personal=name/job/location, preference=tone/topics/likes, ' +
+      'project=things user is building, technical=languages/frameworks/tools. ' +
+      'If nothing worth remembering, return []. Max 5 items. Conversation:\n' + ctx;
+
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: extractPrompt }]
+      })
+    });
+
+    if (!res.ok) return;
+    var data = await res.json();
+    var raw = data.content && data.content[0] && data.content[0].text ? data.content[0].text.trim() : '';
+    if (!raw || raw === '[]') return;
+
+    // Strip any markdown fences just in case
+    raw = raw.replace(/```json|```/g, '').trim();
+    var items = JSON.parse(raw);
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    // Upsert each memory (match on user_id + memory text to avoid duplicates)
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (!item.memory || !item.category) continue;
+      // Check if similar memory already exists
+      var existing = _memories.find(function(m) {
+        return m.memory.toLowerCase().trim() === item.memory.toLowerCase().trim();
+      });
+      if (existing) {
+        // Update existing
+        await _sb.from('user_memories')
+          .update({ memory: item.memory, category: item.category, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      } else {
+        // Check limit before inserting
+        var limit = _supporter.memoryPriority ? 500 : 50;
+        if (_memories.length >= limit) {
+          // Delete oldest to make room
+          var oldest = _memories[_memories.length - 1];
+          if (oldest) await _sb.from('user_memories').delete().eq('id', oldest.id);
+        }
+        await _sb.from('user_memories').insert({
+          user_id: _session.user.id,
+          memory: item.memory,
+          category: item.category,
+          source_chat_id: sourceId || _currentId,
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+    // Reload memories into state
+    await loadMemories();
+    console.log('[CyanixAI] Memories updated:', items.length, 'items');
+  } catch (e) {
+    console.error('[CyanixAI] extractAndSaveMemories exception:', e);
   }
 }
 
