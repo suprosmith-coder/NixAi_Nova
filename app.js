@@ -496,6 +496,16 @@ function attachRipple(el) {
 
 function attachAllRipples() {
   document.querySelectorAll('.auth-btn,.oauth-btn,.send-btn,.tool-btn,.msg-action-btn,.sb-new-btn,.p-chip,.topbar-icon,.sb-nav-btn,.welcome-card').forEach(attachRipple);
+  // Mouse-tracking glow on welcome cards
+  document.querySelectorAll('.welcome-card').forEach(function(card) {
+    card.addEventListener('mousemove', function(e) {
+      var r = card.getBoundingClientRect();
+      var x = ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%';
+      var y = ((e.clientY - r.top)  / r.height * 100).toFixed(1) + '%';
+      card.style.setProperty('--mx', x);
+      card.style.setProperty('--my', y);
+    });
+  });
 }
 
 /* ==========================================================
@@ -835,12 +845,31 @@ function showUpgradeModal() {
 }
 
 function applySupporter() {
+  // -- Badge: show tier name --
   var badge = $('supporter-badge');
-  if (badge) badge.style.display = _supporter.isActive ? 'inline-flex' : 'none';
+  if (badge) {
+    if (_supporter.isActive) {
+      var isFounder = _supporter.unlockedThemes.indexOf('founder') !== -1;
+      badge.textContent = isFounder ? 'Founder' : 'Supporter';
+      badge.setAttribute('data-tier', isFounder ? 'founder' : 'supporter');
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  // -- Supporter-only section (early access, themes, usage) --
   var section = $('supporter-section');
   if (section) section.style.display = _supporter.isActive ? 'block' : 'none';
   var eaRow = $('early-access-row');
   if (eaRow) eaRow.style.display = _supporter.earlyAccess ? '' : 'none';
+
+  // -- Memory row: always visible, locked state for free users --
+  var memVal = $('memory-perk-value');
+  var memLock = $('memory-perk-lock');
+  if (memVal) memVal.textContent = _supporter.memoryPriority ? '500 slots' : '50 slots';
+  if (memLock) memLock.style.display = _supporter.memoryPriority ? 'none' : 'inline-flex';
+
   updateUsageDisplay();
   populateThemeSelect();
   window._chatHistoryLimit = _supporter.memoryPriority ? 500 : 100;
@@ -1667,25 +1696,106 @@ async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
   } catch (e) { toast('Could not save feedback.'); }
 }
 
-window.inlineFeedback = async function(btn, value) {
+window.closeFbPanel = function(btn) {
+  var p = btn && btn.closest('.fb-panel');
+  if (p) p.remove();
+};
+window.toggleFbTag = function(btn) {
+  btn.classList.toggle('selected');
+};
+
+window.inlineFeedback = function(btn, value) {
   if (!_session) { toast('Sign in to give feedback.'); return; }
   var actions = btn.closest('.msg-actions');
   if (!actions) return;
   var msgRow  = btn.closest('.msg-row');
   var msgId   = msgRow && msgRow.dataset.msgId;
+  var content = msgRow && msgRow.querySelector('.msg-content');
+
+  // Toggle voted state on buttons
   var upBtn   = actions.querySelector('.fb-up');
   var downBtn = actions.querySelector('.fb-down');
+  var wasVoted = btn.classList.contains('voted');
+
   if (upBtn)   upBtn.classList.remove('voted');
   if (downBtn) downBtn.classList.remove('voted');
+
+  // If tapping the same button again -- close panel and clear
+  var existingPanel = content && content.querySelector('.fb-panel');
+  if (wasVoted && existingPanel) {
+    existingPanel.remove();
+    return;
+  }
   btn.classList.add('voted');
-  toast(value === 1 ? 'Thanks &#128077;' : 'Got it, we' + String.fromCharCode(39) + 'll improve &#128078;');
-  if (!msgId || !_currentId) return;
-  try {
-    await _sb.from('message_feedback').upsert({
-      message_id: msgId, chat_id: _currentId,
-      user_id: _session.user.id, feedback: value
-    }, { onConflict: 'message_id,user_id' });
-  } catch (e) { console.error('[CyanixAI] feedback save failed:', e); }
+
+  // Remove any existing panel on this message
+  if (existingPanel) existingPanel.remove();
+
+  // Build feedback panel
+  var isPositive = value === 1;
+  var tags = isPositive
+    ? ['Accurate', 'Clear', 'Helpful', 'Well written', 'Creative']
+    : ['Inaccurate', 'Not helpful', 'Too long', 'Too short', 'Off topic', 'Harmful'];
+
+  var panel = document.createElement('div');
+  panel.className = 'fb-panel';
+  panel.innerHTML =
+    '<div class="fb-panel-head">' +
+      '<span class="fb-panel-title">' + (isPositive ? 'What did you like?' : 'What went wrong?') + '</span>' +
+      '<button class="fb-panel-close" onclick="closeFbPanel(this)">&#10005;</button>' +
+    '</div>' +
+    '<div class="fb-tags">' +
+      tags.map(function(t) {
+        return '<button class="fb-tag" onclick="toggleFbTag(this)">' + t + '</button>';
+      }).join('') +
+    '</div>' +
+    '<textarea class="fb-textarea" placeholder="' + (isPositive ? 'Tell us more (optional)' : 'Help us understand what went wrong (optional)') + '" rows="3"></textarea>' +
+    '<div class="fb-panel-actions">' +
+      '<button class="fb-submit-btn" id="fb-submit-' + (msgId || 'noid') + '">Submit feedback</button>' +
+    '</div>';
+
+  // Insert after msg-actions
+  if (content) content.appendChild(panel);
+
+  // Focus textarea
+  setTimeout(function() {
+    var ta = panel.querySelector('.fb-textarea');
+    if (ta) ta.focus();
+  }, 120);
+
+  // Submit handler
+  panel.querySelector('.fb-submit-btn').addEventListener('click', async function() {
+    var selectedTags = Array.from(panel.querySelectorAll('.fb-tag.selected')).map(function(t) { return t.textContent; });
+    var comment = panel.querySelector('.fb-textarea').value.trim();
+    var submitBtn = this;
+    submitBtn.textContent = 'Sending...';
+    submitBtn.disabled = true;
+    try {
+      if (msgId && _currentId) {
+        await _sb.from('message_feedback').upsert({
+          message_id: msgId,
+          chat_id:    _currentId,
+          user_id:    _session.user.id,
+          feedback:   value,
+          tags:       selectedTags.length ? selectedTags : null,
+          comment:    comment || null
+        }, { onConflict: 'message_id,user_id' });
+      }
+      panel.innerHTML = '<div class="fb-thanks">' +
+        '<span class="fb-thanks-icon">' + (isPositive ? '&#128077;' : '&#128078;') + '</span>' +
+        '<span>Thanks for your feedback!</span>' +
+      '</div>';
+      setTimeout(function() {
+        panel.style.opacity = '0';
+        panel.style.transform = 'translateY(-4px)';
+        setTimeout(function() { panel.remove(); }, 300);
+      }, 1800);
+    } catch (e) {
+      submitBtn.textContent = 'Submit feedback';
+      submitBtn.disabled = false;
+      toast('Could not save feedback.');
+    }
+  });
 };
 
 window.editMessage = function(btn) {

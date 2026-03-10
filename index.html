@@ -209,7 +209,10 @@
       </button>
       <button type="button" class="sb-user-btn" id="user-btn">
         <div class="user-avatar" id="user-avatar">?</div>
-        <span class="user-name"  id="user-name">Loading…</span>
+        <div class="user-name-row">
+          <span class="user-name" id="user-name">Loading…</span>
+          <span class="supporter-badge" id="supporter-badge" style="display:none"></span>
+        </div>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
     </div>
@@ -394,34 +397,44 @@
 
 
       <div class="modal-sep"></div>
+
+      <!-- Memory row — visible to ALL users, locked for free -->
+      <div class="setting-section">Storage &amp; Memory</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">Memory slots</div>
+          <div class="setting-desc">How many facts Cyanix remembers about you</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span class="perk-value" id="memory-perk-value">50 slots</span>
+          <span class="perk-lock" id="memory-perk-lock" title="Upgrade to unlock more">&#128274;</span>
+        </div>
+      </div>
+
+      <!-- Supporter-only perks section -->
       <div id="supporter-section" style="display:none">
-        <div class="setting-section">* Supporter Perks</div>
+        <div class="modal-sep"></div>
+        <div class="setting-section">&#9889; Supporter Perks</div>
         <div class="setting-row">
           <div class="setting-info">
-            <div class="setting-label">Daily usage</div>
+            <div class="setting-label">Usage this window</div>
             <div class="setting-desc" id="usage-display">-</div>
           </div>
+          <span class="perk-on">Unlimited</span>
         </div>
         <div class="setting-row" id="early-access-row" style="display:none">
           <div class="setting-info">
             <div class="setting-label">Early Access</div>
-            <div class="setting-desc">Beta features before other users</div>
+            <div class="setting-desc">Beta features before anyone else</div>
           </div>
           <span class="perk-on">Active</span>
         </div>
         <div class="setting-row">
           <div class="setting-info">
             <div class="setting-label">Exclusive Themes</div>
-            <div class="setting-desc">Unlocked in Theme selector above</div>
+            <div class="setting-desc">Founder, Neon &amp; Midnight unlocked</div>
           </div>
           <span class="perk-on">On</span>
-        </div>
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-label">Memory Priority</div>
-            <div class="setting-desc">500 conversations saved</div>
-          </div>
-          <span class="perk-on">Active</span>
         </div>
       </div>
       <div class="modal-sep"></div>
