@@ -1,5 +1,5 @@
 /* ==============================================================
-   CYANIX AI -- JavaScript.js  v12
+   
    Supabase Auth * Chat History * Groq Streaming * RAG * TTS * STT
 ============================================================== */
 'use strict';
