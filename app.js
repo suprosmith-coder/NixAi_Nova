@@ -86,7 +86,7 @@ let _settings = {
   ragAuto:         false,
   contextDepth:    'light',  // light=5 | standard=15 | deep=30
   fontStyle:       'inter',  // inter | space-grotesk | syne | orbitron
-  fontSize:        15,       // 12-20px
+  fontSize:        16,       // 8-20px
 };
 
 const PERSONALITIES = {
@@ -683,7 +683,7 @@ function bindChatUI() {
     saveSettings();
   });
   on('font-size-down', 'click', function() {
-    _settings.fontSize = Math.max(12, (_settings.fontSize || 15) - 1);
+    _settings.fontSize = Math.max(8, (_settings.fontSize || 15) - 1);
     applyFontSize(_settings.fontSize);
     updateFontSizeUI();
     saveSettings();
@@ -857,7 +857,7 @@ var FONT_FAMILIES = {
   'orbitron':     "'Orbitron', system-ui, sans-serif",
 };
 var FONT_NAMES = { 'inter':'Inter', 'space-grotesk':'Space Grotesk', 'syne':'Syne', 'orbitron':'Orbitron' };
-var FONT_SIZE_LABELS = { 12:'XS', 13:'Small', 14:'Small+', 15:'Medium', 16:'Medium+', 17:'Large', 18:'Large+', 19:'XL', 20:'XXL' };
+var FONT_SIZE_LABELS = { 8:'Tiny', 9:'Tiny+', 10:'XS', 11:'XS+', 12:'Small', 13:'Small+', 14:'Medium-', 15:'Medium', 16:'Medium+', 17:'Large', 18:'Large+', 19:'XL', 20:'XXL' };
 
 function applyFontStyle(style) {
   var fam = FONT_FAMILIES[style] || FONT_FAMILIES.inter;
