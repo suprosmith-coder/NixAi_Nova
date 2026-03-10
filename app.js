@@ -84,6 +84,7 @@ let _settings = {
   displayName:     '',
   personality:     'friendly',
   ragAuto:         false,
+  contextDepth:    'light',  // light=5 | standard=15 | deep=30
 };
 
 const PERSONALITIES = {
@@ -134,18 +135,70 @@ function localUUID() {
   });
 }
 
-function buildSystemPrompt() {
+// -- Semantic Memory Retrieval ----------------------------------
+// Lightweight TF-IDF style keyword scoring -- no API needed
+function scoreMemoryRelevance(memory, query) {
+  var mText = (memory.memory + ' ' + (memory.entity_name || '') + ' ' + (memory.category || '')).toLowerCase();
+  var qWords = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 2; });
+  if (!qWords.length) return 0;
+  var score = 0;
+  qWords.forEach(function(word) {
+    if (mText.indexOf(word) !== -1) score += 1;
+    // Boost exact entity name matches
+    if (memory.entity_name && memory.entity_name.toLowerCase().indexOf(word) !== -1) score += 2;
+    // Boost category matches
+    if (memory.category && memory.category.toLowerCase() === word) score += 1;
+  });
+  // Recency boost -- newer memories score higher
+  if (memory.created_at) {
+    var age = Date.now() - new Date(memory.created_at).getTime();
+    var daysSince = age / (1000 * 60 * 60 * 24);
+    score += Math.max(0, 1 - daysSince / 30); // fades over 30 days
+  }
+  return score;
+}
+
+function getContextLimit() {
+  var depth = _settings.contextDepth || 'light';
+  if (!_supporter.isActive) return 5; // free = light only
+  if (depth === 'deep')     return 30;
+  if (depth === 'standard') return 15;
+  return 5;
+}
+
+function retrieveRelevantMemories(query) {
+  if (!_memories || !_memories.length) return [];
+  var limit = getContextLimit();
+  // Score all memories against current query
+  var scored = _memories.map(function(m) {
+    return { mem: m, score: scoreMemoryRelevance(m, query) };
+  });
+  // Sort by score desc, then recency for ties
+  scored.sort(function(a, b) {
+    if (b.score !== a.score) return b.score - a.score;
+    var aTime = a.mem.created_at ? new Date(a.mem.created_at).getTime() : 0;
+    var bTime = b.mem.created_at ? new Date(b.mem.created_at).getTime() : 0;
+    return bTime - aTime;
+  });
+  // Always include high-scoring memories; fill remaining slots with recent ones
+  var topN = scored.slice(0, limit).map(function(s) { return s.mem; });
+  return topN;
+}
+
+function buildSystemPrompt(queryContext) {
   var p = PERSONALITIES[_settings.personality] || PERSONALITIES.friendly;
   var n = _settings.displayName
     ? 'The user' + String.fromCharCode(39) + 's name is ' + _settings.displayName + '. Always address them as ' + _settings.displayName + '.'
     : '';
   var memBlock = '';
-  if (_memories && _memories.length > 0) {
+  // Use semantic retrieval -- only inject relevant memories
+  var activeMemories = queryContext ? retrieveRelevantMemories(queryContext) : (_memories || []);
+  if (activeMemories.length > 0) {
     // -- Memory Graph: group by entity, then show relationships --
     var entities = {};   // entity_name -> { type, facts: [], related: [] }
     var orphans  = [];   // memories with no entity_name
 
-    _memories.forEach(function(m) {
+    activeMemories.forEach(function(m) {
       if (m.entity_name) {
         if (!entities[m.entity_name]) {
           entities[m.entity_name] = { type: m.entity_type || 'concept', facts: [], relatedNames: [] };
@@ -614,6 +667,18 @@ function bindChatUI() {
   on('streaming-toggle',   'change', function() { _settings.streaming = !!$('streaming-toggle').checked; saveSettings(); syncPreferences(); });
   on('theme-select',       'change', function() { _settings.theme = $('theme-select').value; applyTheme(_settings.theme); saveSettings(); syncPreferences(); });
   on('model-select',       'change', function() { _settings.model = $('model-select').value; saveSettings(); syncPreferences(); updateModelLabel(); });
+  on('context-depth-select','change', function() {
+    var sel = $('context-depth-select');
+    if (!sel) return;
+    if (!_supporter.isActive && sel.value !== 'light') {
+      sel.value = 'light';
+      toast('Upgrade to supporter to unlock Standard and Deep recall.');
+      return;
+    }
+    _settings.contextDepth = sel.value;
+    saveSettings(); syncPreferences();
+    updateContextDepthUI();
+  });
   on('consent-toggle',     'change', function() {
     _settings.trainingConsent = !!$('consent-toggle').checked;
     saveSettings(); syncPreferences(); updateTrainingDataRow();
@@ -753,9 +818,33 @@ function syncSettingsToUI() {
   _ragAuto = !!_settings.ragAuto;
   updateTrainingDataRow();
   updatePersonalityChips();
+  updateContextDepthUI();
 }
 
 function applyTheme(theme) { document.documentElement.dataset.theme = theme || 'light'; }
+
+function updateContextDepthUI() {
+  var sel  = $('context-depth-select');
+  var desc = $('context-depth-desc');
+  var row  = $('context-depth-row');
+  if (!sel) return;
+  // Set current value
+  var depth = _settings.contextDepth || 'light';
+  sel.value = depth;
+  // Lock standard/deep for free users
+  if (!_supporter.isActive) {
+    sel.value = 'light';
+    // Disable non-light options
+    Array.from(sel.options).forEach(function(opt) {
+      opt.disabled = (opt.value !== 'light');
+    });
+    if (desc) desc.textContent = 'Light mode (5 memories). Upgrade for Standard & Deep recall.';
+  } else {
+    Array.from(sel.options).forEach(function(opt) { opt.disabled = false; });
+    var limits = { light: '5 memories per message', standard: '15 memories per message', deep: '30 memories per message' };
+    if (desc) desc.textContent = limits[depth] || '5 memories per message';
+  }
+}
 
 
 /* == SUPPORTER PERKS == */
@@ -905,6 +994,7 @@ function applySupporter() {
 
   updateUsageDisplay();
   populateThemeSelect();
+  updateContextDepthUI();
   window._chatHistoryLimit = _supporter.memoryPriority ? 500 : 100;
 }
 
@@ -1528,6 +1618,7 @@ async function sendMessage(text) {
   var pendingAttachment = _attachment;
   clearAttachment();
   show('typing-row');
+  startThoughtStream(text, _ragEnabled);
   scrollToBottom();
 
   let ragData = null;
@@ -1564,7 +1655,7 @@ async function sendMessage(text) {
     userContent = text;
   }
 
-  const messages = [{ role: 'system', content: buildSystemPrompt() + buildRAGContext(ragData) }]
+  const messages = [{ role: 'system', content: buildSystemPrompt(text) + buildRAGContext(ragData) }]
     .concat(_history.slice(-(window._chatHistoryLimit || 100)).map(function(m, idx, arr) {
       // For last user message: use multipart content if attachment was present
       if (idx === arr.length - 1 && m.role === 'user' && typeof userContent !== 'string') {
@@ -1585,6 +1676,7 @@ async function sendMessage(text) {
     });
 
     hide('typing-row');
+    stopThoughtStream();
 
     if (!res.ok) {
       const errText = await res.text().catch(function() { return 'Unknown error'; });
@@ -1656,6 +1748,7 @@ async function sendMessage(text) {
 
   } catch (err) {
     hide('typing-row');
+    stopThoughtStream();
     if (err && err.name !== 'AbortError') {
       renderMessage('ai', ' Error: ' + esc(err.message), true);
     }
@@ -1668,7 +1761,7 @@ async function sendMessage(text) {
 
 function stopResponse() {
   if (_abortCtrl) _abortCtrl.abort();
-  _responding = false; setSendBtn('send'); hide('typing-row');
+  _responding = false; setSendBtn('send'); hide('typing-row'); stopThoughtStream();
 }
 
 function renderStreamingContent(text) {
@@ -1752,6 +1845,88 @@ async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
     await _sb.from('message_feedback').upsert({ message_id: messageId, chat_id: _currentId, user_id: _session.user.id, feedback: value }, { onConflict: 'message_id,user_id' });
     toast(value === 1 ? 'Thanks!' : 'Got it, we' + String.fromCharCode(39) + 'll improve.');
   } catch (e) { toast('Could not save feedback.'); }
+}
+
+// -- Thought Stream ------------------------------------------
+var _thoughtInterval = null;
+
+function getThoughtSteps(text, ragEnabled) {
+  var t = text.toLowerCase();
+  var steps = [];
+
+  // Always start with searching knowledge
+  steps.push('Searching knowledge base');
+
+  // RAG / web search
+  if (ragEnabled) steps.push('Searching the web');
+
+  // Domain-specific steps
+  if (/(code|function|bug|error|debug|class|api|script|fix)/.test(t)) {
+    steps.push('Analyzing code context');
+    steps.push('Building solution');
+  } else if (/(math|calculate|equation|formula|solve|integral|derivative)/.test(t)) {
+    steps.push('Running calculations');
+    steps.push('Verifying result');
+  } else if (/(write|essay|story|poem|creative|draft|blog|article)/.test(t)) {
+    steps.push('Exploring ideas');
+    steps.push('Crafting response');
+  } else if (/(explain|what is|how does|why|meaning|define|describe)/.test(t)) {
+    steps.push('Connecting concepts');
+    steps.push('Building explanation');
+  } else if (/(compare|difference|versus|vs|better|best|which)/.test(t)) {
+    steps.push('Weighing options');
+    steps.push('Forming recommendation');
+  } else if (/(summarize|summary|tldr|brief|overview|recap)/.test(t)) {
+    steps.push('Extracting key points');
+  } else {
+    steps.push('Processing your request');
+    steps.push('Forming response');
+  }
+
+  // Always finish with composing
+  steps.push('Composing answer');
+  return steps;
+}
+
+function startThoughtStream(text, ragEnabled) {
+  var el = document.getElementById('thinking-text');
+  if (!el) return;
+  var steps = getThoughtSteps(text || '', ragEnabled);
+  var idx = 0;
+
+  // Show first step immediately
+  el.textContent = steps[0];
+
+  if (_thoughtInterval) clearInterval(_thoughtInterval);
+  _thoughtInterval = setInterval(function() {
+    idx++;
+    if (idx < steps.length) {
+      // Fade out then in
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(4px)';
+      setTimeout(function() {
+        el.textContent = steps[idx];
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+      }, 180);
+    } else {
+      clearInterval(_thoughtInterval);
+      _thoughtInterval = null;
+    }
+  }, 900);
+}
+
+function stopThoughtStream() {
+  if (_thoughtInterval) {
+    clearInterval(_thoughtInterval);
+    _thoughtInterval = null;
+  }
+  var el = document.getElementById('thinking-text');
+  if (el) {
+    el.textContent = 'Cyanix is thinking';
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+  }
 }
 
 window.closeFbPanel = function(btn) {
@@ -1887,6 +2062,7 @@ window.editMessage = function(btn) {
     _history.splice((uc-1)*2);
     if (_responding && _abortCtrl) _abortCtrl.abort();
     _responding = false; hide('typing-row');
+    stopThoughtStream();
     sendMessage(newText);
   }
 };
