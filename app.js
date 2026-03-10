@@ -1568,6 +1568,8 @@ function renderMessage(role, content, animate, msgId, imageData) {
         '<div class="msg-actions">' +
           '<button type="button" class="msg-action-btn" onclick="copyMsg(this)">Copy</button>' +
           '<button type="button" class="msg-action-btn" onclick="speakMsg(this)">&#9654; Listen</button>' +
+          '<button type="button" class="msg-action-btn fb-up" onclick="inlineFeedback(this,1)" title="Good response">&#128077;</button>' +
+          '<button type="button" class="msg-action-btn fb-down" onclick="inlineFeedback(this,-1)" title="Bad response">&#128078;</button>' +
         '</div>' +
       '</div>';
   }
@@ -1578,14 +1580,9 @@ function renderMessage(role, content, animate, msgId, imageData) {
 }
 
 function addFeedbackButtons(msgEl, messageId) {
+  // Buttons already rendered in HTML. Just stamp the DB ID on the row.
   if (!msgEl || !messageId) return;
-  const actions = msgEl.querySelector('.msg-actions'); if (!actions) return;
-  const up = document.createElement('button'); const down = document.createElement('button');
-  up.className = 'msg-action-btn'; down.className = 'msg-action-btn';
-  up.textContent = ''; down.textContent = '';
-  up.addEventListener('click',   function() { submitFeedback(messageId,  1, up,   down); });
-  down.addEventListener('click', function() { submitFeedback(messageId, -1, down, up);   });
-  actions.appendChild(up); actions.appendChild(down);
+  msgEl.dataset.msgId = messageId;
 }
 
 async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
@@ -1595,6 +1592,27 @@ async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
     toast(value === 1 ? 'Thanks!' : 'Got it, we' + String.fromCharCode(39) + 'll improve.');
   } catch (e) { toast('Could not save feedback.'); }
 }
+
+window.inlineFeedback = async function(btn, value) {
+  if (!_session) { toast('Sign in to give feedback.'); return; }
+  var actions = btn.closest('.msg-actions');
+  if (!actions) return;
+  var msgRow  = btn.closest('.msg-row');
+  var msgId   = msgRow && msgRow.dataset.msgId;
+  var upBtn   = actions.querySelector('.fb-up');
+  var downBtn = actions.querySelector('.fb-down');
+  if (upBtn)   upBtn.classList.remove('voted');
+  if (downBtn) downBtn.classList.remove('voted');
+  btn.classList.add('voted');
+  toast(value === 1 ? 'Thanks &#128077;' : 'Got it, we' + String.fromCharCode(39) + 'll improve &#128078;');
+  if (!msgId || !_currentId) return;
+  try {
+    await _sb.from('message_feedback').upsert({
+      message_id: msgId, chat_id: _currentId,
+      user_id: _session.user.id, feedback: value
+    }, { onConflict: 'message_id,user_id' });
+  } catch (e) { console.error('[CyanixAI] feedback save failed:', e); }
+};
 
 window.editMessage = function(btn) {
   const msgRow  = btn.closest('.msg-row');
