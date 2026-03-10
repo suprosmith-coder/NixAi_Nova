@@ -71,7 +71,7 @@ let _memoriesLoaded = false;
 let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
-  memoryPriority:false, dailyLimit:50, unlockedThemes:[],
+  memoryPriority:false, dailyLimit:20, unlockedThemes:[],
 };
 let _usageToday = 0;
 // _syncPending declared above
@@ -739,28 +739,99 @@ async function loadSupporter() {
 async function loadUsageToday() {
   if (!_session) return;
   try {
-    var today = new Date().toISOString().slice(0, 10);
-    var res = await _sb.from('user_usage').select('prompt_count').eq('user_id', _session.user.id).eq('usage_date', today).single();
+    // Usage window: every 2 hours (key = YYYY-MM-DD-HH where HH is floored to even hour)
+    var windowKey = getUsageWindowKey();
+    var res = await _sb.from('user_usage').select('prompt_count').eq('user_id', _session.user.id).eq('usage_date', windowKey).single();
     _usageToday = (res.data && res.data.prompt_count) ? res.data.prompt_count : 0;
   } catch (e) { _usageToday = 0; }
+}
+
+function getUsageWindowKey() {
+  var now = new Date();
+  var year  = now.getUTCFullYear();
+  var month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  var day   = String(now.getUTCDate()).padStart(2, '0');
+  var hour  = String(Math.floor(now.getUTCHours() / 2) * 2).padStart(2, '0');
+  return year + '-' + month + '-' + day + '-' + hour;
+}
+
+function getWindowResetTime() {
+  var now = new Date();
+  var nextWindowHour = (Math.floor(now.getUTCHours() / 2) + 1) * 2;
+  var reset = new Date(now);
+  reset.setUTCHours(nextWindowHour, 0, 0, 0);
+  var diff = reset - now;
+  var mins = Math.floor(diff / 60000);
+  var secs = Math.floor((diff % 60000) / 1000);
+  if (mins > 0) return mins + ' min' + (mins !== 1 ? 's' : '');
+  return secs + ' sec' + (secs !== 1 ? 's' : '');
 }
 
 async function incrementUsage() {
   if (!_session) return;
   _usageToday++;
   try {
-    var today = new Date().toISOString().slice(0, 10);
-    await _sb.from('user_usage').upsert({ user_id: _session.user.id, usage_date: today, prompt_count: _usageToday }, { onConflict: 'user_id,usage_date' });
+    var windowKey = getUsageWindowKey();
+    await _sb.from('user_usage').upsert({ user_id: _session.user.id, usage_date: windowKey, prompt_count: _usageToday }, { onConflict: 'user_id,usage_date' });
   } catch (e) {}
 }
 
 function checkDailyLimit() {
-  if (_supporter.dailyLimit === null) return true;
+  if (_supporter.dailyLimit === null) return true; // unlimited
   if (_usageToday >= _supporter.dailyLimit) {
-    toast('Daily limit of ' + _supporter.dailyLimit + ' prompts reached.');
+    showUpgradeModal();
     return false;
   }
+  // Soft warning at 80%
+  var pct = _usageToday / _supporter.dailyLimit;
+  if (pct >= 0.8) {
+    var left = _supporter.dailyLimit - _usageToday;
+    toast(left + ' message' + (left === 1 ? '' : 's') + ' left this window. Resets in ' + getWindowResetTime() + '.');
+  }
   return true;
+}
+
+function showUpgradeModal() {
+  var existing = $('upgrade-modal');
+  if (existing) { show('upgrade-modal'); return; }
+  var overlay = document.createElement('div');
+  overlay.id = 'upgrade-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML =
+    '<div class="modal-sheet upgrade-sheet">' +
+      '<div class="upgrade-icon">&#9889;</div>' +
+      '<h2 class="upgrade-title">You' + String.fromCharCode(39) + 've hit your limit</h2>' +
+      '<p class="upgrade-desc">Free users get <strong>20 messages</strong> every 2 hours.<br>Your limit resets in <strong id="upgrade-reset-timer">' + getWindowResetTime() + '</strong>.</p>' +
+      '<div class="upgrade-perks">' +
+        '<div class="upgrade-perk"><span>&#9733;</span> Unlimited messages</div>' +
+        '<div class="upgrade-perk"><span>&#127756;</span> Exclusive themes</div>' +
+        '<div class="upgrade-perk"><span>&#129504;</span> Extended memory</div>' +
+        '<div class="upgrade-perk"><span>&#128640;</span> Early access to new features</div>' +
+      '</div>' +
+      '<div class="upgrade-actions">' +
+        '<button class="upgrade-wait-btn" id="upgrade-wait-btn">Wait for reset (' + getWindowResetTime() + ')</button>' +
+        '<button class="upgrade-close-btn" onclick="hide(&quot;upgrade-modal&quot;)">Maybe later</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) hide('upgrade-modal'); });
+
+  // Live countdown timer
+  var timerEl = overlay.querySelector('#upgrade-reset-timer');
+  var waitBtn = overlay.querySelector('#upgrade-wait-btn');
+  var interval = setInterval(function() {
+    var t = getWindowResetTime();
+    if (timerEl) timerEl.textContent = t;
+    if (waitBtn) waitBtn.textContent = 'Wait for reset (' + t + ')';
+    // Auto-close when window resets
+    if (t === '0 secs') {
+      clearInterval(interval);
+      _usageToday = 0;
+      hide('upgrade-modal');
+      toast('Limit reset! You have 20 messages again.');
+      updateUsageDisplay();
+    }
+  }, 1000);
 }
 
 function applySupporter() {
@@ -778,9 +849,12 @@ function applySupporter() {
 function updateUsageDisplay() {
   var el = $('usage-display');
   if (!el) return;
-  el.textContent = _supporter.dailyLimit === null
-    ? _usageToday + ' prompts today (unlimited)'
-    : _usageToday + ' / ' + _supporter.dailyLimit + ' prompts today';
+  if (_supporter.dailyLimit === null) {
+    el.textContent = _usageToday + ' prompts (unlimited)';
+  } else {
+    var left = Math.max(0, _supporter.dailyLimit - _usageToday);
+    el.textContent = _usageToday + ' / ' + _supporter.dailyLimit + ' this window  \u2022  ' + left + ' left  \u2022  resets in ' + getWindowResetTime();
+  }
 }
 
 function populateThemeSelect() {
