@@ -141,17 +141,50 @@ function buildSystemPrompt() {
     : '';
   var memBlock = '';
   if (_memories && _memories.length > 0) {
-    var grouped = {};
+    // -- Memory Graph: group by entity, then show relationships --
+    var entities = {};   // entity_name -> { type, facts: [], related: [] }
+    var orphans  = [];   // memories with no entity_name
+
     _memories.forEach(function(m) {
-      if (!grouped[m.category]) grouped[m.category] = [];
-      grouped[m.category].push(m.memory);
+      if (m.entity_name) {
+        if (!entities[m.entity_name]) {
+          entities[m.entity_name] = { type: m.entity_type || 'concept', facts: [], relatedNames: [] };
+        }
+        entities[m.entity_name].facts.push(m.memory);
+        // Resolve related_to IDs to entity names for richer context
+        if (Array.isArray(m.related_to) && m.related_to.length) {
+          m.related_to.forEach(function(relId) {
+            var rel = _memories.find(function(r) { return r.id === relId; });
+            if (rel && rel.entity_name && entities[m.entity_name].relatedNames.indexOf(rel.entity_name) === -1) {
+              entities[m.entity_name].relatedNames.push(rel.entity_name);
+            }
+          });
+        }
+      } else {
+        orphans.push(m.memory);
+      }
     });
+
     var parts = [];
-    var labels = { personal: 'About the user', preference: 'User preferences', project: 'User projects', technical: 'Technical context' };
-    Object.keys(grouped).forEach(function(cat) {
-      parts.push((labels[cat] || cat) + ': ' + grouped[cat].join('; '));
+
+    // Emit entity nodes with their relationships
+    Object.keys(entities).forEach(function(name) {
+      var e = entities[name];
+      var line = name + ' (' + e.type + '): ' + e.facts.join('; ');
+      if (e.relatedNames.length) {
+        line += '. Connects to: ' + e.relatedNames.join(', ');
+      }
+      parts.push(line);
     });
-    memBlock = 'Here is what you already know about this user from past conversations: ' + parts.join('. ') + '. Use this context naturally without explicitly mentioning that you remember it.';
+
+    // Emit orphan facts grouped by category
+    if (orphans.length) {
+      parts.push('Other context: ' + orphans.join('; '));
+    }
+
+    memBlock = 'Here is a structured knowledge graph of what you already know about this user from past conversations. ' +
+      'Use it naturally to give contextually aware answers without explicitly mentioning that you remember it. ' +
+      parts.join('. ') + '.';
   }
   return ['You are Cyanix AI, a powerful and intelligent assistant.', p, n, memBlock].filter(Boolean).join(' ');
 }
@@ -466,7 +499,7 @@ async function onSignedIn(session) {
 function onSignedOut() {
   _session = null; _signedInUser = null;
   _chats = []; _currentId = null; _history = [];
-  _supporter = { isActive:false, earlyAccess:false, premiumForever:false, memoryPriority:false, dailyLimit:50, unlockedThemes:[] };
+  _supporter = { isActive:false, earlyAccess:false, premiumForever:false, memoryPriority:false, dailyLimit:20, unlockedThemes:[] };
   _usageToday = 0;
   if ($('user-avatar')) $('user-avatar').textContent = '?';
   if ($('user-name'))   $('user-name').textContent   = 'Loading\u2026';
@@ -739,7 +772,7 @@ async function loadSupporter() {
       _supporter.dailyLimit     = (d.daily_limit === null || d.daily_limit === undefined) ? null : d.daily_limit;
       _supporter.unlockedThemes = d.unlocked_themes || [];
     } else {
-      _supporter = { isActive:false, earlyAccess:false, premiumForever:false, memoryPriority:false, dailyLimit:50, unlockedThemes:[] };
+      _supporter = { isActive:false, earlyAccess:false, premiumForever:false, memoryPriority:false, dailyLimit:20, unlockedThemes:[] };
     }
     await loadUsageToday();
     applySupporter();
@@ -991,8 +1024,8 @@ async function loadChat(id) {
 }
 
 async function syncChatToDB(localId, title) {
-  if (!_sb) { alert('CYANIX DEBUG: _sb is null -- Supabase client not init'); return null; }
-  if (!_session) { alert('CYANIX DEBUG: no session -- user not signed in'); return null; }
+  if (!_sb) { console.error('[CyanixAI] _sb is null -- Supabase client not init'); return null; }
+  if (!_session) { console.error('CYANIX DEBUG: no session -- user not signed in'); return null; }
   try {
     var payload = { user_id: _session.user.id, title: title };
     try { payload.model = _settings.model; } catch(ignore) {}
@@ -1003,7 +1036,7 @@ async function syncChatToDB(localId, title) {
       var hint = result.error.hint ? ' HINT: ' + result.error.hint : '';
       var code = result.error.code ? ' CODE: ' + result.error.code : '';
       var details = result.error.details ? ' DETAILS: ' + result.error.details : '';
-      alert('CYANIX DEBUG -- Chat insert failed:\n' + msg + code + hint + details);
+      console.error('CYANIX DEBUG -- Chat insert failed:\n' + msg + code + hint + details);
       console.error('[CyanixAI] syncChatToDB error:', result.error);
       return null;
     }
@@ -1016,7 +1049,7 @@ async function syncChatToDB(localId, title) {
     toast('Chat saved OK');
     return newId;
   } catch (e) {
-    alert('CYANIX DEBUG -- Chat sync exception:\n' + (e && e.message ? e.message : String(e)));
+    console.error('CYANIX DEBUG -- Chat sync exception:\n' + (e && e.message ? e.message : String(e)));
     console.error('[CyanixAI] syncChatToDB exception:', e);
     return null;
   }
@@ -1229,7 +1262,7 @@ async function loadMemories() {
   try {
     var limit = _supporter.memoryPriority ? 500 : 50;
     var res = await _sb.from('user_memories')
-      .select('id,memory,category,created_at')
+      .select('id,memory,category,entity_name,entity_type,related_to,created_at')
       .eq('user_id', _session.user.id)
       .order('updated_at', { ascending: false })
       .limit(limit);
@@ -1250,8 +1283,13 @@ async function extractAndSaveMemories(messages, sourceId) {
     }).join('\n');
 
     var extractPrompt = 'Extract factual memories about the user from this conversation. ' +
-      'Return ONLY a JSON array, no other text, no markdown. Each item: ' +
-      '{"memory":"fact about user","category":"personal|preference|project|technical"} ' +
+      'Return ONLY a JSON array, no other text, no markdown. Each item must have: ' +
+      '{"memory":"concise fact","category":"personal|preference|project|technical",' +
+      '"entity_name":"the named thing this fact is about e.g. Cyanix AI or Supabase or null",' +
+      '"entity_type":"project|tool|concept|person|null",' +
+      '"relates_to":["exact memory text of related facts from the same conversation, or empty array"]} ' +
+      'entity_name: the specific named subject of the fact. entity_type: what kind of thing it is. ' +
+      'relates_to: list other memories in this batch that this fact directly connects to. ' +
       'Categories: personal=name/job/location, preference=tone/topics/likes, ' +
       'project=things user is building, technical=languages/frameworks/tools. ' +
       'If nothing worth remembering, return []. Max 5 items. Conversation:\n' + ctx;
@@ -1285,25 +1323,45 @@ async function extractAndSaveMemories(messages, sourceId) {
         return m.memory.toLowerCase().trim() === item.memory.toLowerCase().trim();
       });
       if (existing) {
-        // Update existing
+        // Update existing -- also refresh entity data
         await _sb.from('user_memories')
-          .update({ memory: item.memory, category: item.category, updated_at: new Date().toISOString() })
+          .update({
+            memory:      item.memory,
+            category:    item.category,
+            entity_name: item.entity_name || existing.entity_name || null,
+            entity_type: item.entity_type || existing.entity_type || null,
+            updated_at:  new Date().toISOString()
+          })
           .eq('id', existing.id);
       } else {
         // Check limit before inserting
         var limit = _supporter.memoryPriority ? 500 : 50;
         if (_memories.length >= limit) {
-          // Delete oldest to make room
           var oldest = _memories[_memories.length - 1];
           if (oldest) await _sb.from('user_memories').delete().eq('id', oldest.id);
         }
-        await _sb.from('user_memories').insert({
-          user_id: _session.user.id,
-          memory: item.memory,
-          category: item.category,
+        // Resolve related_to: find IDs of memories whose text matches relates_to strings
+        var relatedIds = [];
+        if (Array.isArray(item.relates_to) && item.relates_to.length > 0) {
+          item.relates_to.forEach(function(relText) {
+            // Check both existing memories and newly inserted ones in this batch
+            var match = _memories.find(function(m) {
+              return m.memory.toLowerCase().trim() === relText.toLowerCase().trim();
+            });
+            if (match && match.id) relatedIds.push(match.id);
+          });
+        }
+        var insertPayload = {
+          user_id:        _session.user.id,
+          memory:         item.memory,
+          category:       item.category,
+          entity_name:    item.entity_name || null,
+          entity_type:    item.entity_type || null,
+          related_to:     relatedIds.length ? relatedIds : null,
           source_chat_id: sourceId || _currentId,
-          updated_at: new Date().toISOString()
-        });
+          updated_at:     new Date().toISOString()
+        };
+        await _sb.from('user_memories').insert(insertPayload);
       }
     }
     // Reload memories into state
