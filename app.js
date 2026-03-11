@@ -242,6 +242,11 @@ function buildSystemPrompt(queryContext) {
       'Use it naturally to give contextually aware answers without explicitly mentioning that you remember it. ' +
       parts.join('. ') + '.';
   }
+  // Active persona overrides default personality
+  if (_activePersona && _activePersona.system_prompt) {
+    var personaBlock = 'You are ' + _activePersona.name + '. ' + _activePersona.system_prompt;
+    return [personaBlock, n, memBlock].filter(Boolean).join(' ');
+  }
   return ['You are Cyanix AI, a powerful and intelligent assistant.', p, n, memBlock].filter(Boolean).join(' ');
 }
 
@@ -261,7 +266,12 @@ function mdToHTML(raw) {
   let text = String(raw || '');
   let thinkHTML = '';
 
+  // Only show think block for models that benefit from visible reasoning
+  var thinkModel = _settings && (_settings.model === 'openai/gpt-oss-120b' ||
+    (_settings.model && _settings.model.startsWith('groq/compound')));
+
   text = text.replace(/<think>([\s\S]*?)<\/think>/gi, function(_, content) {
+    if (!thinkModel) return ''; // strip think block silently for other models
     const trimmed = content.trim();
     if (!trimmed) return '';
     const safe = trimmed
@@ -545,6 +555,8 @@ async function onSignedIn(session) {
   await loadSupporter();
   await loadMemories();
   await loadChats();
+  loadReferralData().catch(function() {});
+  loadPersonas().catch(function() {});
 
   if (_chats.length > 0) await loadChat(_chats[0].id);
   else showWelcome();
@@ -973,14 +985,17 @@ async function incrementUsage() {
 
 function checkDailyLimit() {
   if (_supporter.dailyLimit === null) return true; // unlimited
-  if (_usageToday >= _supporter.dailyLimit) {
+  // Apply referral bonus: each referral adds 5 extra messages per window
+  var bonusMessages = (window._referralBonus || 0) * 5;
+  var effectiveLimit = (_supporter.dailyLimit || 20) + bonusMessages;
+  if (_usageToday >= effectiveLimit) {
     showUpgradeModal();
     return false;
   }
   // Soft warning at 80%
-  var pct = _usageToday / _supporter.dailyLimit;
+  var pct = _usageToday / effectiveLimit;
   if (pct >= 0.8) {
-    var left = _supporter.dailyLimit - _usageToday;
+    var left = effectiveLimit - _usageToday;
     toast(left + ' message' + (left === 1 ? '' : 's') + ' left this window. Resets in ' + getWindowResetTime() + '.');
   }
   return true;
@@ -1827,7 +1842,13 @@ function stopResponse() {
 }
 
 function renderStreamingContent(text) {
+  var thinkModel = _settings && (_settings.model === 'openai/gpt-oss-120b' ||
+    (_settings.model && _settings.model.startsWith('groq/compound')));
   if (text.includes('<think>') && text.includes('</think>')) return mdToHTML(text);
+  if (!thinkModel && text.includes('<think>')) {
+    // Strip think content entirely for non-reasoning models
+    return mdToHTML(text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*/i, '').trim());
+  }
   if (text.includes('<think>') && !text.includes('</think>')) {
     const safe = text.slice(text.indexOf('<think>') + 7)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -1908,6 +1929,397 @@ async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
     toast(value === 1 ? 'Thanks!' : 'Got it, we' + String.fromCharCode(39) + 'll improve.');
   } catch (e) { toast('Could not save feedback.'); }
 }
+
+// -- Memory Manager --------------------------------------------------
+var _memoryManagerOpen = false;
+
+window.toggleMemoryManager = function() {
+  var panel    = document.getElementById('memory-manager-panel');
+  var chevron  = document.getElementById('memory-manager-chevron');
+  if (!panel) return;
+  _memoryManagerOpen = !_memoryManagerOpen;
+  panel.style.display   = _memoryManagerOpen ? 'block' : 'none';
+  if (chevron) chevron.style.transform = _memoryManagerOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+  if (_memoryManagerOpen) renderMemoryManager();
+};
+
+function renderMemoryManager() {
+  var list      = document.getElementById('memory-list');
+  var empty     = document.getElementById('memory-empty');
+  var clearBtn  = document.getElementById('clear-all-memories-btn');
+  var descEl    = document.getElementById('memory-manager-desc');
+  if (!list) return;
+
+  list.innerHTML = '';
+
+  if (!_memories || !_memories.length) {
+    if (empty)    empty.style.display   = 'block';
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (descEl)   descEl.textContent    = 'No memories yet';
+    return;
+  }
+
+  if (empty)    empty.style.display   = 'none';
+  if (clearBtn) clearBtn.style.display = 'block';
+  if (descEl)   descEl.textContent    = _memories.length + ' memor' + (_memories.length === 1 ? 'y' : 'ies') + ' stored';
+
+  _memories.forEach(function(m) {
+    var row = document.createElement('div');
+    row.className = 'memory-row';
+    row.setAttribute('data-id', m.id);
+
+    var tag = m.entity_type || m.category || 'fact';
+    var tagColor = {
+      project: 'var(--blue)', tool: '#8b5cf6', concept: '#06b6d4',
+      person: '#f59e0b', personal: '#10b981', preference: '#f97316',
+      technical: '#6366f1'
+    }[tag] || 'var(--text-4)';
+
+    row.innerHTML =
+      '<div class="memory-row-content">' +
+        '<span class="memory-tag" style="background:' + tagColor + '22;color:' + tagColor + '">' + tag + '</span>' +
+        '<span class="memory-text">' + esc(m.memory) + '</span>' +
+      '</div>' +
+      '<button class="memory-delete-btn" data-mid="' + m.id + '" onclick="window.deleteMemory(null,this)" title="Delete">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>';
+    list.appendChild(row);
+  });
+}
+
+window.deleteMemory = async function(id, btn) {
+  if (!id) { id = btn && btn.dataset && btn.dataset.mid; }
+  if (!_sb || !_session) return;
+  btn.disabled = true;
+  try {
+    var res = await _sb.from('user_memories').delete().eq('id', id).eq('user_id', _session.user.id);
+    if (res.error) throw res.error;
+    _memories = _memories.filter(function(m) { return m.id !== id; });
+    var row = document.querySelector('.memory-row[data-id="' + id + '"]');
+    if (row) {
+      row.style.opacity = '0';
+      row.style.transform = 'translateX(20px)';
+      setTimeout(function() { row.remove(); renderMemoryManager(); }, 250);
+    }
+    toast('Memory deleted.');
+  } catch (e) {
+    btn.disabled = false;
+    toast('Could not delete memory.');
+  }
+};
+
+// -- Clear All Memories ------------------------------------------
+document.addEventListener('DOMContentLoaded', function() {
+  var clearBtn = document.getElementById('clear-all-memories-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async function() {
+      if (!_sb || !_session) return;
+      if (!confirm('Delete all ' + _memories.length + ' memories? This cannot be undone.')) return;
+      try {
+        await _sb.from('user_memories').delete().eq('user_id', _session.user.id);
+        _memories = [];
+        renderMemoryManager();
+        toast('All memories cleared.');
+      } catch (e) { toast('Could not clear memories.'); }
+    });
+  }
+});
+
+// -- Referral Codes ---------------------------------------------------
+var _referralCode = null;
+
+function generateReferralCode(userId) {
+  // Deterministic short code from user ID -- no extra DB write needed for generation
+  var hash = 0;
+  for (var i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+    hash |= 0;
+  }
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no O/0/I/1 confusion
+  var code = 'CX';
+  var n = Math.abs(hash);
+  for (var j = 0; j < 5; j++) {
+    code += chars[n % chars.length];
+    n = Math.floor(n / chars.length);
+  }
+  return code; // e.g. CX7KMR2
+}
+
+async function loadReferralData() {
+  if (!_sb || !_session) return;
+  try {
+    var userId = _session.user.id;
+    _referralCode = generateReferralCode(userId);
+
+    // Show code in UI
+    var codeEl = document.getElementById('referral-code-val');
+    if (codeEl) codeEl.textContent = _referralCode;
+
+    // Wire copy button
+    var copyBtn = document.getElementById('referral-copy-btn');
+    if (copyBtn) {
+      copyBtn.onclick = function() {
+        var shareText = 'Try Cyanix AI! Use my code ' + _referralCode + ' at signup: https://suprosmith-coder.github.io/NixAi_Nova';
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(shareText).then(function() { toast('Referral link copied!'); });
+        } else {
+          toast('Code: ' + _referralCode);
+        }
+      };
+    }
+
+    // Count how many signups used this code
+    var res = await _sb.from('referrals')
+      .select('id, created_at', { count: 'exact' })
+      .eq('referrer_code', _referralCode);
+
+    var count = (res.data && res.data.length) || 0;
+    var statsEl = document.getElementById('referral-stats-desc');
+    var badgeEl = document.getElementById('referral-reward-badge');
+
+    if (statsEl) {
+      if (count === 0) {
+        statsEl.textContent = 'No referrals yet. Share your code!';
+      } else {
+        statsEl.textContent = count + ' user' + (count === 1 ? '' : 's') + ' joined with your code';
+      }
+    }
+
+    // Show +2hr badge if they have any referrals
+    if (badgeEl) badgeEl.style.display = count > 0 ? 'inline-block' : 'none';
+
+    // Apply bonus: each referral adds 2hr window extension (stored in state)
+    window._referralBonus = count * 2; // extra hours per window
+
+  } catch (e) {
+    console.error('[CyanixAI] loadReferralData:', e);
+  }
+}
+
+async function saveReferralIfNeeded(codeUsed) {
+  if (!_sb || !_session || !codeUsed) return;
+  try {
+    // Check not already used a referral
+    var existing = await _sb.from('referrals')
+      .select('id').eq('referred_user_id', _session.user.id).single();
+    if (existing.data) return; // already redeemed
+
+    // Validate code belongs to someone
+    if (!codeUsed.startsWith('CX') || codeUsed.length !== 7) return;
+
+    await _sb.from('referrals').insert({
+      referrer_code:    codeUsed,
+      referred_user_id: _session.user.id,
+      created_at:       new Date().toISOString(),
+    });
+    toast('Referral code applied! Your friend earned a rate limit bonus.');
+  } catch (e) {
+    console.error('[CyanixAI] saveReferralIfNeeded:', e);
+  }
+}
+
+
+// -- Personas -------------------------------------------------------
+var _personas       = [];
+var _activePersona  = null; // null = default Cyanix
+var _editingPersona = null; // persona being edited in modal
+
+var PERSONA_EMOJIS = [
+  '\u{1F916}','\u{1F9E0}','\u{1F47E}','\u{1F480}','\u{1F31F}',
+  '\u{1F525}','\u{26A1}','\u{1F3AF}','\u{1F52E}','\u{1F9EC}',
+  '\u{1F4DA}','\u{1F3A8}','\u{1F3B5}','\u{2696}\uFE0F','\u{1F9EA}',
+  '\u{1F40D}','\u{1F98A}','\u{1F984}','\u{1F9B8}','\u{1FAB8}',
+  '\u{1F47D}','\u{1F31A}','\u{1F32A}\uFE0F','\u{1F4A1}','\u{1F9FF}'
+];
+
+async function loadPersonas() {
+  if (!_sb || !_session) return;
+  try {
+    var res = await _sb.from('personas')
+      .select('id,name,emoji,system_prompt,created_at')
+      .eq('user_id', _session.user.id)
+      .order('created_at', { ascending: true });
+    _personas = res.data || [];
+    renderPersonaList();
+  } catch (e) { console.error('[CyanixAI] loadPersonas:', e); }
+}
+
+function renderPersonaList() {
+  var list    = document.getElementById('persona-list');
+  var descEl  = document.getElementById('persona-limit-desc');
+  var addBtn  = document.getElementById('persona-add-btn');
+  var divider = document.getElementById('persona-add-divider');
+  if (!list) return;
+
+  var limit = _supporter.isActive ? Infinity : 3;
+  if (descEl) descEl.textContent = _supporter.isActive ? 'Unlimited' : _personas.length + '/3 used';
+  if (addBtn) addBtn.style.display = _personas.length >= limit ? 'none' : 'flex';
+  if (divider) divider.style.display = _personas.length >= limit ? 'none' : 'block';
+
+  list.innerHTML = '';
+
+  // Default Cyanix row
+  var defaultRow = document.createElement('div');
+  defaultRow.className = 'settings-card-row persona-row' + (!_activePersona ? ' persona-row--active' : '');
+  defaultRow.onclick = function() { setActivePersona(null); };
+  defaultRow.innerHTML =
+    '<div class="persona-avatar">\u{1F300}</div>' +
+    '<div class="scr-body"><div class="scr-label">Cyanix AI <span style="font-size:.7rem;color:var(--text-4)">(default)</span></div></div>' +
+    (!_activePersona ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' : '');
+  list.appendChild(defaultRow);
+
+  _personas.forEach(function(p) {
+    var isActive = _activePersona && _activePersona.id === p.id;
+    var row = document.createElement('div');
+    row.className = 'settings-card-row persona-row' + (isActive ? ' persona-row--active' : '');
+
+    var divEl = document.createElement('div');
+    divEl.className = 'settings-card-divider';
+    list.appendChild(divEl);
+
+    row.innerHTML =
+      '<div class="persona-avatar">' + (p.emoji || '\u{1F916}') + '</div>' +
+      '<div class="scr-body"><div class="scr-label">' + esc(p.name) + '</div></div>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">' +
+        (isActive ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
+        '<button class="scr-link-btn" onclick="event.stopPropagation();window.openPersonaModal(\'' + p.id + '\')" style="color:var(--text-4);font-size:.78rem;">Edit</button>' +
+      '</div>';
+    row.onclick = function() { setActivePersona(p); };
+    list.appendChild(row);
+  });
+}
+
+function setActivePersona(p) {
+  _activePersona = p;
+  renderPersonaList();
+  // Update topbar hint
+  var titleEl = document.getElementById('chat-title');
+  if (titleEl && p) titleEl.textContent = p.name;
+  toast(p ? ('Switched to ' + p.name) : 'Switched to Cyanix AI');
+}
+
+window.openPersonaModal = function(id) {
+  var overlay = document.getElementById('persona-modal-overlay');
+  if (!overlay) return;
+
+  _editingPersona = id ? (_personas.find(function(p) { return p.id === id; }) || null) : null;
+
+  // Populate fields
+  var titleEl  = document.getElementById('persona-modal-title');
+  var nameEl   = document.getElementById('persona-name-input');
+  var promptEl = document.getElementById('persona-prompt-input');
+  var emojiEl  = document.getElementById('persona-emoji-preview');
+  var deleteBtn= document.getElementById('persona-delete-btn');
+  var countEl  = document.getElementById('persona-prompt-count');
+
+  if (titleEl)  titleEl.textContent  = _editingPersona ? 'Edit Persona' : 'New Persona';
+  if (nameEl)   nameEl.value         = _editingPersona ? _editingPersona.name : '';
+  if (promptEl) promptEl.value       = _editingPersona ? (_editingPersona.system_prompt || '') : '';
+  if (emojiEl)  emojiEl.textContent  = _editingPersona ? (_editingPersona.emoji || '\u{1F916}') : '\u{1F916}';
+  if (deleteBtn) deleteBtn.style.display = _editingPersona ? 'block' : 'none';
+  if (countEl)  countEl.textContent  = promptEl ? promptEl.value.length : '0';
+
+  // Build emoji picker
+  var picker = document.getElementById('persona-emoji-picker');
+  if (picker) {
+    picker.innerHTML = '';
+    PERSONA_EMOJIS.forEach(function(em) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = em;
+      btn.style.cssText = 'font-size:1.4rem;background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;';
+      btn.onclick = function() {
+        if (emojiEl) emojiEl.textContent = em;
+        if (picker) picker.style.display = 'none';
+      };
+      picker.appendChild(btn);
+    });
+  }
+
+  // Prompt char counter
+  if (promptEl) {
+    promptEl.oninput = function() {
+      if (countEl) countEl.textContent = promptEl.value.length;
+    };
+  }
+
+  overlay.style.display = 'flex';
+};
+
+window.closePersonaModal = function() {
+  var overlay = document.getElementById('persona-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+  _editingPersona = null;
+};
+
+window.toggleEmojiPicker = function() {
+  var picker = document.getElementById('persona-emoji-picker');
+  if (picker) picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
+};
+
+window.savePersona = async function() {
+  if (!_sb || !_session) return;
+  var nameEl   = document.getElementById('persona-name-input');
+  var promptEl = document.getElementById('persona-prompt-input');
+  var emojiEl  = document.getElementById('persona-emoji-preview');
+  var saveBtn  = document.getElementById('persona-save-btn');
+
+  var name   = (nameEl && nameEl.value.trim()) || '';
+  var prompt = (promptEl && promptEl.value.trim()) || '';
+  var emoji  = (emojiEl && emojiEl.textContent.trim()) || '\u{1F916}';
+
+  if (!name) { toast('Give your persona a name.'); return; }
+
+  var limit = _supporter.isActive ? Infinity : 3;
+  if (!_editingPersona && _personas.length >= limit) {
+    toast('Upgrade to supporter for unlimited personas.'); return;
+  }
+
+  if (saveBtn) saveBtn.textContent = 'Saving...';
+
+  try {
+    if (_editingPersona) {
+      // Update
+      var res = await _sb.from('personas').update({
+        name, emoji, system_prompt: prompt, updated_at: new Date().toISOString()
+      }).eq('id', _editingPersona.id).eq('user_id', _session.user.id).select().single();
+      if (res.error) throw res.error;
+      var idx = _personas.findIndex(function(p) { return p.id === _editingPersona.id; });
+      if (idx >= 0) _personas[idx] = res.data;
+      // Update active persona if it was the one edited
+      if (_activePersona && _activePersona.id === _editingPersona.id) _activePersona = res.data;
+    } else {
+      // Insert
+      var res = await _sb.from('personas').insert({
+        user_id: _session.user.id, name, emoji, system_prompt: prompt,
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+      }).select().single();
+      if (res.error) throw res.error;
+      _personas.push(res.data);
+    }
+    renderPersonaList();
+    window.closePersonaModal();
+    toast(_editingPersona ? 'Persona updated.' : 'Persona created!');
+  } catch (e) {
+    toast('Could not save persona.');
+    console.error('[CyanixAI] savePersona:', e);
+  } finally {
+    if (saveBtn) saveBtn.textContent = 'Save Persona';
+  }
+};
+
+window.deletePersona = async function() {
+  if (!_editingPersona || !_sb || !_session) return;
+  if (!confirm('Delete ' + _editingPersona.name + '?')) return;
+  try {
+    await _sb.from('personas').delete().eq('id', _editingPersona.id).eq('user_id', _session.user.id);
+    _personas = _personas.filter(function(p) { return p.id !== _editingPersona.id; });
+    if (_activePersona && _activePersona.id === _editingPersona.id) _activePersona = null;
+    renderPersonaList();
+    window.closePersonaModal();
+    toast('Persona deleted.');
+  } catch (e) { toast('Could not delete persona.'); }
+};
 
 // -- Thought Stream ------------------------------------------
 var _thoughtInterval = null;
