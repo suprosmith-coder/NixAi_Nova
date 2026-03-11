@@ -534,7 +534,8 @@ async function onSignedIn(session) {
   hide('view-auth'); show('view-chat');
 
   const user = session.user;
-  const name = (user.user_metadata && user.user_metadata.full_name) ? user.user_metadata.full_name : user.email;
+  const rawName = (user.user_metadata && user.user_metadata.full_name) ? user.user_metadata.full_name : user.email;
+  const name = typeof rawName === 'string' ? rawName : (String(rawName || user.email || ''));
   const initials = name ? name.split(' ').map(function(n) { return n[0]; }).join('').slice(0,2).toUpperCase() : '?';
   if ($('user-avatar')) $('user-avatar').textContent = initials;
   if ($('user-name'))   $('user-name').textContent   = name || user.email;
