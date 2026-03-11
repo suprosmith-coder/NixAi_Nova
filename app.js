@@ -1676,7 +1676,7 @@ async function sendMessage(text) {
   }
 
   hide('welcome-state');
-  _history.push({ role: 'user', content: typeof userContent === 'string' ? userContent : text });
+  _history.push({ role: 'user', content: text }); // image data excluded from history to save tokens
   renderMessage('user', text, true, null, _attachment && _attachment.type === 'image' ? _attachment.data : null);
   var pendingAttachment = _attachment;
   clearAttachment();
@@ -1699,20 +1699,19 @@ async function sendMessage(text) {
   }
 
   // Build user content -- plain text or multipart if attachment present
+  // NOTE: use pendingAttachment (captured before clearAttachment() was called)
   var userContent;
-  if (_attachment) {
-    if (_attachment.type === 'image') {
+  if (pendingAttachment) {
+    if (pendingAttachment.type === 'image') {
       userContent = [
-        { type: 'image_url', image_url: { url: 'data:' + _attachment.mediaType + ';base64,' + _attachment.data } },
+        { type: 'image_url', image_url: { url: 'data:' + pendingAttachment.mediaType + ';base64,' + pendingAttachment.data } },
         { type: 'text', text: text }
       ];
-    } else if (_attachment.type === 'pdf') {
-      // Send PDF as text note -- Groq doesn't support PDF natively, extract as base64 note
-      userContent = text + '\n\n[Attached PDF: ' + _attachment.name + ']\nNote: PDF content attached as base64. Please analyze it.' + _attachment.data.slice(0, 4000);
+    } else if (pendingAttachment.type === 'pdf') {
+      userContent = text + '\n\n[Attached PDF: ' + pendingAttachment.name + ']\nNote: PDF content attached as base64. Please analyze it.' + pendingAttachment.data.slice(0, 4000);
     } else {
-      // Text/code file -- inject as code block
-      var ext = _attachment.name.split('.').pop() || 'text';
-      userContent = text + '\n\n**Attached file: ' + _attachment.name + '**\n```' + ext + '\n' + _attachment.data.slice(0, 12000) + '\n```';
+      var ext = pendingAttachment.name.split('.').pop() || 'text';
+      userContent = text + '\n\n**Attached file: ' + pendingAttachment.name + '**\n```' + ext + '\n' + pendingAttachment.data.slice(0, 12000) + '\n```';
     }
   } else {
     userContent = text;
