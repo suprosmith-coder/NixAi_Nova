@@ -81,7 +81,7 @@
 <!-- Update Bar -->
 <div id="update-bar" class="update-bar hidden">
   <span>✨ Update ready</span>
-  <button type="button" id="update-reload-btn">Reload</button>
+  <button type="button" id="update-reload-btn">Update</button>
 </div>
 
 <!-- ═══════════════════════════════════════════════
@@ -416,6 +416,20 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           </div>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="settings-card-row">
+          <div class="scr-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </div>
+          <div class="scr-body">
+            <div class="scr-label">Voice</div>
+            <div class="scr-desc">Cyanix speak voice</div>
+          </div>
+          <select class="scr-select" id="tts-voice-select">
+            <option value="Celeste-PlayAI">Celeste &mdash; Calm Female</option>
+            <option value="Atlas-PlayAI">Atlas &mdash; Confident Male</option>
+          </select>
         </div>
       </div>
 
