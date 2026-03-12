@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Cysearch -- Explore the Web</title>
+<meta name="theme-color" content="#020408" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* -- RESET ------------------------------------------- */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:       #020408;
+  --surface:  #090d14;
+  --surface2: #0d1520;
+  --border:   rgba(0,200,255,.12);
+  --blue:     #00c8ff;
+  --blue2:    #0070ff;
+  --purple:   #7c3aed;
+  --text1:    #e8f4ff;
+  --text2:    #8ba8c4;
+  --text3:    #4a6a88;
+  --glow:     rgba(0,200,255,.15);
+  --font:     'DM Sans', system-ui, sans-serif;
+  --font-brand:'Orbitron', monospace;
+  --r:        14px;
+  --ease:     cubic-bezier(.25,.46,.45,.94);
+}
+html,body{
+  height:100%;
+  background:var(--bg);
+  color:var(--text1);
+  font-family:var(--font);
+  font-size:15px;
+  line-height:1.6;
+  overflow:hidden;
+}
+
+/* -- STARFIELD ---------------------------------------- */
+#starfield{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+.star{
+  position:absolute;border-radius:50%;background:#fff;
+  animation:twinkle var(--d,3s) var(--delay,0s) ease-in-out infinite alternate;
+}
+@keyframes twinkle{0%{opacity:var(--min,.1);}100%{opacity:var(--max,.8);}}
+
+/* -- LAYOUT ------------------------------------------- */
+#app{
+  position:relative;z-index:1;
+  height:100vh;display:flex;flex-direction:column;
+}
+
+/* -- TOPBAR ------------------------------------------- */
+#topbar{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;
+  border-bottom:1px solid var(--border);
+  background:rgba(2,4,8,.85);
+  backdrop-filter:blur(16px);
+  flex-shrink:0;
+  position:relative;z-index:10;
+}
+#logo{
+  font-family:var(--font-brand);
+  font-size:.95rem;font-weight:700;
+  color:var(--blue);
+  letter-spacing:.08em;
+  white-space:nowrap;
+  text-shadow:0 0 20px rgba(0,200,255,.5);
+  text-decoration:none;
+}
+#logo span{color:var(--text2);font-weight:400;}
+#search-wrap{
+  flex:1;position:relative;max-width:680px;
+}
+#search-input{
+  width:100%;
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:40px;
+  padding:10px 46px 10px 18px;
+  font-family:var(--font);
+  font-size:.92rem;
+  color:var(--text1);
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+#search-input:focus{
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(0,200,255,.1),0 0 20px rgba(0,200,255,.08);
+}
+#search-input::placeholder{color:var(--text3);}
+#search-btn{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;border-radius:50%;
+  background:var(--blue);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .15s,box-shadow .15s;
+  box-shadow:0 0 12px rgba(0,200,255,.3);
+}
+#search-btn:hover{transform:translateY(-50%) scale(1.1);box-shadow:0 0 20px rgba(0,200,255,.5);}
+#search-btn svg{color:#000;}
+#topbar-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+#cyanix-link{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:20px;
+  background:var(--surface2);border:1.5px solid var(--border);
+  color:var(--text2);font-size:.78rem;font-weight:500;
+  text-decoration:none;white-space:nowrap;
+  transition:border-color .2s,color .2s;
+}
+#cyanix-link:hover{border-color:var(--blue);color:var(--blue);}
+#user-dot{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue2),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;color:#fff;
+  flex-shrink:0;cursor:pointer;
+  box-shadow:0 0 12px rgba(0,100,255,.3);
+}
+
+/* -- UNIVERSE (main scroll area) ---------------------- */
+#universe{
+  flex:1;overflow:auto;position:relative;
+  padding:28px 20px 40px;
+}
+#universe::-webkit-scrollbar{width:4px;}
+#universe::-webkit-scrollbar-track{background:transparent;}
+#universe::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+/* -- HERO (empty state) ------------------------------- */
+#hero{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:calc(100vh - 80px);
+  text-align:center;gap:16px;
+  animation:heroIn .6s var(--ease) both;
+}
+@keyframes heroIn{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
+#hero-logo{
+  font-family:var(--font-brand);
+  font-size:2.4rem;font-weight:900;
+  background:linear-gradient(135deg,var(--blue),var(--blue2),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:none;
+  letter-spacing:.05em;
+  animation:logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.2);}}
+#hero-sub{color:var(--text2);font-size:.95rem;max-width:360px;}
+#hero-hints{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+  margin-top:8px;
+}
+.hint-chip{
+  padding:6px 14px;border-radius:20px;
+  border:1px solid var(--border);
+  background:var(--surface2);
+  color:var(--text2);font-size:.78rem;cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s;
+}
+.hint-chip:hover{border-color:var(--blue);color:var(--blue);background:rgba(0,200,255,.05);}
+
+/* -- RESULTS GRID ------------------------------------- */
+#results-wrap{display:none;}
+#results-header{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:20px;flex-wrap:wrap;
+}
+#results-query{
+  font-family:var(--font-brand);
+  font-size:.78rem;font-weight:600;
+  color:var(--blue);letter-spacing:.08em;text-transform:uppercase;
+}
+#results-count{font-size:.78rem;color:var(--text3);}
+#abstract-card{
+  background:linear-gradient(135deg,rgba(0,112,255,.08),rgba(124,58,237,.08));
+  border:1.5px solid rgba(0,200,255,.2);
+  border-radius:var(--r);padding:16px 20px;
+  margin-bottom:24px;
+  position:relative;overflow:hidden;
+  animation:cardIn .4s var(--ease) both;
+}
+#abstract-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--blue),var(--purple));
+}
+#abstract-text{font-size:.88rem;color:var(--text2);line-height:1.7;}
+#abstract-link{
+  display:inline-flex;align-items:center;gap:4px;
+  margin-top:8px;font-size:.78rem;color:var(--blue);text-decoration:none;
+}
+#abstract-link:hover{text-decoration:underline;}
+
+/* -- CARDS GRID --------------------------------------- */
+#cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:14px;
+  margin-bottom:32px;
+}
+.result-card{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  padding:16px;
+  cursor:pointer;
+  position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+  animation:cardIn .4s var(--ease) both;
+  animation-delay:var(--delay,0s);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+.result-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(0,200,255,.06) 0%,transparent 60%);
+  opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.result-card:hover::before{opacity:1;}
+.result-card:hover{
+  border-color:rgba(0,200,255,.35);
+  transform:translateY(-2px);
+  box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 0 1px rgba(0,200,255,.1);
+}
+.card-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.card-favicon{
+  width:28px;height:28px;border-radius:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;overflow:hidden;
+}
+.card-favicon img{width:16px;height:16px;object-fit:contain;}
+.card-favicon-fallback{font-size:.7rem;color:var(--text3);}
+.card-meta{flex:1;min-width:0;}
+.card-domain{font-size:.72rem;color:var(--text3);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-title{
+  font-size:.9rem;font-weight:600;color:var(--text1);
+  line-height:1.3;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card-snippet{
+  font-size:.8rem;color:var(--text2);line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card-actions{
+  display:flex;align-items:center;gap:6px;margin-top:12px;
+}
+.card-btn{
+  display:flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:20px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--text3);font-size:.72rem;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;font-family:var(--font);
+}
+.card-btn:hover{border-color:var(--blue);color:var(--blue);}
+.card-btn.saved{border-color:rgba(124,58,237,.5);color:var(--purple);background:rgba(124,58,237,.08);}
+.card-visit{
+  margin-left:auto;padding:5px 12px;border-radius:20px;
+  border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.06);
+  color:var(--blue);font-size:.72rem;cursor:pointer;
+  text-decoration:none;font-family:var(--font);
+  transition:background .15s,box-shadow .15s;
+}
+.card-visit:hover{background:rgba(0,200,255,.12);box-shadow:0 0 12px rgba(0,200,255,.2);}
+
+/* -- RELATED CLUSTER ---------------------------------- */
+#related-section{margin-top:8px;}
+#related-title{
+  font-size:.7rem;font-weight:700;letter-spacing:.12em;
+  color:var(--text3);text-transform:uppercase;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+#related-title::after{content:'';flex:1;height:1px;background:var(--border);}
+#related-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.related-chip{
+  padding:7px 14px;border-radius:20px;
+  border:1px solid var(--border);
+  background:rgba(124,58,237,.06);
+  color:var(--text2);font-size:.78rem;cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s;
+  display:flex;align-items:center;gap:6px;
+}
+.related-chip:hover{border-color:var(--purple);color:var(--text1);background:rgba(124,58,237,.12);}
+.related-chip svg{opacity:.5;}
+
+/* -- PREVIEW PANEL ------------------------------------ */
+#preview-panel{
+  position:fixed;right:0;top:0;bottom:0;width:420px;
+  background:var(--surface);
+  border-left:1.5px solid var(--border);
+  z-index:100;
+  display:flex;flex-direction:column;
+  transform:translateX(100%);
+  transition:transform .3s var(--ease);
+  backdrop-filter:blur(20px);
+}
+#preview-panel.open{transform:translateX(0);}
+#preview-header{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+#preview-favicon{
+  width:24px;height:24px;border-radius:5px;
+  background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;
+}
+#preview-favicon img{width:14px;height:14px;object-fit:contain;}
+#preview-title{font-size:.85rem;font-weight:600;color:var(--text1);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#preview-close{
+  width:28px;height:28px;border-radius:50%;border:none;
+  background:var(--surface2);color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+#preview-close:hover{background:var(--border);color:var(--text1);}
+#preview-body{flex:1;display:flex;flex-direction:column;padding:16px;gap:12px;overflow-y:auto;}
+#preview-snippet-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;
+}
+#preview-snippet-domain{font-size:.72rem;color:var(--blue);margin-bottom:4px;}
+#preview-snippet-text{font-size:.85rem;color:var(--text2);line-height:1.7;}
+#preview-actions{display:flex;flex-direction:column;gap:8px;}
+#preview-visit-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px;border-radius:10px;
+  background:var(--blue);border:none;color:#000;
+  font-family:var(--font);font-size:.88rem;font-weight:600;cursor:pointer;
+  text-decoration:none;transition:box-shadow .2s;
+}
+#preview-visit-btn:hover{box-shadow:0 0 20px rgba(0,200,255,.4);}
+#preview-save-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px;border-radius:10px;
+  border:1.5px solid var(--border);background:transparent;
+  color:var(--text2);font-family:var(--font);font-size:.85rem;cursor:pointer;
+  transition:border-color .2s,color .2s;
+}
+#preview-save-btn:hover{border-color:var(--purple);color:var(--purple);}
+#preview-save-btn.saved{border-color:var(--purple);color:var(--purple);background:rgba(124,58,237,.08);}
+#preview-ask-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px;border-radius:10px;
+  border:1.5px solid rgba(0,200,255,.2);background:rgba(0,200,255,.05);
+  color:var(--blue);font-family:var(--font);font-size:.85rem;cursor:pointer;
+  transition:background .2s;
+}
+#preview-ask-btn:hover{background:rgba(0,200,255,.1);}
+
+/* -- LOADING ------------------------------------------ */
+#loading{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:16px;}
+.load-orb{
+  width:48px;height:48px;border-radius:50%;
+  border:2px solid var(--border);
+  border-top-color:var(--blue);
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.load-text{font-family:var(--font-brand);font-size:.72rem;color:var(--text3);letter-spacing:.1em;animation:loadPulse 1.5s ease-in-out infinite;}
+@keyframes loadPulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+
+/* -- TOAST -------------------------------------------- */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:8px 18px;
+  font-size:.82rem;color:var(--text1);
+  opacity:0;transition:opacity .25s,transform .25s;
+  pointer-events:none;z-index:999;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* -- AUTH GATE ---------------------------------------- */
+#auth-gate{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(2,4,8,.95);backdrop-filter:blur(20px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.auth-gate-card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:20px;padding:32px;text-align:center;
+  max-width:380px;width:100%;
+  animation:cardIn .4s var(--ease) both;
+}
+.auth-gate-logo{
+  font-family:var(--font-brand);font-size:1.4rem;font-weight:900;
+  color:var(--blue);letter-spacing:.08em;margin-bottom:8px;
+}
+.auth-gate-sub{font-size:.85rem;color:var(--text2);margin-bottom:24px;}
+.auth-gate-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:12px;border-radius:10px;
+  background:var(--blue);border:none;color:#000;
+  font-family:var(--font);font-size:.92rem;font-weight:600;
+  cursor:pointer;text-decoration:none;
+  transition:box-shadow .2s;
+}
+.auth-gate-btn:hover{box-shadow:0 0 20px rgba(0,200,255,.4);}
+
+/* -- COLLECTIONS PANEL -------------------------------- */
+#saves-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:20px;
+  background:var(--surface2);border:1.5px solid var(--border);
+  color:var(--text2);font-size:.78rem;cursor:pointer;font-family:var(--font);
+  transition:border-color .2s,color .2s;
+}
+#saves-btn:hover{border-color:var(--purple);color:var(--purple);}
+
+/* -- RESPONSIVE --------------------------------------- */
+@media(max-width:640px){
+  #topbar{padding:10px 14px;gap:10px;}
+  #logo{font-size:.78rem;}
+  #cards-grid{grid-template-columns:1fr;}
+  #preview-panel{width:100%;top:auto;height:75vh;border-radius:20px 20px 0 0;border-left:none;border-top:1.5px solid var(--border);}
+  #preview-panel.open{transform:translateY(0);}
+  #preview-panel:not(.open){transform:translateY(100%);}
+  #cyanix-link span{display:none;}
+  #universe{padding:20px 14px 40px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Starfield -->
+<div id="starfield"></div>
+
+<!-- Auth Gate -->
+<div id="auth-gate">
+  <div class="auth-gate-card">
+    <div class="auth-gate-logo">CYSEARCH</div>
+    <p class="auth-gate-sub">Sign in to Cyanix AI to explore the web</p>
+    <a href="./index.html" class="auth-gate-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Go to Cyanix AI
+    </a>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" style="display:none">
+
+  <!-- Topbar -->
+  <div id="topbar">
+    <a id="logo" href="./index.html">CY<span>SEARCH</span></a>
+    <div id="search-wrap">
+      <input id="search-input" type="search" placeholder="Search the universe..." autocomplete="off" />
+      <button id="search-btn" aria-label="Search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </div>
+    <div id="topbar-actions">
+      <button id="saves-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        Saved
+      </button>
+      <a id="cyanix-link" href="./index.html">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Cyanix AI</span>
+      </a>
+      <div id="user-dot">?</div>
+    </div>
+  </div>
+
+  <!-- Universe -->
+  <div id="universe">
+
+    <!-- Hero -->
+    <div id="hero">
+      <div id="hero-logo">CYSEARCH</div>
+      <p id="hero-sub">An infinite universe of information.<br/>Start exploring.</p>
+      <div id="hero-hints">
+        <div class="hint-chip" onclick="doSearch('latest AI news')">Latest AI news</div>
+        <div class="hint-chip" onclick="doSearch('cyberpunk aesthetic')">Cyberpunk aesthetic</div>
+        <div class="hint-chip" onclick="doSearch('Supabase edge functions')">Supabase edge functions</div>
+        <div class="hint-chip" onclick="doSearch('PWA development 2025')">PWA development</div>
+        <div class="hint-chip" onclick="doSearch('space exploration news')">Space exploration</div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading">
+      <div class="load-orb"></div>
+      <div class="load-text">SCANNING THE UNIVERSE</div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-wrap">
+      <div id="results-header">
+        <span id="results-query"></span>
+        <span id="results-count"></span>
+      </div>
+      <div id="abstract-card" style="display:none">
+        <div id="abstract-text"></div>
+        <a id="abstract-link" href="#" target="_blank" rel="noopener">
+          Read more
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+        <div id="summary-wrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;color:var(--blue);margin-bottom:8px;">AI SUMMARY</div>
+          <div id="summary-text" style="font-size:.85rem;color:var(--text1);line-height:1.7;margin-bottom:10px;"></div>
+          <div id="summary-points" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <button id="summarize-btn" style="display:none;margin-top:10px;padding:6px 14px;border-radius:20px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.06);color:var(--blue);font-size:.75rem;font-family:var(--font);cursor:pointer;align-items:center;gap:6px;" onclick="window.requestSummary()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          AI Summary
+        </button>
+      </div>
+      <div id="cards-grid"></div>
+      <div id="related-section" style="display:none">
+        <div id="related-title">Related Searches</div>
+        <div id="related-chips"></div>
+      </div>
+    </div>
+
+  </div><!-- /universe -->
+</div><!-- /app -->
+
+<!-- Preview Panel -->
+<div id="preview-panel">
+  <div id="preview-header">
+    <div id="preview-favicon">
+      <img id="preview-favicon-img" src="" alt="" onerror="this.style.display='none'" />
+    </div>
+    <div id="preview-title">--</div>
+    <button id="preview-close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="preview-body">
+    <div id="preview-snippet-box">
+      <div id="preview-snippet-domain"></div>
+      <div id="preview-snippet-text"></div>
+    </div>
+    <div id="preview-actions">
+      <a id="preview-visit-btn" href="#" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Visit Site
+      </a>
+      <button id="preview-save-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        Save to Collection
+      </button>
+      <button id="preview-ask-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Ask Cyanix about this
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* -- Config ----------------------------------------- */
+const SUPABASE_URL  = 'https://tdbgpvscwaysndrloltl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYmdwdnNjd2F5c25kcmxvbHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDExMTQsImV4cCI6MjA4NTMxNzExNH0.5-UfXEYo8qbjmHPhuZdj4Yf3wqjEOtre4zQgDhDJShw';
+const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
+const CY_API_URL    = SUPABASE_URL + '/functions/v1/cysearch-api';
+const CYANIX_URL    = './index.html';
+
+let _sb      = null;
+let _session = null;
+let _saves   = [];   // { url, title, snippet, saved_at }
+let _previewItem = null;
+
+/* -- Init ------------------------------------------- */
+window.addEventListener('DOMContentLoaded', async function() {
+  buildStarfield();
+  addCardGlowListeners();
+
+  _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const { data: { session } } = await _sb.auth.getSession();
+
+  if (!session) {
+    document.getElementById('auth-gate').style.display = 'flex';
+    return;
+  }
+
+  _session = session;
+  document.getElementById('auth-gate').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  // Set user dot initials
+  const name = session.user.user_metadata?.full_name || session.user.email || '';
+  const initials = typeof name === 'string' ? name.split(' ').map(function(n){return n[0]||'';}).join('').slice(0,2).toUpperCase() : '?';
+  document.getElementById('user-dot').textContent = initials || '?';
+
+  await loadSaves();
+
+  // Check if coming from Cyanix with a query
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get('q');
+  if (q) {
+    document.getElementById('search-input').value = q;
+    doSearch(q);
+  }
+
+  // Auth state changes
+  _sb.auth.onAuthStateChange(function(event, sess) {
+    _session = sess;
+    if (!sess) window.location.href = CYANIX_URL;
+  });
+});
+
+/* -- Starfield -------------------------------------- */
+function buildStarfield() {
+  var sf = document.getElementById('starfield');
+  var count = 120;
+  for (var i = 0; i < count; i++) {
+    var s = document.createElement('div');
+    s.className = 'star';
+    var size = Math.random() * 2.5 + .5;
+    s.style.cssText = [
+      'width:' + size + 'px',
+      'height:' + size + 'px',
+      'left:' + (Math.random()*100) + '%',
+      'top:' + (Math.random()*100) + '%',
+      '--d:' + (Math.random()*4+2) + 's',
+      '--delay:-' + (Math.random()*4) + 's',
+      '--min:' + (Math.random()*.15) + '',
+      '--max:' + (Math.random()*.6+.2) + '',
+      'opacity:' + (Math.random()*.4+.1),
+    ].join(';');
+    sf.appendChild(s);
+  }
+}
+
+/* -- Card glow on mousemove ------------------------- */
+function addCardGlowListeners() {
+  document.addEventListener('mousemove', function(e) {
+    var cards = document.querySelectorAll('.result-card');
+    cards.forEach(function(card) {
+      var rect = card.getBoundingClientRect();
+      var x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+      var y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
+      card.style.setProperty('--mx', x + '%');
+      card.style.setProperty('--my', y + '%');
+    });
+  });
+}
+
+/* -- Search ----------------------------------------- */
+window.doSearch = async function(query) {
+  query = query || document.getElementById('search-input').value.trim();
+  if (!query) return;
+
+  document.getElementById('search-input').value = query;
+  document.getElementById('hero').style.display = 'none';
+  document.getElementById('results-wrap').style.display = 'none';
+  document.getElementById('loading').style.display = 'flex';
+  closePreview();
+
+  // Update URL
+  var newUrl = window.location.pathname + '?q=' + encodeURIComponent(query);
+  window.history.pushState({q: query}, '', newUrl);
+
+  try {
+    var headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (_session ? _session.access_token : SUPABASE_ANON),
+      'apikey': SUPABASE_ANON,
+    };
+    var res = await fetch(RAG_URL, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ query: query }),
+    });
+    if (!res.ok) throw new Error('Search failed: ' + res.status);
+    var data = await res.json();
+    renderResults(query, data);
+  } catch (err) {
+    console.error('[Cysearch]', err);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('results-wrap').style.display = 'block';
+    document.getElementById('cards-grid').innerHTML =
+      '<div style="color:var(--text3);font-size:.88rem;padding:20px 0;">Could not load results. Try again.</div>';
+  }
+};
+
+/* -- Render Results --------------------------------- */
+function renderResults(query, data) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('results-wrap').style.display = 'block';
+
+  // Header
+  document.getElementById('results-query').textContent = query;
+  document.getElementById('results-count').textContent =
+    data.results ? data.results.length + ' results' : '';
+
+  // Abstract
+  var abstractCard = document.getElementById('abstract-card');
+  if (data.abstract && data.abstract.length > 30) {
+    abstractCard.style.display = 'block';
+    document.getElementById('abstract-text').textContent = data.abstract;
+    var absLink = document.getElementById('abstract-link');
+    absLink.href = data.abstractUrl || '#';
+    absLink.style.display = data.abstractUrl ? 'inline-flex' : 'none';
+  } else {
+    abstractCard.style.display = 'none';
+  }
+
+  // Cards
+  var grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+  var results = data.results || [];
+
+  if (results.length === 0) {
+    grid.innerHTML = '<div style="color:var(--text3);font-size:.88rem;padding:20px 0;">No results found. Try a different search.</div>';
+  }
+
+  results.forEach(function(r, i) {
+    var card = buildCard(r, i);
+    grid.appendChild(card);
+  });
+
+  // Related topics as chips
+  var relSection = document.getElementById('related-section');
+  var relChips   = document.getElementById('related-chips');
+  var related    = data.relatedTopics || [];
+
+  if (related.length > 0) {
+    relSection.style.display = 'block';
+    relChips.innerHTML = '';
+    related.slice(0, 8).forEach(function(t) {
+      var chip = document.createElement('div');
+      chip.className = 'related-chip';
+      var label = t.text ? t.text.split(' - ')[0].slice(0, 50) : '';
+      chip.innerHTML =
+        '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+        esc(label);
+      chip.onclick = function() { doSearch(label); };
+      relChips.appendChild(chip);
+    });
+  } else {
+    relSection.style.display = 'none';
+  }
+
+  // Store results for summarize
+  _currentResults = results;
+
+  // Show summarize button (only if results exist)
+  var sBtn = document.getElementById('summarize-btn');
+  var sWrap = document.getElementById('summary-wrap');
+  if (sBtn) sBtn.style.display = results.length > 0 ? 'inline-flex' : 'none';
+  if (sWrap) sWrap.style.display = 'none';
+
+  // Scroll to top
+  document.getElementById('universe').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildCard(r, idx) {
+  var card = document.createElement('div');
+  card.className = 'result-card';
+  card.style.setProperty('--delay', (idx * 0.06) + 's');
+
+  var domain = '';
+  try { domain = new URL(r.url).hostname.replace('www.',''); } catch(e) { domain = r.url; }
+
+  var faviconUrl = 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=32';
+  var isSaved = _saves.some(function(s) { return s.url === r.url; });
+
+  card.innerHTML =
+    '<div class="card-header">' +
+      '<div class="card-favicon">' +
+        '<img src="' + faviconUrl + '" alt="" onerror="this.parentElement.innerHTML=\'<span class=card-favicon-fallback>' + esc(domain[0]||'?').toUpperCase() + '</span>\'" />' +
+      '</div>' +
+      '<div class="card-meta">' +
+        '<div class="card-domain">' + esc(domain) + '</div>' +
+        '<div class="card-title">' + esc(r.title || domain) + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="card-snippet">' + esc(r.snippet || '') + '</div>' +
+    '<div class="card-actions">' +
+      '<button class="card-btn save-btn' + (isSaved ? ' saved' : '') + '" data-url="' + esc(r.url) + '" data-title="' + esc(r.title||'') + '" data-snippet="' + esc(r.snippet||'') + '">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+        (isSaved ? 'Saved' : 'Save') +
+      '</button>' +
+      '<a class="card-visit" href="' + esc(r.url) + '" target="_blank" rel="noopener">Visit</a>' +
+    '</div>';
+
+  // Click card body = open preview
+  card.addEventListener('click', function(e) {
+    if (e.target.closest('.card-btn') || e.target.closest('.card-visit')) return;
+    openPreview(r);
+  });
+
+  // Save btn
+  card.querySelector('.save-btn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleSave(r, this);
+  });
+
+  return card;
+}
+
+/* -- Preview Panel ---------------------------------- */
+function openPreview(r) {
+  _previewItem = r;
+  var domain = '';
+  try { domain = new URL(r.url).hostname.replace('www.',''); } catch(e) { domain = r.url; }
+
+  document.getElementById('preview-title').textContent = r.title || domain;
+  document.getElementById('preview-snippet-domain').textContent = domain;
+  document.getElementById('preview-snippet-text').textContent = r.snippet || 'No description available.';
+  document.getElementById('preview-favicon-img').src = 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=32';
+  document.getElementById('preview-visit-btn').href = r.url;
+
+  var saveBtn = document.getElementById('preview-save-btn');
+  var isSaved = _saves.some(function(s) { return s.url === r.url; });
+  saveBtn.className = 'preview-save-btn' + (isSaved ? ' saved' : '');
+  // Use id so it's accessible
+  document.getElementById('preview-save-btn').className = isSaved ? 'saved' : '';
+  saveBtn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+    (isSaved ? 'Saved' : 'Save to Collection');
+
+  document.getElementById('preview-panel').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('preview-panel').classList.remove('open');
+  _previewItem = null;
+}
+
+document.getElementById('preview-close').addEventListener('click', closePreview);
+
+document.getElementById('preview-save-btn').addEventListener('click', function() {
+  if (_previewItem) toggleSave(_previewItem, this);
+});
+
+document.getElementById('preview-ask-btn').addEventListener('click', function() {
+  if (!_previewItem) return;
+  var q = encodeURIComponent('Tell me about: ' + _previewItem.title + ' (' + _previewItem.url + ')');
+  window.open(CYANIX_URL + '?ask=' + q, '_blank');
+  toast('Opening Cyanix AI...');
+});
+
+/* -- Saves / Collections ---------------------------- */
+async function loadSaves() {
+  if (!_sb || !_session) return;
+  try {
+    var res = await _sb.from('cysearch_saves')
+      .select('url,title,snippet,saved_at')
+      .eq('user_id', _session.user.id)
+      .order('saved_at', { ascending: false });
+    _saves = res.data || [];
+  } catch (e) { _saves = []; }
+}
+
+async function toggleSave(r, btn) {
+  if (!_sb || !_session) { toast('Sign in to save.'); return; }
+  var isSaved = _saves.some(function(s) { return s.url === r.url; });
+
+  if (isSaved) {
+    // Unsave
+    try {
+      await _sb.from('cysearch_saves').delete()
+        .eq('user_id', _session.user.id).eq('url', r.url);
+      _saves = _saves.filter(function(s) { return s.url !== r.url; });
+      if (btn) { btn.classList.remove('saved'); btn.innerHTML = btn.innerHTML.replace('Saved','Save'); }
+      var psb = document.getElementById('preview-save-btn');
+      if (psb) { psb.classList.remove('saved'); psb.innerHTML = psb.innerHTML.replace('Saved','Save to Collection'); }
+      toast('Removed from collection.');
+    } catch(e) { toast('Could not remove.'); }
+  } else {
+    // Save
+    try {
+      var row = { user_id: _session.user.id, url: r.url, title: r.title||'', snippet: r.snippet||'', saved_at: new Date().toISOString() };
+      await _sb.from('cysearch_saves').insert(row);
+      _saves.push(row);
+      if (btn) { btn.classList.add('saved'); btn.innerHTML = btn.innerHTML.replace('Save','Saved'); }
+      var psb2 = document.getElementById('preview-save-btn');
+      if (psb2) { psb2.classList.add('saved'); psb2.innerHTML = psb2.innerHTML.replace('Save to Collection','Saved'); }
+      toast('Saved to collection!');
+    } catch(e) { toast('Could not save.'); }
+  }
+}
+
+document.getElementById('saves-btn').addEventListener('click', function() {
+  if (_saves.length === 0) { toast('No saved sites yet.'); return; }
+  // Render saves as search results
+  var fakeData = {
+    abstract: 'Your saved collection -- ' + _saves.length + ' site' + (_saves.length === 1 ? '' : 's'),
+    abstractUrl: '',
+    results: _saves.map(function(s) { return { title: s.title, snippet: s.snippet, url: s.url }; }),
+    relatedTopics: [],
+  };
+  document.getElementById('hero').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('search-input').value = '';
+  renderResults('Saved Collection', fakeData);
+});
+
+/* -- Search events ---------------------------------- */
+document.getElementById('search-btn').addEventListener('click', function() { doSearch(); });
+document.getElementById('search-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doSearch();
+});
+
+/* -- Browser back/forward --------------------------- */
+window.addEventListener('popstate', function(e) {
+  if (e.state && e.state.q) {
+    document.getElementById('search-input').value = e.state.q;
+    doSearch(e.state.q);
+  } else {
+    document.getElementById('results-wrap').style.display = 'none';
+    document.getElementById('hero').style.display = 'flex';
+  }
+});
+
+/* -- Toast ------------------------------------------ */
+var _toastTimer = null;
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+}
+
+/* -- Cysearch API helper ----------------------------- */
+async function cyApiCall(endpoint, payload) {
+  if (!_session) throw new Error('No session');
+  var res = await fetch(CY_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer ' + _session.access_token,
+      'apikey': SUPABASE_ANON,
+    },
+    body: JSON.stringify(Object.assign({ endpoint: endpoint }, payload)),
+  });
+  var data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'API error');
+  return data;
+}
+
+/* -- Request AI Summary ------------------------------ */
+var _currentResults = [];
+window.requestSummary = async function() {
+  var btn  = document.getElementById('summarize-btn');
+  var wrap = document.getElementById('summary-wrap');
+  if (!btn || !_currentResults.length) return;
+
+  btn.style.display = 'none';
+  document.getElementById('abstract-card').style.display = 'block';
+  document.getElementById('summary-text').textContent = 'Summarizing...';
+  document.getElementById('summary-points').innerHTML = '';
+  wrap.style.display = 'block';
+
+  var query = document.getElementById('search-input').value.trim();
+  try {
+    var result = await cyApiCall('summarize', { query: query, results: _currentResults });
+    document.getElementById('summary-text').textContent = result.summary || '';
+    var pts = document.getElementById('summary-points');
+    pts.innerHTML = '';
+    (result.keyPoints || []).forEach(function(pt) {
+      var d = document.createElement('div');
+      d.style.cssText = 'display:flex;gap:8px;align-items:flex-start;font-size:.82rem;color:var(--text2);line-height:1.5;';
+      d.innerHTML = '<span style="color:var(--blue);flex-shrink:0;margin-top:3px;">--</span><span>' + esc(pt) + '</span>';
+      pts.appendChild(d);
+    });
+    toast('Summary ready.');
+  } catch(e) {
+    document.getElementById('summary-text').textContent = 'Could not generate summary. Try again.';
+    console.error('[Cysearch] summarize:', e);
+  }
+};
+
+/* -- Escape helper ---------------------------------- */
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Cysearch API Docs</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#020408;--surface:#090d14;--surface2:#0d1520;
+  --border:rgba(0,200,255,.12);--blue:#00c8ff;--purple:#7c3aed;
+  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;
+  --text1:#e8f4ff;--text2:#8ba8c4;--text3:#4a6a88;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --brand:'Orbitron',monospace;
+}
+body{background:var(--bg);color:var(--text1);font-family:var(--font);font-size:15px;line-height:1.7;}
+a{color:var(--blue);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+/* layout */
+.page{max-width:860px;margin:0 auto;padding:48px 24px 80px;}
+
+/* header */
+.doc-header{border-bottom:1px solid var(--border);padding-bottom:32px;margin-bottom:40px;}
+.doc-logo{font-family:var(--brand);font-size:1.5rem;font-weight:900;color:var(--blue);letter-spacing:.08em;margin-bottom:6px;}
+.doc-logo span{color:var(--text2);font-weight:600;}
+.doc-tagline{color:var(--text2);font-size:.95rem;}
+.version-badge{display:inline-block;padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:.72rem;color:var(--text3);margin-top:10px;font-family:var(--mono);}
+
+/* section */
+.section{margin-bottom:48px;}
+.section-title{font-family:var(--brand);font-size:.78rem;font-weight:700;letter-spacing:.12em;color:var(--blue);text-transform:uppercase;margin-bottom:16px;}
+p{color:var(--text2);margin-bottom:12px;}
+
+/* endpoint card */
+.endpoint-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+.endpoint-header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);}
+.method-badge{padding:4px 10px;border-radius:6px;font-family:var(--mono);font-size:.72rem;font-weight:500;background:rgba(0,200,255,.12);color:var(--blue);flex-shrink:0;}
+.endpoint-path{font-family:var(--mono);font-size:.88rem;color:var(--text1);}
+.endpoint-desc{font-size:.82rem;color:var(--text3);margin-left:auto;}
+.endpoint-body{padding:20px;}
+
+/* field table */
+.field-table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+.field-table th{font-size:.72rem;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);}
+.field-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03);font-size:.83rem;vertical-align:top;}
+.field-table tr:last-child td{border-bottom:none;}
+.field-name{font-family:var(--mono);color:var(--blue);}
+.field-type{font-family:var(--mono);color:var(--purple);font-size:.78rem;}
+.field-req{color:var(--orange);font-size:.75rem;font-family:var(--mono);}
+.field-opt{color:var(--text3);font-size:.75rem;font-family:var(--mono);}
+.field-desc{color:var(--text2);}
+
+/* code block */
+.code-label{font-size:.68rem;font-weight:600;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:6px;}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto;margin-bottom:16px;}
+code{font-family:var(--mono);font-size:.8rem;color:var(--text1);line-height:1.6;}
+.k{color:var(--purple);}.s{color:var(--green);}.n{color:var(--blue);}.c{color:var(--text3);}
+
+/* error table */
+.error-chip{display:inline-block;padding:2px 8px;border-radius:5px;font-family:var(--mono);font-size:.72rem;}
+.e-red{background:rgba(239,68,68,.1);color:var(--red);}
+.e-orange{background:rgba(245,158,11,.1);color:var(--orange);}
+
+/* auth box */
+.auth-box{background:rgba(0,200,255,.04);border:1.5px solid rgba(0,200,255,.15);border-radius:12px;padding:16px 20px;margin-bottom:20px;}
+.auth-box p{margin-bottom:0;}
+
+/* rate limit */
+.limit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.limit-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.limit-card-label{font-size:.72rem;color:var(--text3);margin-bottom:4px;}
+.limit-card-value{font-family:var(--mono);font-size:1rem;color:var(--text1);font-weight:500;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="doc-header">
+    <div class="doc-logo">CY<span>SEARCH</span> API</div>
+    <div class="doc-tagline">Search and AI summarization for Cyanix users</div>
+    <div class="version-badge">v1.0 -- Supabase Edge</div>
+  </div>
+
+  <!-- Base URL -->
+  <div class="section">
+    <div class="section-title">Base URL</div>
+    <pre><code>https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/cysearch-api</code></pre>
+    <p>All requests are <code>POST</code>. The endpoint is selected via the <code>"endpoint"</code> field in the JSON body.</p>
+  </div>
+
+  <!-- Auth -->
+  <div class="section">
+    <div class="section-title">Authentication</div>
+    <div class="auth-box">
+      <p>Every request requires a valid Cyanix AI session token in the <code>Authorization</code> header. Only authenticated Cyanix users can access this API.</p>
+    </div>
+    <div class="code-label">Required headers</div>
+    <pre><code><span class="n">Authorization</span>: <span class="s">Bearer &lt;supabase_access_token&gt;</span>
+<span class="n">apikey</span>:         <span class="s">&lt;supabase_anon_key&gt;</span>
+<span class="n">Content-Type</span>:   <span class="s">application/json</span></code></pre>
+    <div class="code-label">Getting your token (from Cyanix app.js)</div>
+    <pre><code><span class="k">const</span> { data: { session } } = <span class="k">await</span> _sb.auth.getSession();
+<span class="k">const</span> token = session.access_token;</code></pre>
+  </div>
+
+  <!-- Endpoint: search -->
+  <div class="section">
+    <div class="section-title">Endpoints</div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-header">
+        <span class="method-badge">POST</span>
+        <span class="endpoint-path">/cysearch-api</span>
+        <span class="endpoint-desc">endpoint: "search"</span>
+      </div>
+      <div class="endpoint-body">
+        <p>Searches DuckDuckGo and returns ranked results with an instant answer abstract.</p>
+
+        <div class="code-label">Request body</div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td class="field-name">endpoint</td><td class="field-type">string</td><td class="field-req">required</td><td class="field-desc">Must be <code>"search"</code></td></tr>
+          <tr><td class="field-name">query</td><td class="field-type">string</td><td class="field-req">required</td><td class="field-desc">Search query, 2--300 characters</td></tr>
+        </table>
+
+        <div class="code-label">Example request</div>
+        <pre><code><span class="k">fetch</span>(<span class="s">'https://tdbgpvscwaysndrloltl.supabase.co/functions/v1/cysearch-api'</span>, {
+  method: <span class="s">'POST'</span>,
+  headers: {
+    <span class="s">'Content-Type'</span>:  <span class="s">'application/json'</span>,
+    <span class="s">'Authorization'</span>: <span class="s">`Bearer ${token}`</span>,
+    <span class="s">'apikey'</span>:        <span class="s">'&lt;anon_key&gt;'</span>,
+  },
+  body: <span class="k">JSON.stringify</span>({
+    endpoint: <span class="s">'search'</span>,
+    query:    <span class="s">'Supabase edge functions tutorial'</span>,
+  }),
+})</code></pre>
+
+        <div class="code-label">Response shape</div>
+        <pre><code>{
+  <span class="n">"query"</span>:       <span class="s">"Supabase edge functions tutorial"</span>,
+  <span class="n">"abstract"</span>:    <span class="s">"Supabase Edge Functions are server-side..."</span>,  <span class="c">// may be empty</span>
+  <span class="n">"abstractUrl"</span>: <span class="s">"https://supabase.com/docs/..."</span>,
+  <span class="n">"results"</span>: [
+    {
+      <span class="n">"title"</span>:   <span class="s">"Edge Functions | Supabase Docs"</span>,
+      <span class="n">"snippet"</span>: <span class="s">"Deploy globally distributed TypeScript functions..."</span>,
+      <span class="n">"url"</span>:     <span class="s">"https://supabase.com/docs/guides/functions"</span>
+    }
+    <span class="c">// ... up to 6 results</span>
+  ],
+  <span class="n">"relatedTopics"</span>: [
+    { <span class="n">"text"</span>: <span class="s">"Deno Deploy"</span>, <span class="n">"url"</span>: <span class="s">"https://..."</span> }
+  ],
+  <span class="n">"source"</span>: <span class="s">"duckduckgo"</span>,
+  <span class="n">"ms"</span>:     <span class="s">842</span>   <span class="c">// response time in milliseconds</span>
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Endpoint: summarize -->
+    <div class="endpoint-card">
+      <div class="endpoint-header">
+        <span class="method-badge">POST</span>
+        <span class="endpoint-path">/cysearch-api</span>
+        <span class="endpoint-desc">endpoint: "summarize"</span>
+      </div>
+      <div class="endpoint-body">
+        <p>Passes search results to Groq Llama 3.1 8B and returns a concise summary + key points. Typically chained after a <code>search</code> call.</p>
+
+        <div class="code-label">Request body</div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td class="field-name">endpoint</td><td class="field-type">string</td><td class="field-req">required</td><td class="field-desc">Must be <code>"summarize"</code></td></tr>
+          <tr><td class="field-name">query</td><td class="field-type">string</td><td class="field-req">required</td><td class="field-desc">The original search query (used as context)</td></tr>
+          <tr><td class="field-name">results</td><td class="field-type">array</td><td class="field-req">required</td><td class="field-desc">Array of result objects from <code>search</code> (up to 5 used)</td></tr>
+        </table>
+
+        <div class="code-label">Example -- chaining search + summarize</div>
+        <pre><code><span class="c">// 1. Search</span>
+<span class="k">const</span> searchRes = <span class="k">await</span> cyApiCall(<span class="s">'search'</span>, { query: <span class="s">'black holes explained'</span> });
+
+<span class="c">// 2. Summarize the results</span>
+<span class="k">const</span> summary = <span class="k">await</span> cyApiCall(<span class="s">'summarize'</span>, {
+  query:   <span class="s">'black holes explained'</span>,
+  results: searchRes.results,
+});</code></pre>
+
+        <div class="code-label">Response shape</div>
+        <pre><code>{
+  <span class="n">"query"</span>:     <span class="s">"black holes explained"</span>,
+  <span class="n">"summary"</span>:   <span class="s">"Black holes are regions of spacetime where gravity is so strong..."</span>,
+  <span class="n">"keyPoints"</span>: [
+    <span class="s">"Formed from collapsed massive stars"</span>,
+    <span class="s">"Event horizon marks the point of no return"</span>,
+    <span class="s">"Detected via gravitational waves and X-ray emissions"</span>
+  ],
+  <span class="n">"ms"</span>: <span class="s">1243</span>
+}</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Errors -->
+  <div class="section">
+    <div class="section-title">Error Codes</div>
+    <table class="field-table" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <tr><th>HTTP</th><th>code</th><th>Meaning</th></tr>
+      <tr>
+        <td><span class="error-chip e-red">401</span></td>
+        <td class="field-name">UNAUTHORIZED</td>
+        <td class="field-desc">Missing or invalid JWT. Sign in to Cyanix AI first.</td>
+      </tr>
+      <tr>
+        <td><span class="error-chip e-orange">400</span></td>
+        <td class="field-name">MISSING_QUERY</td>
+        <td class="field-desc">The <code>query</code> field is missing or too short.</td>
+      </tr>
+      <tr>
+        <td><span class="error-chip e-orange">400</span></td>
+        <td class="field-name">QUERY_TOO_LONG</td>
+        <td class="field-desc">Query exceeds 300 characters.</td>
+      </tr>
+      <tr>
+        <td><span class="error-chip e-orange">400</span></td>
+        <td class="field-name">MISSING_RESULTS</td>
+        <td class="field-desc">The <code>results</code> array is missing or empty (summarize only).</td>
+      </tr>
+      <tr>
+        <td><span class="error-chip e-orange">400</span></td>
+        <td class="field-name">UNKNOWN_ENDPOINT</td>
+        <td class="field-desc">The <code>endpoint</code> field doesn't match any known endpoint.</td>
+      </tr>
+      <tr>
+        <td><span class="error-chip e-red">502</span></td>
+        <td class="field-name">SEARCH_ERROR</td>
+        <td class="field-desc">DuckDuckGo upstream failure. Retry.</td>
+      </tr>
+      <tr>
+        <td><span class="error-chip e-red">502</span></td>
+        <td class="field-name">SUMMARIZE_ERROR</td>
+        <td class="field-desc">Groq API failure. Retry.</td>
+      </tr>
+    </table>
+    <div class="code-label">Error response shape</div>
+    <pre><code>{ <span class="n">"error"</span>: <span class="s">"human readable message"</span>, <span class="n">"code"</span>: <span class="s">"MACHINE_CODE"</span> }</code></pre>
+  </div>
+
+  <!-- Rate limits -->
+  <div class="section">
+    <div class="section-title">Rate Limits</div>
+    <p>Limits are inherited from your Cyanix AI account tier and Supabase's edge function quotas.</p>
+    <div class="limit-grid">
+      <div class="limit-card">
+        <div class="limit-card-label">Free users</div>
+        <div class="limit-card-value">20 req / 2hr</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-card-label">Supporters</div>
+        <div class="limit-card-value">Unlimited</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-card-label">Summarize latency</div>
+        <div class="limit-card-value">~0.5--1s</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-card-label">Max results used by summarize</div>
+        <div class="limit-card-value">5</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deploy -->
+  <div class="section">
+    <div class="section-title">Deployment</div>
+    <div class="code-label">Deploy the edge function</div>
+    <pre><code>supabase functions deploy cysearch-api --no-verify-jwt</code></pre>
+    <div class="code-label">Required environment variable (set in Supabase dashboard)</div>
+    <pre><code>GROQ_API_KEY=gsk_...  (already set if you use Groq for TTS/RAG)</code></pre>
+    <p>The <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> variables are injected automatically by Supabase.</p>
+  </div>
+
+  <div style="border-top:1px solid var(--border);padding-top:24px;font-size:.78rem;color:var(--text3);">
+    Cysearch API -- part of the Cyanix AI ecosystem &nbsp;&middot;&nbsp;
+    <a href="./cysearch.html">Open Cysearch</a> &nbsp;&middot;&nbsp;
+    <a href="./index.html">Cyanix AI</a>
+  </div>
+
+</div>
+</body>
+</html>
