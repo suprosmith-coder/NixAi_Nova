@@ -389,7 +389,7 @@ function handleStartActions() {
   if (action === 'new-chat') {
     window.addEventListener('cyanix:ready', function() { newChat(); }, { once: true });
   } else if (action === 'settings') {
-    window.addEventListener('cyanix:ready', function() { show('settings-modal'); }, { once: true });
+    window.addEventListener('cyanix:ready', function() { show('settings-modal'); window.openSettingsPage('main'); }, { once: true });
   }
   if (sharedText) {
     window.addEventListener('cyanix:ready', function() {
@@ -682,7 +682,7 @@ function bindChatUI() {
     inp.click();
   });
 
-  on('settings-btn',   'click', function() { show('settings-modal'); closeUserMenu(); });
+  on('settings-btn',   'click', function() { show('settings-modal'); window.openSettingsPage('main'); closeUserMenu(); });
   on('settings-close', 'click', function() { hide('settings-modal'); });
   on('settings-modal', 'click', function(e) { if (e.target.id==='settings-modal') hide('settings-modal'); });
 
@@ -691,7 +691,7 @@ function bindChatUI() {
   on('help-modal', 'click', function(e) { if (e.target.id==='help-modal') hide('help-modal'); });
 
   on('user-btn',    'click', toggleUserMenu);
-  on('um-settings', 'click', function() { closeUserMenu(); show('settings-modal'); });
+  on('um-settings', 'click', function() { closeUserMenu(); show('settings-modal'); window.openSettingsPage('main'); });
   on('um-signout',  'click', function() { closeUserMenu(); signOut(); });
   on('model-btn',   'click', function() { const d=$('model-dropdown'); if(d) d.classList.toggle('hidden'); });
   on('model-select', 'change', function() {
@@ -2142,6 +2142,22 @@ async function saveReferralIfNeeded(codeUsed) {
 }
 
 
+
+// -- Settings sub-page navigation ----------------------------
+window.openSettingsPage = function(page) {
+  var pages = [
+    'main','appearance','personas','voice','memory','personalization',
+    'tos','privacy','about','referral','supporter'
+  ];
+  pages.forEach(function(p) {
+    var el = document.getElementById('settings-page-' + p);
+    if (el) el.style.display = p === page ? 'flex' : 'none';
+  });
+};
+
+// Reset to main page when settings modal opens
+var _origOpenSettings = window.openSettings;
+
 // -- Personas -------------------------------------------------------
 var _personas       = [];
 var _activePersona  = null; // null = default Cyanix
@@ -2744,3 +2760,414 @@ function clearMessages() {
 function scrollToBottom() {
   const s = $('chat-scroll'); if (s) s.scrollTop = s.scrollHeight;
 }
+
+// ============================================================
+// COMMUNITY
+// ============================================================
+(function() {
+  var _currentCat = 'all';
+  var _currentPostId = null;
+  var _newPostCat = 'code';
+  var _postImageBase64 = null;
+
+  // -- Sidebar tab switch ----------------------------------
+  window.switchSidebarTab = function(tab) {
+    var chats = document.getElementById('sb-panel-chats');
+    var comm  = document.getElementById('sb-panel-community');
+    var tChats = document.getElementById('sb-tab-chats');
+    var tComm  = document.getElementById('sb-tab-community');
+    if (tab === 'community') {
+      chats.style.display = 'none';
+      comm.style.display  = 'flex';
+      tChats.classList.remove('active');
+      tComm.classList.add('active');
+      loadCommunityFeed(_currentCat);
+    } else {
+      comm.style.display  = 'none';
+      chats.style.display = 'flex';
+      tComm.classList.remove('active');
+      tChats.classList.add('active');
+    }
+  };
+
+  // -- Category filter -------------------------------------
+  window.communitySetCat = function(btn, cat) {
+    document.querySelectorAll('#sb-panel-community .comm-cat').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    _currentCat = cat;
+    loadCommunityFeed(cat);
+  };
+
+  // -- Load feed -------------------------------------------
+  function loadCommunityFeed(cat) {
+    var feed = document.getElementById('community-feed');
+    var empty = document.getElementById('comm-empty');
+    if (!feed) return;
+    empty.textContent = 'Loading...';
+    empty.style.display = 'block';
+    // Clear existing cards
+    Array.from(feed.children).forEach(function(c) {
+      if (!c.id) feed.removeChild(c);
+    });
+
+    var url = window._supabaseUrl + '/rest/v1/community_posts?select=*&hidden=eq.false&order=created_at.desc&limit=50';
+    if (cat !== 'all') url += '&category=eq.' + cat;
+
+    fetch(url, {
+      headers: {
+        'apikey': window._supabaseAnon,
+        'Authorization': 'Bearer ' + window._supabaseAnon
+      }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(posts) {
+      empty.style.display = posts.length ? 'none' : 'block';
+      if (!posts.length) { empty.textContent = 'No posts yet. Be the first!'; return; }
+      posts.forEach(function(p) { feed.appendChild(buildCard(p)); });
+    })
+    .catch(function() {
+      empty.textContent = 'Could not load posts.';
+    });
+  }
+
+  // -- Build feed card -------------------------------------
+  function buildCard(p) {
+    var card = document.createElement('div');
+    card.className = 'comm-card';
+    card.dataset.id = p.id;
+    var authorDisplay = p.author_name || 'Anonymous';
+    var snippet = p.category === 'image' ? '(Image post)' : (p.body || '').slice(0, 120);
+    card.innerHTML =
+      '<div class="comm-card-top">' +
+        '<span class="comm-cat-badge ' + p.category + '">' + p.category + '</span>' +
+        '<span class="comm-card-author">' + escHtml(authorDisplay) + '</span>' +
+      '</div>' +
+      '<div class="comm-card-title">' + escHtml(p.title) + '</div>' +
+      '<div class="comm-card-snippet">' + escHtml(snippet) + '</div>' +
+      '<div class="comm-card-footer">' +
+        '<button class="comm-action-btn like-btn" data-id="' + p.id + '" onclick="event.stopPropagation();window.communityToggleLike(this,' + p.id + ')">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' +
+          '<span>' + (p.likes || 0) + '</span>' +
+        '</button>' +
+        '<button class="comm-action-btn" onclick="event.stopPropagation();window.openPostDetail(' + p.id + ')">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+          '<span>' + (p.comment_count || 0) + '</span>' +
+        '</button>' +
+        '<button class="comm-action-btn" onclick="event.stopPropagation();window.communitySavePost(' + p.id + ')" title="Save">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+        '</button>' +
+        '<button class="comm-action-btn" onclick="event.stopPropagation();window.communityOpenInCyanix(' + p.id + ')" title="Open in chat">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+          'Use' +
+        '</button>' +
+      '</div>';
+    card.addEventListener('click', function() { window.openPostDetail(p.id); });
+    return card;
+  }
+
+  // -- Like ------------------------------------------------
+  window.communityToggleLike = function(btn, postId) {
+    var key = 'cx_liked_' + postId;
+    var liked = localStorage.getItem(key);
+    var delta = liked ? -1 : 1;
+    if (liked) localStorage.removeItem(key);
+    else localStorage.setItem(key, '1');
+    btn.classList.toggle('liked', !liked);
+    var span = btn.querySelector('span');
+    span.textContent = parseInt(span.textContent || 0) + delta;
+    fetch(window._supabaseUrl + '/rest/v1/rpc/increment_likes', {
+      method: 'POST',
+      headers: {
+        'apikey': window._supabaseAnon,
+        'Authorization': 'Bearer ' + window._supabaseAnon,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ post_id: postId, delta: delta })
+    });
+  };
+
+  // -- Save post -------------------------------------------
+  window.communitySavePost = function(postId) {
+    var user = window._currentUser;
+    if (!user) { toast('Sign in to save posts'); return; }
+    fetch(window._supabaseUrl + '/rest/v1/community_saved', {
+      method: 'POST',
+      headers: {
+        'apikey': window._supabaseAnon,
+        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ user_id: user.id, post_id: postId })
+    }).then(function() { toast('Saved to collection'); });
+  };
+
+  // -- Open in Cyanix --------------------------------------
+  window.communityOpenInCyanix = function(postId) {
+    fetch(window._supabaseUrl + '/rest/v1/community_posts?id=eq.' + postId, {
+      headers: { 'apikey': window._supabaseAnon, 'Authorization': 'Bearer ' + window._supabaseAnon }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(rows) {
+      if (!rows.length) return;
+      var p = rows[0];
+      var input = document.getElementById('user-input');
+      if (input) {
+        input.value = p.title + '\n\n' + p.body;
+        input.dispatchEvent(new Event('input'));
+        window.switchSidebarTab('chats');
+        toast('Opened in chat');
+      }
+    });
+  };
+
+  // -- Post detail modal -----------------------------------
+  window.openPostDetail = function(postId) {
+    _currentPostId = postId;
+    var modal = document.getElementById('post-detail-modal');
+    var body  = document.getElementById('post-detail-body');
+    var title = document.getElementById('post-detail-title');
+    body.innerHTML = '<div class="sb-empty">Loading...</div>';
+    modal.classList.remove('hidden');
+
+    fetch(window._supabaseUrl + '/rest/v1/community_posts?id=eq.' + postId, {
+      headers: { 'apikey': window._supabaseAnon, 'Authorization': 'Bearer ' + window._supabaseAnon }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(rows) {
+      if (!rows.length) { body.innerHTML = '<div class="sb-empty">Post not found.</div>'; return; }
+      var p = rows[0];
+      title.textContent = p.title;
+      var isCode = p.category === 'code';
+      var isImage = p.category === 'image';
+      var contentHtml = isImage && p.image_url
+        ? '<img src="' + escHtml(p.image_url) + '" style="width:100%;border-radius:12px;" alt="post image" />'
+        : '<div class="post-detail-content' + (isCode ? ' code-content' : '') + '">' + escHtml(p.body || '') + '</div>';
+
+      var user = window._currentUser;
+      var isOwner = user && user.id === p.user_id;
+
+      body.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span class="comm-cat-badge ' + p.category + '">' + p.category + '</span>' +
+          '<span style="font-size:.75rem;color:var(--text-3);">by ' + escHtml(p.author_name || 'Anonymous') + '</span>' +
+        '</div>' +
+        contentHtml +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button class="comm-action-btn" style="border:1.5px solid var(--border);padding:7px 14px;border-radius:8px;" onclick="window.communityOpenInCyanix(' + p.id + ')">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg> Open in Cyanix' +
+          '</button>' +
+          (isCode || p.category === 'prompt' ?
+          '<button class="comm-action-btn" style="border:1.5px solid var(--border);padding:7px 14px;border-radius:8px;" onclick="navigator.clipboard.writeText(' + JSON.stringify(p.body) + ');toast(\'Copied!\')">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy' +
+          '</button>' : '') +
+          '<button class="comm-action-btn" style="border:1.5px solid var(--border);padding:7px 14px;border-radius:8px;" onclick="window.communitySavePost(' + p.id + ')">&#128278; Save</button>' +
+          '<button class="comm-action-btn" style="border:1.5px solid var(--border);padding:7px 14px;border-radius:8px;" onclick="window.reportPost(' + p.id + ')">&#9873; Report</button>' +
+          (isOwner ? '<button class="comm-action-btn" style="border:1.5px solid #ef4444;color:#ef4444;padding:7px 14px;border-radius:8px;" onclick="window.deletePost(' + p.id + ')">Delete</button>' : '') +
+        '</div>' +
+        '<div style="font-size:.78rem;font-weight:700;color:var(--text-2);">Comments</div>' +
+        '<div id="post-comments-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+        '<div class="comm-comment-input-row">' +
+          '<textarea class="comm-comment-input" id="comment-input" placeholder="Add a comment..." rows="1"></textarea>' +
+          '<button class="comm-send-btn" onclick="window.submitComment(' + p.id + ')">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div style="height:8px"></div>';
+
+      loadComments(postId);
+    });
+  };
+
+  window.closePostDetail = function() {
+    document.getElementById('post-detail-modal').classList.add('hidden');
+    _currentPostId = null;
+  };
+
+  // -- Comments --------------------------------------------
+  function loadComments(postId) {
+    var list = document.getElementById('post-comments-list');
+    if (!list) return;
+    fetch(window._supabaseUrl + '/rest/v1/community_comments?post_id=eq.' + postId + '&order=created_at.asc', {
+      headers: { 'apikey': window._supabaseAnon, 'Authorization': 'Bearer ' + window._supabaseAnon }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(comments) {
+      list.innerHTML = '';
+      if (!comments.length) {
+        list.innerHTML = '<div style="font-size:.78rem;color:var(--text-4);text-align:center;padding:8px 0;">No comments yet</div>';
+        return;
+      }
+      comments.forEach(function(c) {
+        var el = document.createElement('div');
+        el.className = 'comm-comment';
+        el.innerHTML = '<div class="comm-comment-author">' + escHtml(c.author_name || 'Anonymous') + '</div><div class="comm-comment-text">' + escHtml(c.body) + '</div>';
+        list.appendChild(el);
+      });
+    });
+  }
+
+  window.submitComment = function(postId) {
+    var input = document.getElementById('comment-input');
+    var body = (input.value || '').trim();
+    if (!body) return;
+    var user = window._currentUser;
+    fetch(window._supabaseUrl + '/rest/v1/community_comments', {
+      method: 'POST',
+      headers: {
+        'apikey': window._supabaseAnon,
+        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        post_id: postId,
+        user_id: user ? user.id : null,
+        author_name: user ? (user.user_metadata && user.user_metadata.full_name) || user.email : 'Anonymous',
+        body: body
+      })
+    }).then(function() {
+      input.value = '';
+      loadComments(postId);
+    });
+  };
+
+  // -- Report post -----------------------------------------
+  window.reportPost = function(postId) {
+    if (!confirm('Report this post?')) return;
+    fetch(window._supabaseUrl + '/rest/v1/community_reports', {
+      method: 'POST',
+      headers: {
+        'apikey': window._supabaseAnon,
+        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ post_id: postId, reporter_id: window._currentUser ? window._currentUser.id : null })
+    }).then(function() { toast('Reported. Thanks.'); });
+  };
+
+  // -- Delete post (owner only) ----------------------------
+  window.deletePost = function(postId) {
+    if (!confirm('Delete this post?')) return;
+    var user = window._currentUser;
+    if (!user) return;
+    fetch(window._supabaseUrl + '/rest/v1/community_posts?id=eq.' + postId + '&user_id=eq.' + user.id, {
+      method: 'DELETE',
+      headers: {
+        'apikey': window._supabaseAnon,
+        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon)
+      }
+    }).then(function() {
+      toast('Post deleted');
+      window.closePostDetail();
+      loadCommunityFeed(_currentCat);
+    });
+  };
+
+  // -- New post modal --------------------------------------
+  window.openNewPostModal = function() {
+    var user = window._currentUser;
+    if (!user) { toast('Sign in to post'); return; }
+    document.getElementById('post-title-input').value = '';
+    document.getElementById('post-body-input').value = '';
+    document.getElementById('post-body-count').textContent = '0';
+    document.getElementById('post-image-wrap').style.display = 'none';
+    document.getElementById('post-image-preview').style.display = 'none';
+    _postImageBase64 = null;
+    _newPostCat = 'code';
+    document.querySelectorAll('#new-post-modal .comm-cat').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.cat === 'code');
+    });
+    document.getElementById('post-cat-val').value = 'code';
+    document.getElementById('new-post-modal').classList.remove('hidden');
+    // char counter
+    document.getElementById('post-body-input').oninput = function() {
+      document.getElementById('post-body-count').textContent = this.value.length;
+    };
+  };
+
+  window.closeNewPostModal = function() {
+    document.getElementById('new-post-modal').classList.add('hidden');
+  };
+
+  window.selectPostCat = function(btn, cat) {
+    document.querySelectorAll('#new-post-modal .comm-cat').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    _newPostCat = cat;
+    document.getElementById('post-cat-val').value = cat;
+    document.getElementById('post-image-wrap').style.display = cat === 'image' ? 'block' : 'none';
+  };
+
+  window.previewPostImage = function(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      _postImageBase64 = e.target.result;
+      var img = document.getElementById('post-image-preview');
+      img.src = _postImageBase64;
+      img.style.display = 'block';
+      document.getElementById('post-image-dropzone').textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // -- Submit new post -------------------------------------
+  window.submitPost = function() {
+    var user = window._currentUser;
+    if (!user) { toast('Sign in to post'); return; }
+    var title = (document.getElementById('post-title-input').value || '').trim();
+    var body  = (document.getElementById('post-body-input').value || '').trim();
+    var cat   = document.getElementById('post-cat-val').value || 'code';
+    if (!title) { toast('Add a title'); return; }
+    if (cat !== 'image' && !body) { toast('Add some content'); return; }
+    var authorName = (user.user_metadata && user.user_metadata.full_name) || user.email || 'Anonymous';
+    var payload = {
+      user_id: user.id,
+      author_name: authorName,
+      category: cat,
+      title: title,
+      body: body,
+      image_url: cat === 'image' ? _postImageBase64 : null,
+      likes: 0,
+      comment_count: 0,
+      reported: false
+    };
+    document.getElementById('post-submit-btn').textContent = 'Posting...';
+    fetch(window._supabaseUrl + '/rest/v1/community_posts', {
+      method: 'POST',
+      headers: {
+        'apikey': window._supabaseAnon,
+        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    }).then(function(r) {
+      document.getElementById('post-submit-btn').textContent = 'Post';
+      if (r.ok) {
+        toast('Posted!');
+        window.closeNewPostModal();
+        loadCommunityFeed(_currentCat);
+      } else {
+        toast('Failed to post. Try again.');
+      }
+    });
+  };
+
+  // -- Expose supabase session for community requests ------
+  // Hook into existing auth to capture session token
+  var _origOnAuth = window._onAuthStateChange;
+  window._communityHookAuth = function(session) {
+    if (session) window._supabaseSession = session.access_token;
+    else window._supabaseSession = null;
+  };
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+})();
