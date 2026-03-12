@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Cyanix AI</title>
-  <meta name="description" content="Cyanix AI — Your intelligent assistant powered by advanced language models." />
+  <meta name="description" content="Cyanix AI  --  Your intelligent assistant powered by advanced language models." />
   <meta name="keywords"    content="AI, assistant, chat, GPT, Cyanix, productivity" />
   <meta name="author"      content="Cyanix AI" />
   <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
@@ -17,10 +17,10 @@
   <meta name="format-detection"                      content="telephone=no,date=no,address=no" />
   <link rel="manifest"     href="./manifest.json" />
   <link rel="icon"         type="image/png" sizes="32x32" href="./icons/manifest/icon-96x96.png" />
-  <!-- ── Open Graph (Facebook, WhatsApp, Discord, iMessage, LinkedIn) ── -->
+  <!--  Open Graph (Facebook, WhatsApp, Discord, iMessage, LinkedIn)  -->
   <meta property="og:type"              content="website" />
   <meta property="og:site_name"         content="Cyanix AI" />
-  <meta property="og:title"             content="Cyanix AI — Your AI Assistant" />
+  <meta property="og:title"             content="Cyanix AI  --  Your AI Assistant" />
   <meta property="og:description"       content="Chat, code, create and research with Cyanix AI. Powered by advanced language models with web search, voice input, and memory." />
   <meta property="og:url"               content="https://suprosmith-coder.github.io/NixAi_Nova/" />
   <meta property="og:image"             content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
@@ -31,15 +31,15 @@
   <meta property="og:image:alt"         content="Cyanix AI logo" />
   <meta property="og:locale"            content="en_US" />
 
-  <!-- ── Twitter / X Card ── -->
+  <!--  Twitter / X Card  -->
   <meta name="twitter:card"        content="summary" />
   <meta name="twitter:site"        content="@cyanixai" />
-  <meta name="twitter:title"       content="Cyanix AI — Your AI Assistant" />
+  <meta name="twitter:title"       content="Cyanix AI  --  Your AI Assistant" />
   <meta name="twitter:description" content="Chat, code, create and research with Cyanix AI. Powered by advanced language models with web search, voice input, and memory." />
   <meta name="twitter:image"       content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
   <meta name="twitter:image:alt"   content="Cyanix AI logo" />
 
-  <!-- ── iMessage / Apple ── -->
+  <!--  iMessage / Apple  -->
   <meta name="apple-mobile-web-app-title" content="Cyanix AI" />
   <link rel="apple-touch-icon"            href="https://suprosmith-coder.github.io/NixAi_Nova/icons/ios/apple-touch-icon-180x180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -72,21 +72,21 @@
   <img src="cyanix_emblem.png" class="install-banner-icon" alt="" />
   <div class="install-banner-text">
     <strong>Install Cyanix AI</strong>
-    <span>Works offline · Feels native</span>
+    <span>Works offline * Feels native</span>
   </div>
   <button type="button" class="install-banner-btn" id="install-yes-btn">Add to Home</button>
-  <button type="button" class="install-banner-x"   id="install-no-btn">✕</button>
+  <button type="button" class="install-banner-x"   id="install-no-btn"></button>
 </div>
 
 <!-- Update Bar -->
 <div id="update-bar" class="update-bar hidden">
-  <span>✨ Update ready</span>
+  <span> Update ready</span>
   <button type="button" id="update-reload-btn">Reload</button>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     AUTH VIEW — shown immediately, no splash
-═══════════════════════════════════════════════ -->
+<!-- 
+     AUTH VIEW  --  shown immediately, no splash
+ -->
 <div id="view-auth" class="view auth-view">
   <div class="auth-bg-blur"></div>
   <div class="auth-card">
@@ -176,14 +176,14 @@
       <div class="auth-msg hidden" id="fp-err" data-type="err"></div>
       <div class="auth-msg hidden" id="fp-ok"  data-type="ok"></div>
       <button type="button" class="auth-btn" id="fp-btn"><span>Send Reset Link</span></button>
-      <p class="auth-switch"><a class="switch-link" data-to="signin" href="#">← Back to Sign In</a></p>
+      <p class="auth-switch"><a class="switch-link" data-to="signin" href="#"> Back to Sign In</a></p>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
+<!-- 
      CHAT VIEW  (Gemini-style layout)
-═══════════════════════════════════════════════ -->
+ -->
 <div id="view-chat" class="view chat-view hidden">
 
   <!-- LEFT SIDEBAR -->
@@ -203,14 +203,18 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Chats
         </button>
-        <button type="button" class="sb-tab" id="sb-tab-community" onclick="window.switchSidebarTab('community')">
+        <a href="./community.html" class="sb-tab" id="sb-tab-community" style="text-decoration:none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Community
+        </a>
+        <button type="button" class="sb-tab" id="sb-tab-splitbrain" onclick="window.switchSidebarTab('splitbrain')" title="Split Brain">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+          Split
         </button>
       </div>
     </div>
 
-    <!-- ── CHATS PANEL ── -->
+    <!--  CHATS PANEL  -->
     <div id="sb-panel-chats" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
       <button type="button" class="sb-new-btn" id="new-chat-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -222,28 +226,42 @@
       </div>
     </div>
 
-    <!-- ── COMMUNITY PANEL ── -->
-    <div id="sb-panel-community" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-      <!-- Category tabs -->
-      <div class="comm-cats">
-        <button type="button" class="comm-cat active" data-cat="all" onclick="window.communitySetCat(this,'all')">All</button>
-        <button type="button" class="comm-cat" data-cat="code" onclick="window.communitySetCat(this,'code')">Code</button>
-        <button type="button" class="comm-cat" data-cat="prompt" onclick="window.communitySetCat(this,'prompt')">Prompts</button>
-        <button type="button" class="comm-cat" data-cat="doc" onclick="window.communitySetCat(this,'doc')">Docs</button>
-        <button type="button" class="comm-cat" data-cat="image" onclick="window.communitySetCat(this,'image')">Images</button>
-      </div>
+    <!-- Community moved to community.html -->
 
-      <!-- Post feed -->
-      <div class="sb-list" id="community-feed">
-        <div class="sb-empty" id="comm-empty">Loading...</div>
-      </div>
-
-      <!-- New post button -->
-      <div style="padding:10px 12px 6px;">
-        <button type="button" class="sb-new-btn" onclick="window.openNewPostModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New post
+    <!--  SPLIT BRAIN PANEL  -->
+    <div id="sb-panel-splitbrain" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div style="padding:10px 12px 6px;flex-shrink:0;">
+        <div style="font-size:.7rem;font-weight:700;color:var(--text-3);letter-spacing:.08em;margin-bottom:8px;">SPLIT BRAIN</div>
+        <input type="text" id="sb-topic-input" placeholder="Enter a topic to debate..." maxlength="120"
+          style="width:100%;padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text-1);font-family:var(--font);font-size:.82rem;outline:none;"/>
+        <button type="button" onclick="window.startSplitBrain()" id="sb-start-btn"
+          style="margin-top:7px;width:100%;padding:8px;border-radius:9px;border:none;background:var(--blue);color:#000;font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);">
+          &#9889; Generate Debate
         </button>
+      </div>
+      <div id="sb-debate-meta" style="display:none;padding:0 12px 8px;flex-shrink:0;"></div>
+      <div id="sb-debate-feed" style="flex:1;overflow-y:auto;padding:0 8px 12px;display:flex;flex-direction:column;gap:6px;">
+        <div class="sb-empty" style="padding:20px;text-align:center;font-size:.78rem;color:var(--text-3);">Enter a topic above to start a Split Brain debate</div>
+      </div>
+      <div id="sb-referee-bar" style="display:none;padding:8px 12px;border-top:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="sb-referee-input" placeholder="Jump in as referee..." maxlength="300"
+            style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text-1);font-family:var(--font);font-size:.8rem;outline:none;"/>
+          <button type="button" onclick="window.sendRefereeMessage()"
+            style="width:32px;height:32px;border-radius:8px;border:none;background:var(--blue);color:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button type="button" onclick="window.continueDebate()" id="sb-continue-btn"
+            style="flex:1;padding:6px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text-2);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font);">
+            &#8635; Next Round
+          </button>
+          <button type="button" onclick="window.startSplitBrain()"
+            style="flex:1;padding:6px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text-2);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font);">
+            &#8635; New Topic
+          </button>
+        </div>
       </div>
     </div>
 
@@ -259,7 +277,7 @@
       <button type="button" class="sb-user-btn" id="user-btn">
         <div class="user-avatar" id="user-avatar">?</div>
         <div class="user-name-row">
-          <span class="user-name" id="user-name">Loading…</span>
+          <span class="user-name" id="user-name">Loading...</span>
           <span class="supporter-badge" id="supporter-badge" style="display:none"></span>
         </div>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -315,7 +333,7 @@
     <div class="chat-scroll" id="chat-scroll">
       <div class="messages" id="messages">
 
-        <!-- Welcome state — randomised on every new chat -->
+        <!-- Welcome state  --  randomised on every new chat -->
         <div class="welcome" id="welcome-state">
           <div class="welcome-glow"></div>
           <div class="welcome-logo">
@@ -359,8 +377,11 @@
           <button type="button" class="tool-btn" id="attach-btn" title="Attach file">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
+          <button type="button" class="tool-btn" id="echo-toggle-btn" title="Echo Mode  --  write in your voice" onclick="window.toggleEchoMode()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 12s1.5-2 4-2 4 2 4 2"/><path d="M9 9h.01M15 9h.01"/></svg>
+          </button>
         </div>
-        <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything…" rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
+        <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything..." rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
         <div class="composer-actions">
           <button type="button" class="mic-btn" id="mic-btn" title="Voice input">
             <svg id="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -369,6 +390,11 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
+      </div>
+      <div id="echo-mode-bar" style="display:none;padding:4px 12px 0;display:none;align-items:center;gap:6px;">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pulse 1.5s infinite;flex-shrink:0;"></div>
+        <span style="font-size:.72rem;color:var(--purple);font-weight:600;">Echo Mode ON &mdash; Cyanix will write in your voice</span>
+        <button type="button" onclick="window.toggleEchoMode()" style="margin-left:auto;font-size:.68rem;color:var(--text-3);background:none;border:none;cursor:pointer;">Turn off</button>
       </div>
       <p class="composer-hint">Cyanix AI can make mistakes. Verify important info.</p>
     </div>
@@ -381,7 +407,7 @@
   <div class="modal-sheet">
     <div class="modal-drag-handle"></div>
 
-    <!-- ══ MAIN PAGE ══ -->
+    <!--  MAIN PAGE  -->
     <div id="settings-page-main" style="display:flex;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" id="settings-close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -476,7 +502,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Appearance ══ -->
+    <!--  SUB-PAGE: Appearance  -->
     <div id="settings-page-appearance" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -516,7 +542,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Personas ══ -->
+    <!--  SUB-PAGE: Personas  -->
     <div id="settings-page-personas" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -538,7 +564,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Voice ══ -->
+    <!--  SUB-PAGE: Voice  -->
     <div id="settings-page-voice" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -560,7 +586,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Memory ══ -->
+    <!--  SUB-PAGE: Memory  -->
     <div id="settings-page-memory" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -603,7 +629,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Personalization ══ -->
+    <!--  SUB-PAGE: Personalization  -->
     <div id="settings-page-personalization" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -655,7 +681,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Terms of Service ══ -->
+    <!--  SUB-PAGE: Terms of Service  -->
     <div id="settings-page-tos" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -670,7 +696,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Privacy Policy ══ -->
+    <!--  SUB-PAGE: Privacy Policy  -->
     <div id="settings-page-privacy" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -694,7 +720,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: About & Contact ══ -->
+    <!--  SUB-PAGE: About & Contact  -->
     <div id="settings-page-about" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -711,7 +737,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Referral Code ══ -->
+    <!--  SUB-PAGE: Referral Code  -->
     <div id="settings-page-referral" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -741,7 +767,7 @@
       </div>
     </div>
 
-    <!-- ══ SUB-PAGE: Supporter Perks ══ -->
+    <!--  SUB-PAGE: Supporter Perks  -->
     <div id="settings-page-supporter" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -884,7 +910,7 @@ if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.sta
   document.documentElement.classList.add('pwa-mode');
 </script>
 
-<!-- ══ COMMUNITY: NEW POST MODAL ══ -->
+<!--  COMMUNITY: NEW POST MODAL  -->
 <div class="modal-overlay hidden" id="new-post-modal">
   <div class="modal-sheet">
     <div class="modal-drag-handle"></div>
@@ -933,7 +959,7 @@ if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.sta
   </div>
 </div>
 
-<!-- ══ COMMUNITY: POST DETAIL MODAL ══ -->
+<!--  COMMUNITY: POST DETAIL MODAL  -->
 <div class="modal-overlay hidden" id="post-detail-modal">
   <div class="modal-sheet">
     <div class="modal-drag-handle"></div>

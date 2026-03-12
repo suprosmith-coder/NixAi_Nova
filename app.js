@@ -11,6 +11,8 @@ const CHAT_URL      = SUPABASE_URL + '/functions/v1/cyanix-chat';
 const TTS_URL       = SUPABASE_URL + '/functions/v1/tts';
 const TRAINING_URL  = SUPABASE_URL + '/functions/v1/collect-training-data';
 const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
+const CYBASE_URL    = SUPABASE_URL + '/functions/v1/cybase-search';
+const DESIGNIX_URL  = SUPABASE_URL + '/functions/v1/designix';
 const WHISPER_URL   = SUPABASE_URL + '/functions/v1/whisper';
 const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
 
@@ -242,7 +244,8 @@ function buildSystemPrompt(queryContext) {
   // Active persona overrides default personality
   if (_activePersona && _activePersona.system_prompt) {
     var personaBlock = 'You are ' + _activePersona.name + '. ' + _activePersona.system_prompt;
-    return [personaBlock, n, memBlock].filter(Boolean).join(' ');
+    var echoCtx = (window.getEchoModeContext ? window.getEchoModeContext() : '');
+    return [personaBlock, n, memBlock].filter(Boolean).join(' ') + echoCtx;
   }
   var now = new Date();
   var dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -254,7 +257,8 @@ function buildSystemPrompt(queryContext) {
     'When asked if you are outdated or what your knowledge cutoff is: acknowledge your training has a cutoff, state today' + String.fromCharCode(39) + 's date confidently, and offer to search the web for current information using your built-in RAG search.',
     'Cyanix AI has built-in web search (RAG) that can retrieve real-time information -- proactively offer this when a user needs current data.',
   ].join(' ');
-  return [identity, p, n, memBlock].filter(Boolean).join(' ');
+  var echoCtx = (window.getEchoModeContext ? window.getEchoModeContext() : '');
+  return [identity, p, n, memBlock].filter(Boolean).join(' ') + echoCtx;
 }
 
 function edgeHeaders() {
@@ -1661,6 +1665,47 @@ async function fetchRAGContext(query) {
   } catch (e) { return null; }
 }
 
+async function fetchCybaseContext(query) {
+  if (!_session) return null;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(function() { ctrl.abort(); }, 6000);
+    const res = await fetch(CYBASE_URL, {
+      method: 'POST',
+      headers: edgeHeaders(),
+      body: JSON.stringify({ query: query, limit: 4 }),
+      signal: ctrl.signal
+    });
+    clearTimeout(t);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.results && data.results.length ? data.results : null;
+  } catch (e) { return null; }
+}
+
+function buildCybaseContext(results) {
+  if (!results || !results.length) return '';
+  const parts = ['[FROM YOUR CYBASE]'];
+  results.forEach(function(r) {
+    parts.push('[' + r.type.toUpperCase() + '] ' + r.title + (r.content ? ': ' + r.content.slice(0, 300) : ''));
+  });
+  return '\n\n' + parts.join('\n') + '\n[END CYBASE]';
+}
+
+function needsDesignix(text) {
+  return /\b(design|designix|generate|create|make|draw|sketch|render|visualize|prototype|concept|mockup|product|build me)\b/i.test(text) &&
+    /\b(product|app|device|gadget|tool|object|thing|item|logo|ui|interface|watch|phone|bag|shoe|chair|lamp|bottle|packaging|brand|icon)\b/i.test(text) ||
+    /^(design|create|generate|make|draw|sketch|render|show me|visualize)\b.{0,60}(product|device|gadget|object|concept|prototype|idea)/i.test(text) ||
+    /\/design|\/designix/i.test(text);
+}
+
+function needsCybaseSearch(text) {
+  // Search cybase when query seems personal/knowledge-related
+  var q = text.toLowerCase();
+  return /\b(my note|my code|i saved|i wrote|i added|my doc|from cybase|in my base|my snippet|my link|remember (that|when)|i mentioned|find my)\b/i.test(q) ||
+    /\b(show me|recall|look up|retrieve)\b/i.test(q);
+}
+
 function buildRAGContext(ragData) {
   if (!ragData) return '';
   const parts = [];
@@ -1724,6 +1769,7 @@ async function sendMessage(text) {
   scrollToBottom();
 
   let ragData = null;
+  let cybaseData = null;
   const isCompound = _settings.model.startsWith('groq/compound');
   if (!isCompound && (_ragEnabled || (_ragAuto && needsWebSearch(text)))) {
     // Skip manual RAG when Compound is selected -- it has built-in web search
@@ -1735,6 +1781,25 @@ async function sendMessage(text) {
   if (isCompound) {
     const tl = $('thinking-text');
     if (tl) tl.textContent = 'Cyanix is searching the web...';
+  }
+  // Always check Cybase for personal knowledge queries
+  if (needsCybaseSearch(text)) {
+    const tl = $('thinking-text');
+    if (tl) tl.textContent = 'Checking your Cybase...';
+    cybaseData = await fetchCybaseContext(text);
+    if (tl) tl.textContent = 'Cyanix is thinking';
+  }
+
+  // Designix -- detect design intent and generate image
+  if (needsDesignix(text) && !pendingAttachment) {
+    const tl = $('thinking-text');
+    if (tl) tl.textContent = 'Designix is generating...';
+    hide('typing-row');
+    stopThoughtStream();
+    _responding = false;
+    setSendBtn('send');
+    await runDesignix(text);
+    return;
   }
 
   // Build user content -- plain text or multipart if attachment present
@@ -1756,7 +1821,7 @@ async function sendMessage(text) {
     userContent = text;
   }
 
-  const messages = [{ role: 'system', content: buildSystemPrompt(text) + buildRAGContext(ragData) }]
+  const messages = [{ role: 'system', content: buildSystemPrompt(text) + buildRAGContext(ragData) + buildCybaseContext(cybaseData) }]
     .concat(_history.slice(-(window._chatHistoryLimit || 100)).map(function(m, idx, arr) {
       // For last user message: use multipart content if attachment was present
       if (idx === arr.length - 1 && m.role === 'user' && typeof userContent !== 'string') {
@@ -2142,6 +2207,24 @@ async function saveReferralIfNeeded(codeUsed) {
 }
 
 
+
+// -- Cybase inject handler -----------------------------------
+(function() {
+  var injected = sessionStorage.getItem('cybase_inject');
+  if (injected) {
+    sessionStorage.removeItem('cybase_inject');
+    try {
+      var item = JSON.parse(injected);
+      window.addEventListener('cyanix:ready', function() {
+        var input = document.getElementById('composer-input') || document.getElementById('user-input');
+        if (input) {
+          input.value = 'I saved this ' + item.type + ' to Cybase titled "' + item.title + '". Can you help me with it?\n\n' + item.content;
+          input.dispatchEvent(new Event('input'));
+        }
+      }, { once: true });
+    } catch(e) {}
+  }
+})();
 
 // -- Settings sub-page navigation ----------------------------
 window.openSettingsPage = function(page) {
@@ -3169,5 +3252,487 @@ function scrollToBottom() {
   function escHtml(str) {
     return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+})();
+
+// ============================================================
+// SPLIT BRAIN
+// ============================================================
+(function() {
+  var _debating    = false;
+  var _personaA    = null;
+  var _personaB    = null;
+  var _topic       = '';
+  var _history     = [];
+  var _round       = 0;
+
+  window.startSplitBrain = async function() {
+    var topic = (document.getElementById('sb-topic-input').value || '').trim();
+    if (!topic) { toast('Enter a topic first'); return; }
+
+    _topic    = topic;
+    _history  = [];
+    _round    = 0;
+    _debating = true;
+
+    var btn  = document.getElementById('sb-start-btn');
+    var feed = document.getElementById('sb-debate-feed');
+    var meta = document.getElementById('sb-debate-meta');
+    var bar  = document.getElementById('sb-referee-bar');
+
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+    feed.innerHTML = '';
+    meta.style.display = 'none';
+    bar.style.display  = 'none';
+
+    // Step 1: Generate two opposing personas for this topic
+    var setupPrompt =
+      'You are setting up a Split Brain debate. The topic is: "' + topic + '".\n' +
+      'Generate two opposing debaters perfectly suited for this topic. Respond in JSON only:\n' +
+      '{"a":{"name":"...","stance":"...","personality":"...","emoji":"..."},' +
+       '"b":{"name":"...","stance":"...","personality":"...","emoji":"..."}}\n' +
+      'Make them dramatically different. Short stances (max 8 words). Be creative with names.';
+
+    try {
+      var setupRes = await callEdge([
+        { role: 'system', content: 'You generate debate personas. Respond only with valid JSON.' },
+        { role: 'user',   content: setupPrompt }
+      ], 300);
+
+      var json = setupRes.replace(/```json?|```/g, '').trim();
+      var personas = JSON.parse(json);
+      _personaA = personas.a;
+      _personaB = personas.b;
+    } catch(e) {
+      // Fallback personas
+      _personaA = { name: 'Advocate', stance: 'Strongly in favor', personality: 'Passionate optimist', emoji: '&#128293;' };
+      _personaB = { name: 'Skeptic',  stance: 'Strongly against',  personality: 'Sharp critical thinker', emoji: '&#129300;' };
+    }
+
+    // Render meta cards
+    meta.style.display = 'block';
+    meta.innerHTML =
+      '<div class="sb-meta-row">' +
+        '<div class="sb-meta-card a">' + _personaA.emoji + ' ' + _personaA.name + '<span>' + _personaA.stance + '</span></div>' +
+        '<div class="sb-meta-card b">' + _personaB.emoji + ' ' + _personaB.name + '<span>' + _personaB.stance + '</span></div>' +
+      '</div>';
+
+    bar.style.display = 'block';
+    btn.textContent = '&#9889; Generate Debate';
+    btn.disabled = false;
+
+    // Start first round
+    await runDebateRound();
+  };
+
+  window.continueDebate = async function() {
+    if (!_personaA || !_personaB) return;
+    await runDebateRound();
+  };
+
+  window.sendRefereeMessage = async function() {
+    var input = document.getElementById('sb-referee-input');
+    var msg   = (input.value || '').trim();
+    if (!msg) return;
+    input.value = '';
+
+    appendBubble('referee', '&#9878; Referee', msg);
+    _history.push({ role: 'user', content: '[REFEREE]: ' + msg });
+
+    // Both personas respond to referee
+    await runDebateRound('[REFEREE]: ' + msg);
+  };
+
+  async function runDebateRound(refereeMsg) {
+    _round++;
+    var feed = document.getElementById('sb-debate-feed');
+    var contBtn = document.getElementById('sb-continue-btn');
+    if (contBtn) { contBtn.disabled = true; contBtn.textContent = 'Generating...'; }
+
+    // Side A speaks
+    var aTyping = appendBubble('side-a', _personaA.emoji + ' ' + _personaA.name, '...', true);
+    var aPrompt = buildPersonaPrompt(_personaA, 'A', _personaB, refereeMsg);
+    var aText   = await callEdge(aPrompt, 250);
+    aTyping.querySelector('.sb-bubble-text').textContent = aText;
+    aTyping.classList.remove('sb-typing');
+    _history.push({ role: 'assistant', content: _personaA.name + ': ' + aText });
+
+    // Small pause for effect
+    await new Promise(function(r) { setTimeout(r, 400); });
+
+    // Side B responds
+    var bTyping = appendBubble('side-b', _personaB.emoji + ' ' + _personaB.name, '...', true);
+    var bPrompt = buildPersonaPrompt(_personaB, 'B', _personaA, null, aText);
+    var bText   = await callEdge(bPrompt, 250);
+    bTyping.querySelector('.sb-bubble-text').textContent = bText;
+    bTyping.classList.remove('sb-typing');
+    _history.push({ role: 'assistant', content: _personaB.name + ': ' + bText });
+
+    if (contBtn) { contBtn.disabled = false; contBtn.textContent = '&#8635; Next Round'; }
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function buildPersonaPrompt(persona, side, opponent, refereeMsg, opponentLastMsg) {
+    var sysPrompt =
+      'You are ' + persona.name + ' debating the topic: "' + _topic + '".\n' +
+      'Your stance: ' + persona.stance + '.\n' +
+      'Your personality: ' + persona.personality + '.\n' +
+      'Keep your response under 80 words. Be sharp, direct, and stay in character.\n' +
+      'You are debating against ' + opponent.name + ' who takes the opposite stance.\n' +
+      'Do NOT use your own name in the response.';
+
+    var msgs = [{ role: 'system', content: sysPrompt }];
+
+    // Include recent history for context
+    _history.slice(-6).forEach(function(h) { msgs.push(h); });
+
+    var userMsg = refereeMsg
+      ? 'The referee says: ' + refereeMsg + '. Respond to this.'
+      : (opponentLastMsg
+          ? opponent.name + ' just said: "' + opponentLastMsg + '". Counter this.'
+          : 'Make your opening argument about "' + _topic + '".');
+
+    msgs.push({ role: 'user', content: userMsg });
+    return msgs;
+  }
+
+  function appendBubble(side, label, text, typing) {
+    var feed = document.getElementById('sb-debate-feed');
+    var div  = document.createElement('div');
+    div.className = 'sb-debate-bubble ' + side + (typing ? ' sb-typing' : '');
+    div.style.animationDelay = '0ms';
+    div.innerHTML =
+      '<div class="sb-bubble-label"><div class="sb-persona-dot"></div>' + label + '</div>' +
+      '<div class="sb-bubble-text">' + escSB(text) + '</div>';
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+    return div;
+  }
+
+  async function callEdge(messages, maxTokens) {
+    try {
+      var res = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: edgeHeaders(),
+        body: JSON.stringify({
+          model:      'groq/compound-mini',
+          messages:   messages,
+          stream:     false,
+          max_tokens: maxTokens || 300
+        })
+      });
+      if (!res.ok) return '[Error generating response]';
+      var data = await res.json();
+      if (data.choices && data.choices[0]) return data.choices[0].message.content.trim();
+      if (data.content) return data.content.trim();
+      return '[No response]';
+    } catch(e) {
+      return '[Error: ' + e.message + ']';
+    }
+  }
+
+  function escSB(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Hook into switchSidebarTab
+  var _origSwitch = window.switchSidebarTab;
+  window.switchSidebarTab = function(tab) {
+    var sbPanel = document.getElementById('sb-panel-splitbrain');
+    var sbTab   = document.getElementById('sb-tab-splitbrain');
+    if (tab === 'splitbrain') {
+      ['chats','community'].forEach(function(p) {
+        var el = document.getElementById('sb-panel-' + p);
+        if (el) el.style.display = 'none';
+        var t = document.getElementById('sb-tab-' + p);
+        if (t) t.classList.remove('active');
+      });
+      if (sbPanel) sbPanel.style.display = 'flex';
+      if (sbTab)   sbTab.classList.add('active');
+    } else {
+      if (sbPanel) sbPanel.style.display = 'none';
+      if (sbTab)   sbTab.classList.remove('active');
+      _origSwitch(tab);
+    }
+  };
+})();
+
+// ============================================================
+// ECHO MODE
+// ============================================================
+(function() {
+  var _echoOn      = false;
+  var _voiceProfile = null;
+
+  window.toggleEchoMode = function() {
+    _echoOn = !_echoOn;
+    var btn = document.getElementById('echo-toggle-btn');
+    var bar = document.getElementById('echo-mode-bar');
+    if (btn) btn.classList.toggle('echo-active', _echoOn);
+    if (bar) bar.style.display = _echoOn ? 'flex' : 'none';
+    if (_echoOn) {
+      toast('&#128270; Echo Mode ON  --  Cyanix will write in your voice');
+      buildVoiceProfile();
+    } else {
+      toast('Echo Mode off');
+    }
+  };
+
+  // Build voice profile from past chat messages
+  async function buildVoiceProfile() {
+    if (_voiceProfile) return; // already built
+    if (!_session) return;
+
+    try {
+      // Fetch last 30 user messages from Supabase
+      var res = await fetch(
+        SUPABASE_URL + '/rest/v1/messages?role=eq.user&user_id=eq.' + _session.user.id +
+        '&order=created_at.desc&limit=30&select=content',
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + _session.access_token } }
+      );
+      var msgs = await res.json();
+      var samples = msgs.map(function(m) { return m.content; }).filter(function(c) { return c && c.length > 20; });
+
+      if (!samples.length) return;
+
+      // Ask AI to analyze writing style
+      var analyzeRes = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: edgeHeaders(),
+        body: JSON.stringify({
+          model:      'groq/compound-mini',
+          stream:     false,
+          max_tokens: 400,
+          messages: [
+            {
+              role: 'system',
+              content: 'You analyze writing style. Respond only with a JSON object describing the writing style profile.'
+            },
+            {
+              role: 'user',
+              content: 'Analyze the writing style of these messages and create a voice profile. ' +
+                'Include: tone, vocabulary level, sentence length, common phrases, formality, punctuation habits, and any unique patterns.\n\n' +
+                'Messages:\n' + samples.slice(0, 15).join('\n---\n') + '\n\n' +
+                'Respond with JSON: { "tone": "...", "vocabulary": "...", "sentenceLength": "...", "formality": "...", "patterns": ["..."], "uniqueTraits": ["..."] }'
+            }
+          ]
+        })
+      });
+
+      var data = await analyzeRes.json();
+      var raw  = (data.choices && data.choices[0] ? data.choices[0].message.content : '').replace(/```json?|```/g, '').trim();
+      _voiceProfile = JSON.parse(raw);
+      console.log('[Echo] Voice profile built:', _voiceProfile);
+    } catch(e) {
+      console.log('[Echo] Could not build voice profile:', e.message);
+    }
+  }
+
+  // Inject Echo Mode into buildSystemPrompt
+  var _origBuildSys = window._buildSystemPromptHook;
+  window.getEchoModeContext = function() {
+    if (!_echoOn) return '';
+    var base = '\n\n[ECHO MODE ACTIVE] Write your entire response in the user\'s personal voice and style.';
+    if (_voiceProfile) {
+      base += ' Voice profile: ' +
+        'Tone=' + (_voiceProfile.tone || '') + '. ' +
+        'Vocabulary=' + (_voiceProfile.vocabulary || '') + '. ' +
+        'Sentence length=' + (_voiceProfile.sentenceLength || '') + '. ' +
+        'Formality=' + (_voiceProfile.formality || '') + '. ' +
+        'Unique traits: ' + (_voiceProfile.uniqueTraits || []).join(', ') + '. ' +
+        'Mimic this style precisely. Sound like the user wrote it themselves.';
+    } else {
+      base += ' Mirror the writing style from the conversation history  --  match their tone, vocabulary and sentence patterns exactly.';
+    }
+    return base;
+  };
+
+  // Expose echo state for buildSystemPrompt to use
+  window._echoModeActive = function() { return _echoOn; };
+})();
+
+
+// ============================================================
+// DESIGNIX -- AI Product Image Generation
+// ============================================================
+(function() {
+
+  window.runDesignix = async function(userText) {
+    if (!_session) { toast('Sign in to use Designix'); return; }
+
+    // Show user message
+    renderMessage('user', userText, true, null, null);
+    show('typing-row');
+    var tl = $('thinking-text');
+    if (tl) tl.textContent = 'Designix is imagining your product...';
+    scrollToBottom();
+
+    try {
+      var ctrl = new AbortController();
+      var timeout = setTimeout(function() { ctrl.abort(); }, 60000);
+
+      var res = await fetch(DESIGNIX_URL, {
+        method: 'POST',
+        headers: edgeHeaders(),
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          user_message:         userText,
+          conversation_history: _history.slice(-8)
+        })
+      });
+      clearTimeout(timeout);
+      hide('typing-row');
+
+      if (!res.ok) {
+        var err = await res.json().catch(function() { return {}; });
+        renderDesignixError(err.error || 'Image generation failed');
+        return;
+      }
+
+      var data = await res.json();
+      if (!data.image_b64) {
+        renderDesignixError('No image returned. Try a different description.');
+        return;
+      }
+
+      // Render Designix result bubble
+      renderDesignixResult(data);
+
+      // Add to history so next message has context
+      _history.push({ role: 'user', content: userText });
+      _history.push({ role: 'assistant', content: '[Designix generated image] ' + (data.analysis || '') });
+
+    } catch(e) {
+      hide('typing-row');
+      if (e.name === 'AbortError') {
+        renderDesignixError('Generation timed out. Try again.');
+      } else {
+        renderDesignixError('Error: ' + e.message);
+      }
+    }
+
+    scrollToBottom();
+  };
+
+  function renderDesignixResult(data) {
+    var messages = $('messages');
+    if (!messages) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'message assistant';
+    wrap.style.cssText = 'animation:msgIn .3s var(--ease,ease) both;';
+
+    var imgSrc = 'data:image/png;base64,' + data.image_b64;
+
+    wrap.innerHTML =
+      '<div class="msg-bubble assistant" style="padding:0;overflow:hidden;border-radius:14px;max-width:360px;">' +
+        // Designix header badge
+        '<div style="padding:8px 14px;display:flex;align-items:center;gap:6px;background:rgba(124,58,237,.15);border-bottom:1px solid rgba(124,58,237,.2);">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
+          '<span style="font-size:.65rem;font-weight:800;letter-spacing:.1em;color:#7c3aed;">DESIGNIX</span>' +
+        '</div>' +
+        // Generated image
+        '<div class="dxi-zoom" style="position:relative;cursor:zoom-in;">' +
+          '<img src="' + imgSrc + '" alt="Designix generation" style="width:100%;display:block;"/>' +
+          '<div style="position:absolute;bottom:8px;right:8px;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.6);font-size:.65rem;font-weight:700;color:#fff;letter-spacing:.06em;">FLUX.1</div>' +
+        '</div>' +
+        // Prompt used
+        '<div style="padding:8px 14px;font-size:.68rem;color:var(--text-3,#4a6a88);border-bottom:1px solid rgba(0,200,255,.08);font-style:italic;">' +
+          esc(data.image_prompt ? data.image_prompt.slice(0, 120) + (data.image_prompt.length > 120 ? '...' : '') : '') +
+        '</div>' +
+        // Analysis
+        '<div style="padding:12px 14px;font-size:.82rem;line-height:1.75;color:var(--text-1,#e8f4ff);">' +
+          formatAnalysis(data.analysis || '') +
+        '</div>' +
+        // Action row
+        '<div style="display:flex;gap:0;border-top:1px solid rgba(0,200,255,.08);">' +
+          '<button class="dxi-dl" style="flex:1;padding:9px;background:none;border:none;border-right:1px solid rgba(0,200,255,.08);color:var(--text-2,#8ba8c4);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font,sans-serif);">Download</button>' +
+          '<button class="dxi-iter" data-prompt="' + escAttr(data.image_prompt) + '" style="flex:1;padding:9px;background:none;border:none;border-right:1px solid rgba(0,200,255,.08);color:var(--text-2,#8ba8c4);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font,sans-serif);">Iterate</button>' +
+          '<button class="dxi-save" data-prompt="' + escAttr(data.image_prompt || '') + '" style="flex:1;padding:9px;background:none;border:none;color:var(--text-2,#8ba8c4);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font,sans-serif);">Save to Cybase</button>' +
+        '</div>' +
+      '</div>';
+
+    // Store imgSrc on element for event delegation
+    wrap.dataset.imgSrc = imgSrc;
+    var zoomEl = wrap.querySelector('.dxi-zoom');
+    if (zoomEl) zoomEl.addEventListener('click', function(){ window.openDesignixImage(this); });
+    wrap.querySelector('.dxi-dl').addEventListener('click', function(){ window.downloadDesignix(imgSrc); });
+    wrap.querySelector('.dxi-iter').addEventListener('click', function(){ window.iterateDesignix(this.dataset.prompt); });
+    wrap.querySelector('.dxi-save').addEventListener('click', function(){ window.saveDesignixToCybase(imgSrc, this.dataset.prompt); });
+    messages.appendChild(wrap);
+  }
+
+  function renderDesignixError(msg) {
+    var messages = $('messages');
+    if (!messages) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'message assistant';
+    wrap.innerHTML = '<div class="msg-bubble assistant" style="color:var(--red,#ef4444);font-size:.85rem;">Designix: ' + esc(msg) + '</div>';
+    // Store imgSrc on element for event delegation
+    wrap.dataset.imgSrc = imgSrc;
+    var zoomEl = wrap.querySelector('.dxi-zoom');
+    if (zoomEl) zoomEl.addEventListener('click', function(){ window.openDesignixImage(this); });
+    wrap.querySelector('.dxi-dl').addEventListener('click', function(){ window.downloadDesignix(imgSrc); });
+    wrap.querySelector('.dxi-iter').addEventListener('click', function(){ window.iterateDesignix(this.dataset.prompt); });
+    wrap.querySelector('.dxi-save').addEventListener('click', function(){ window.saveDesignixToCybase(imgSrc, this.dataset.prompt); });
+    messages.appendChild(wrap);
+  }
+
+  function formatAnalysis(text) {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--blue,#00c8ff);">$1</strong>')
+      .replace(/^- (.+)$/gm, '<span style="display:block;padding-left:10px;position:relative;">&bull; $1</span>')
+      .replace(/\n/g, '<br/>');
+  }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escAttr(s) {
+    return String(s||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/\n/g,' ');
+  }
+
+  //  PUBLIC ACTIONS 
+
+  window.openDesignixImage = function(container) {
+    var img = container.querySelector('img');
+    if (!img) return;
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+    overlay.onclick = function() { document.body.removeChild(overlay); };
+    var bigImg = document.createElement('img');
+    bigImg.src = img.src;
+    bigImg.style.cssText = 'max-width:90vw;max-height:90vh;border-radius:12px;box-shadow:0 0 60px rgba(0,200,255,.2);';
+    overlay.appendChild(bigImg);
+    document.body.appendChild(overlay);
+  };
+
+  window.downloadDesignix = function(src) {
+    var a = document.createElement('a');
+    a.href = src;
+    a.download = 'designix-' + Date.now() + '.png';
+    a.click();
+    toast('Image downloaded');
+  };
+
+  window.iterateDesignix = function(prevPrompt) {
+    var input = $('composer-input');
+    if (input) {
+      input.value = 'Redesign this  --  previous prompt was: ' + prevPrompt.slice(0, 80) + '. Now ';
+      input.focus();
+      input.style.height = 'auto';
+      input.style.height = input.scrollHeight + 'px';
+    }
+  };
+
+  window.saveDesignixToCybase = function(imgSrc, prompt) {
+    sessionStorage.setItem('cybase_inject', JSON.stringify({
+      title:   'Designix: ' + prompt.slice(0, 60),
+      type:    'image',
+      content: prompt
+    }));
+    toast('Saved to Cybase');
+  };
 
 })();
