@@ -2812,13 +2812,13 @@ function scrollToBottom() {
       if (!c.id) feed.removeChild(c);
     });
 
-    var url = window._supabaseUrl + '/rest/v1/community_posts?select=*&hidden=eq.false&order=created_at.desc&limit=50';
+    var url = SUPABASE_URL + '/rest/v1/community_posts?select=*&hidden=eq.false&order=created_at.desc&limit=50';
     if (cat !== 'all') url += '&category=eq.' + cat;
 
     fetch(url, {
       headers: {
-        'apikey': window._supabaseAnon,
-        'Authorization': 'Bearer ' + window._supabaseAnon
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + SUPABASE_ANON
       }
     })
     .then(function(r) { return r.json(); })
@@ -2877,11 +2877,11 @@ function scrollToBottom() {
     btn.classList.toggle('liked', !liked);
     var span = btn.querySelector('span');
     span.textContent = parseInt(span.textContent || 0) + delta;
-    fetch(window._supabaseUrl + '/rest/v1/rpc/increment_likes', {
+    fetch(SUPABASE_URL + '/rest/v1/rpc/increment_likes', {
       method: 'POST',
       headers: {
-        'apikey': window._supabaseAnon,
-        'Authorization': 'Bearer ' + window._supabaseAnon,
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + SUPABASE_ANON,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ post_id: postId, delta: delta })
@@ -2890,13 +2890,13 @@ function scrollToBottom() {
 
   // -- Save post -------------------------------------------
   window.communitySavePost = function(postId) {
-    var user = window._currentUser;
+    var user = (typeof _session !== 'undefined' && _session) ? _session.user : null;
     if (!user) { toast('Sign in to save posts'); return; }
-    fetch(window._supabaseUrl + '/rest/v1/community_saved', {
+    fetch(SUPABASE_URL + '/rest/v1/community_saved', {
       method: 'POST',
       headers: {
-        'apikey': window._supabaseAnon,
-        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + ((typeof _session !== 'undefined' && _session) ? _session.access_token : SUPABASE_ANON),
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
@@ -2906,8 +2906,8 @@ function scrollToBottom() {
 
   // -- Open in Cyanix --------------------------------------
   window.communityOpenInCyanix = function(postId) {
-    fetch(window._supabaseUrl + '/rest/v1/community_posts?id=eq.' + postId, {
-      headers: { 'apikey': window._supabaseAnon, 'Authorization': 'Bearer ' + window._supabaseAnon }
+    fetch(SUPABASE_URL + '/rest/v1/community_posts?id=eq.' + postId, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
     })
     .then(function(r) { return r.json(); })
     .then(function(rows) {
@@ -2932,8 +2932,8 @@ function scrollToBottom() {
     body.innerHTML = '<div class="sb-empty">Loading...</div>';
     modal.classList.remove('hidden');
 
-    fetch(window._supabaseUrl + '/rest/v1/community_posts?id=eq.' + postId, {
-      headers: { 'apikey': window._supabaseAnon, 'Authorization': 'Bearer ' + window._supabaseAnon }
+    fetch(SUPABASE_URL + '/rest/v1/community_posts?id=eq.' + postId, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
     })
     .then(function(r) { return r.json(); })
     .then(function(rows) {
@@ -2946,7 +2946,7 @@ function scrollToBottom() {
         ? '<img src="' + escHtml(p.image_url) + '" style="width:100%;border-radius:12px;" alt="post image" />'
         : '<div class="post-detail-content' + (isCode ? ' code-content' : '') + '">' + escHtml(p.body || '') + '</div>';
 
-      var user = window._currentUser;
+      var user = (typeof _session !== 'undefined' && _session) ? _session.user : null;
       var isOwner = user && user.id === p.user_id;
 
       body.innerHTML =
@@ -2990,8 +2990,8 @@ function scrollToBottom() {
   function loadComments(postId) {
     var list = document.getElementById('post-comments-list');
     if (!list) return;
-    fetch(window._supabaseUrl + '/rest/v1/community_comments?post_id=eq.' + postId + '&order=created_at.asc', {
-      headers: { 'apikey': window._supabaseAnon, 'Authorization': 'Bearer ' + window._supabaseAnon }
+    fetch(SUPABASE_URL + '/rest/v1/community_comments?post_id=eq.' + postId + '&order=created_at.asc', {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
     })
     .then(function(r) { return r.json(); })
     .then(function(comments) {
@@ -3013,12 +3013,12 @@ function scrollToBottom() {
     var input = document.getElementById('comment-input');
     var body = (input.value || '').trim();
     if (!body) return;
-    var user = window._currentUser;
-    fetch(window._supabaseUrl + '/rest/v1/community_comments', {
+    var user = (typeof _session !== 'undefined' && _session) ? _session.user : null;
+    fetch(SUPABASE_URL + '/rest/v1/community_comments', {
       method: 'POST',
       headers: {
-        'apikey': window._supabaseAnon,
-        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + ((typeof _session !== 'undefined' && _session) ? _session.access_token : SUPABASE_ANON),
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
@@ -3037,28 +3037,28 @@ function scrollToBottom() {
   // -- Report post -----------------------------------------
   window.reportPost = function(postId) {
     if (!confirm('Report this post?')) return;
-    fetch(window._supabaseUrl + '/rest/v1/community_reports', {
+    fetch(SUPABASE_URL + '/rest/v1/community_reports', {
       method: 'POST',
       headers: {
-        'apikey': window._supabaseAnon,
-        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + ((typeof _session !== 'undefined' && _session) ? _session.access_token : SUPABASE_ANON),
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify({ post_id: postId, reporter_id: window._currentUser ? window._currentUser.id : null })
+      body: JSON.stringify({ post_id: postId, reporter_id: (typeof _session !== 'undefined' && _session) ? _session.user.id : null })
     }).then(function() { toast('Reported. Thanks.'); });
   };
 
   // -- Delete post (owner only) ----------------------------
   window.deletePost = function(postId) {
     if (!confirm('Delete this post?')) return;
-    var user = window._currentUser;
+    var user = (typeof _session !== 'undefined' && _session) ? _session.user : null;
     if (!user) return;
-    fetch(window._supabaseUrl + '/rest/v1/community_posts?id=eq.' + postId + '&user_id=eq.' + user.id, {
+    fetch(SUPABASE_URL + '/rest/v1/community_posts?id=eq.' + postId + '&user_id=eq.' + user.id, {
       method: 'DELETE',
       headers: {
-        'apikey': window._supabaseAnon,
-        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon)
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + ((typeof _session !== 'undefined' && _session) ? _session.access_token : SUPABASE_ANON)
       }
     }).then(function() {
       toast('Post deleted');
@@ -3069,7 +3069,7 @@ function scrollToBottom() {
 
   // -- New post modal --------------------------------------
   window.openNewPostModal = function() {
-    var user = window._currentUser;
+    var user = (typeof _session !== 'undefined' && _session) ? _session.user : null;
     if (!user) { toast('Sign in to post'); return; }
     document.getElementById('post-title-input').value = '';
     document.getElementById('post-body-input').value = '';
@@ -3117,14 +3117,14 @@ function scrollToBottom() {
 
   // -- Submit new post -------------------------------------
   window.submitPost = function() {
-    var user = window._currentUser;
+    var user = (typeof _session !== 'undefined' && _session) ? _session.user : null;
     if (!user) { toast('Sign in to post'); return; }
     var title = (document.getElementById('post-title-input').value || '').trim();
     var body  = (document.getElementById('post-body-input').value || '').trim();
     var cat   = document.getElementById('post-cat-val').value || 'code';
     if (!title) { toast('Add a title'); return; }
     if (cat !== 'image' && !body) { toast('Add some content'); return; }
-    var authorName = (user.user_metadata && user.user_metadata.full_name) || user.email || 'Anonymous';
+    var authorName = (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || user.email || 'Anonymous';
     var payload = {
       user_id: user.id,
       author_name: authorName,
@@ -3137,11 +3137,11 @@ function scrollToBottom() {
       reported: false
     };
     document.getElementById('post-submit-btn').textContent = 'Posting...';
-    fetch(window._supabaseUrl + '/rest/v1/community_posts', {
+    fetch(SUPABASE_URL + '/rest/v1/community_posts', {
       method: 'POST',
       headers: {
-        'apikey': window._supabaseAnon,
-        'Authorization': 'Bearer ' + (window._supabaseSession || window._supabaseAnon),
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + ((typeof _session !== 'undefined' && _session) ? _session.access_token : SUPABASE_ANON),
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
