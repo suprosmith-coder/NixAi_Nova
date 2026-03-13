@@ -203,13 +203,9 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Chats
         </button>
-        <a href="./community.html" class="sb-tab" id="sb-tab-community" style="text-decoration:none;">
+        <button type="button" class="sb-tab" id="sb-tab-community" onclick="window.switchSidebarTab('community')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Community
-        </a>
-        <button type="button" class="sb-tab" id="sb-tab-splitbrain" onclick="window.switchSidebarTab('splitbrain')" title="Split Brain">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
-          Split
         </button>
       </div>
     </div>
@@ -226,42 +222,26 @@
       </div>
     </div>
 
-    <!-- Community moved to community.html -->
-
-    <!--  SPLIT BRAIN PANEL  -->
-    <div id="sb-panel-splitbrain" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-      <div style="padding:10px 12px 6px;flex-shrink:0;">
-        <div style="font-size:.7rem;font-weight:700;color:var(--text-3);letter-spacing:.08em;margin-bottom:8px;">SPLIT BRAIN</div>
-        <input type="text" id="sb-topic-input" placeholder="Enter a topic to debate..." maxlength="120"
-          style="width:100%;padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text-1);font-family:var(--font);font-size:.82rem;outline:none;"/>
-        <button type="button" onclick="window.startSplitBrain()" id="sb-start-btn"
-          style="margin-top:7px;width:100%;padding:8px;border-radius:9px;border:none;background:var(--blue);color:#000;font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);">
-          &#9889; Generate Debate
+    <!-- -- COMMUNITY PANEL -- -->
+    <div id="sb-panel-community" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <!-- Category tabs -->
+      <div class="comm-cats">
+        <button type="button" class="comm-cat active" data-cat="all" onclick="window.communitySetCat(this,'all')">All</button>
+        <button type="button" class="comm-cat" data-cat="code" onclick="window.communitySetCat(this,'code')">Code</button>
+        <button type="button" class="comm-cat" data-cat="prompt" onclick="window.communitySetCat(this,'prompt')">Prompts</button>
+        <button type="button" class="comm-cat" data-cat="doc" onclick="window.communitySetCat(this,'doc')">Docs</button>
+        <button type="button" class="comm-cat" data-cat="image" onclick="window.communitySetCat(this,'image')">Images</button>
+      </div>
+      <!-- Post feed -->
+      <div class="sb-list" id="community-feed">
+        <div class="sb-empty" id="comm-empty">Loading...</div>
+      </div>
+      <!-- New post button -->
+      <div style="padding:10px 12px 6px;">
+        <button type="button" class="sb-new-btn" onclick="window.openNewPostModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New post
         </button>
-      </div>
-      <div id="sb-debate-meta" style="display:none;padding:0 12px 8px;flex-shrink:0;"></div>
-      <div id="sb-debate-feed" style="flex:1;overflow-y:auto;padding:0 8px 12px;display:flex;flex-direction:column;gap:6px;">
-        <div class="sb-empty" style="padding:20px;text-align:center;font-size:.78rem;color:var(--text-3);">Enter a topic above to start a Split Brain debate</div>
-      </div>
-      <div id="sb-referee-bar" style="display:none;padding:8px 12px;border-top:1px solid var(--border);flex-shrink:0;">
-        <div style="display:flex;gap:6px;">
-          <input type="text" id="sb-referee-input" placeholder="Jump in as referee..." maxlength="300"
-            style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text-1);font-family:var(--font);font-size:.8rem;outline:none;"/>
-          <button type="button" onclick="window.sendRefereeMessage()"
-            style="width:32px;height:32px;border-radius:8px;border:none;background:var(--blue);color:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:6px;">
-          <button type="button" onclick="window.continueDebate()" id="sb-continue-btn"
-            style="flex:1;padding:6px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text-2);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font);">
-            &#8635; Next Round
-          </button>
-          <button type="button" onclick="window.startSplitBrain()"
-            style="flex:1;padding:6px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text-2);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font);">
-            &#8635; New Topic
-          </button>
-        </div>
       </div>
     </div>
 
@@ -377,9 +357,6 @@
           <button type="button" class="tool-btn" id="attach-btn" title="Attach file">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
-          <button type="button" class="tool-btn" id="echo-toggle-btn" title="Echo Mode  --  write in your voice" onclick="window.toggleEchoMode()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 12s1.5-2 4-2 4 2 4 2"/><path d="M9 9h.01M15 9h.01"/></svg>
-          </button>
         </div>
         <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything..." rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
         <div class="composer-actions">
@@ -391,8 +368,6 @@
           </button>
         </div>
       </div>
-      <div id="echo-mode-bar" style="display:none;padding:4px 12px 0;display:none;align-items:center;gap:6px;">
-        <div style="width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pulse 1.5s infinite;flex-shrink:0;"></div>
         <span style="font-size:.72rem;color:var(--purple);font-weight:600;">Echo Mode ON &mdash; Cyanix will write in your voice</span>
         <button type="button" onclick="window.toggleEchoMode()" style="margin-left:auto;font-size:.68rem;color:var(--text-3);background:none;border:none;cursor:pointer;">Turn off</button>
       </div>
@@ -453,6 +428,15 @@
           <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('tos')">
             <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
             <div class="scr-body"><div class="scr-label">Terms of Service</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('improve')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+            <div class="scr-body">
+              <div class="scr-label">Help Cyanix Improve</div>
+              <div class="scr-desc" id="improve-nav-status">Off</div>
+            </div>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
           <div class="settings-card-divider"></div>
@@ -697,6 +681,106 @@
     </div>
 
     <!--  SUB-PAGE: Privacy Policy  -->
+    <!--  SUB-PAGE: Help Cyanix Improve  -->
+    <div id="settings-page-improve" style="display:none;flex-direction:column;height:100%;">
+      <div class="modal-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Help Cyanix Improve</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+
+        <!-- Hero description -->
+        <div style="padding:4px 0 18px;">
+          <p style="font-size:.9rem;color:var(--text-1);font-weight:600;margin:0 0 6px;">Make Cyanix smarter for everyone</p>
+          <p style="font-size:.82rem;color:var(--text-2);line-height:1.7;margin:0;">
+            When you opt in, your conversations are automatically cleaned, improved, and anonymized before being stored.
+            This creates a high-quality dataset that helps Cyanix give better answers over time -- not just for you, but for all users.
+          </p>
+        </div>
+
+        <!-- Main toggle -->
+        <div class="settings-card">
+          <div class="settings-card-row" style="padding:14px 20px">
+            <div class="scr-body">
+              <div class="scr-label">Contribute to training</div>
+              <div class="scr-desc">Anonymized + cleaned versions of your chats help improve Cyanix</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="consent-toggle" /><span class="track"></span></label>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <!-- How it works -->
+        <div class="settings-card">
+          <div style="padding:14px 20px">
+            <div class="scr-label" style="margin-bottom:12px;">How your data is used</div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--accent);opacity:.15;flex-shrink:0;"></div>
+              <div style="position:relative;">
+                <div style="position:absolute;left:-22px;top:6px;width:28px;height:28px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div style="padding-left:6px;">
+                  <div style="font-size:.82rem;font-weight:600;color:var(--text-1);">Prompt Refiner</div>
+                  <div style="font-size:.78rem;color:var(--text-2);margin-top:2px;line-height:1.5;">Your message is rewritten to be clear and specific before storing</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+              <div style="position:relative;width:28px;flex-shrink:0;">
+                <div style="position:absolute;left:0;top:6px;width:28px;height:28px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+              </div>
+              <div style="padding-left:6px;">
+                <div style="font-size:.82rem;font-weight:600;color:var(--text-1);">Response Improver</div>
+                <div style="font-size:.78rem;color:var(--text-2);margin-top:2px;line-height:1.5;">The AI response is polished and structured before being saved</div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div style="position:relative;width:28px;flex-shrink:0;">
+                <div style="position:absolute;left:0;top:6px;width:28px;height:28px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+              </div>
+              <div style="padding-left:6px;">
+                <div style="font-size:.82rem;font-weight:600;color:var(--text-1);">Quality Filter</div>
+                <div style="font-size:.78rem;color:var(--text-2);margin-top:2px;line-height:1.5;">Only high-quality, toxicity-free exchanges are kept. Your feedback votes count toward this.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <!-- Withdraw -->
+        <div class="settings-card" id="training-data-row">
+          <div class="settings-card-row" style="padding:14px 20px">
+            <div class="scr-body">
+              <div class="scr-label">Withdraw contributions</div>
+              <div class="scr-desc">Remove all your anonymized data from the training dataset</div>
+            </div>
+            <button type="button" class="scr-link-btn" id="delete-training-btn">Withdraw</button>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <!-- Privacy note -->
+        <p style="font-size:.75rem;color:var(--text-3);line-height:1.6;padding:0 4px;">
+          All stored data is fully anonymized -- emails, URLs, and personal identifiers are removed before storage. Cyanix never sells data. You can withdraw at any time.
+        </p>
+
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
     <div id="settings-page-privacy" style="display:none;flex-direction:column;height:100%;">
       <div class="modal-head">
         <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -707,13 +791,9 @@
         <div class="settings-card" style="padding:16px 20px;">
           <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;">Cyanix AI stores your chat history and memories in Supabase to power your personalized experience. We do not sell your data. You can delete your memories and chats at any time from Settings.</p>
           <div class="settings-card-divider" style="margin:14px 0"></div>
-          <div class="settings-card-row" style="padding:0">
-            <div class="scr-body"><div class="scr-label">Help Improve Cyanix</div><div class="scr-desc">Allow anonymized training. Withdraw anytime.</div></div>
-            <label class="toggle"><input type="checkbox" id="consent-toggle" /><span class="track"></span></label>
-          </div>
-          <div class="settings-card-row hidden" id="training-data-row" style="padding:0;margin-top:8px">
-            <div class="scr-body"><div class="scr-label">Withdraw Contributions</div></div>
-            <button type="button" class="scr-link-btn" id="delete-training-btn">Withdraw</button>
+          <div class="settings-card-row" style="padding:0;cursor:pointer" onclick="window.openSettingsPage('improve')">
+            <div class="scr-body"><div class="scr-label">Help Improve Cyanix</div><div class="scr-desc">Manage your training data contribution</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
         </div>
         <div style="height:24px"></div>

@@ -10,6 +10,8 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const CHAT_URL      = SUPABASE_URL + '/functions/v1/cyanix-chat';
 const TTS_URL       = SUPABASE_URL + '/functions/v1/tts';
 const TRAINING_URL  = SUPABASE_URL + '/functions/v1/collect-training-data';
+const TRAINING_PIPELINE_URL = SUPABASE_URL + '/functions/v1/training-pipeline';
+const KG_URL            = SUPABASE_URL + '/functions/v1/knowledge-graph';
 const PIPELINE_URL  = SUPABASE_URL + '/functions/v1/feedback-pipeline';
 const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
 const BROWSE_URL    = SUPABASE_URL + '/functions/v1/browse-page';
@@ -69,6 +71,7 @@ let _syncPending  = false; // race condition guard
 let _memories  = [];        // cross-chat memories loaded on sign-in
 let _memoriesLoaded = false;
 let _learnedCtx = null;     // { personal_examples, global_examples, style_prefs } -- loaded at login
+let _kgContext  = '';       // unified knowledge graph + memory context string
 let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
@@ -315,7 +318,11 @@ function buildSystemPrompt(queryContext) {
 
   ].filter(Boolean).join(' ');
   var echoCtx = (window.getEchoModeContext ? window.getEchoModeContext() : '');
-  return [identity, p, n, memBlock].filter(Boolean).join(' ') + buildLearnedContext() + echoCtx;
+  // Append KG context if available (replaces old memory block when present)
+  var kgBlock = _kgContext
+    ? '\n\n' + _kgContext
+    : '';
+  return [identity, p, n, (kgBlock || memBlock)].filter(Boolean).join(' ') + buildLearnedContext() + echoCtx;
 }
 
 function edgeHeaders() {
@@ -652,8 +659,9 @@ async function onSignedIn(session) {
     }
   } catch (e) {}
 
-  if (_chats.length > 0) await loadChat(_chats[0].id);
-  else showWelcome();
+  // Always boot into a fresh unsaved chat -- save only happens on first message send
+  newChat();
+  // Sidebar still shows previous chats for easy access
 
   setTimeout(attachAllRipples, 150);
   window.dispatchEvent(new Event('cyanix:ready'));
@@ -816,6 +824,8 @@ function bindChatUI() {
   });
   on('consent-toggle',     'change', function() {
     _settings.trainingConsent = !!$('consent-toggle').checked;
+    var improveStatus = document.getElementById('improve-nav-status');
+    if (improveStatus) improveStatus.textContent = _settings.trainingConsent ? 'On' : 'Off';
     saveSettings(); syncPreferences(); updateTrainingDataRow();
     toast(_settings.trainingConsent ? 'Training data enabled.' : 'Training data disabled.');
   });
@@ -948,6 +958,9 @@ function syncSettingsToUI() {
   if ($('streaming-toggle'))   $('streaming-toggle').checked   = !!_settings.streaming;
   if ($('theme-select'))       $('theme-select').value         = _settings.theme || 'light';
   if ($('consent-toggle'))     $('consent-toggle').checked     = !!_settings.trainingConsent;
+  // Update the nav row status label
+  var improveStatus = document.getElementById('improve-nav-status');
+  if (improveStatus) improveStatus.textContent = _settings.trainingConsent ? 'On' : 'Off';
   if ($('display-name-input')) $('display-name-input').value   = _settings.displayName || '';
   if ($('rag-auto-toggle'))    $('rag-auto-toggle').checked    = !!_settings.ragAuto;
   _ragAuto = !!_settings.ragAuto;
@@ -1629,6 +1642,10 @@ async function extractAndSaveMemories(messages, sourceId) {
     // Reload memories into state
     await loadMemories();
     console.log('[CyanixAI] Memories updated:', items.length, 'items');
+    // Auto-attach new memories to knowledge graph nodes
+    _memories.slice(0, items.length).forEach(function(m) {
+      if (m.id && m.memory) autoAttachMemory(m.id, m.memory);
+    });
   } catch (e) {
     console.error('[CyanixAI] extractAndSaveMemories exception:', e);
   }
@@ -1637,8 +1654,20 @@ async function extractAndSaveMemories(messages, sourceId) {
 async function maybeCollectTraining(userText, aiText) {
   if (!_settings.trainingConsent || !_session) return;
   try {
-    await fetch(TRAINING_URL, { method: 'POST', headers: edgeHeaders(),
-      body: JSON.stringify({ message: userText, response: aiText, model: _settings.model }) });
+    // Fire the intelligent training pipeline -- refines prompt, improves response,
+    // runs quality filters, then stores only clean data. Fire-and-forget.
+    fetch(TRAINING_PIPELINE_URL, {
+      method: 'POST',
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        original_prompt: userText,
+        ai_response:     aiText,
+        model:           _settings.model,
+        user_id:         _session.user.id,
+      })
+    }).catch(function(e) {
+      console.warn('[CyanixAI] Training pipeline fire-and-forget failed:', e.message);
+    });
   } catch (e) {}
 }
 
@@ -1713,6 +1742,52 @@ function buildLearnedContext() {
   }
 
   return parts.length ? '\n\n' + parts.join('\n\n') : '';
+}
+
+async function fetchKGContext(query) {
+  if (!_session) return;
+  try {
+    var ctrl = new AbortController();
+    var t = setTimeout(function() { ctrl.abort(); }, 6000);
+    var res = await fetch(KG_URL + '?action=retrieve', {
+      method: 'POST',
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        action:       'retrieve',
+        query:        query.slice(0, 300),
+        user_id:      _session.user.id,
+        node_limit:   3,
+        memory_limit: 6,
+        depth:        2,
+      }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return;
+    var data = await res.json();
+    if (data.context) {
+      _kgContext = data.context;
+      console.log('[CyanixAI] KG context:', data.nodes_found, 'nodes,', data.memories_found, 'memories');
+    }
+  } catch (e) {
+    console.warn('[CyanixAI] KG context fetch failed:', e.message);
+  }
+}
+
+async function autoAttachMemory(memoryId, memoryText) {
+  if (!_session) return;
+  try {
+    fetch(KG_URL + '?action=auto-attach', {
+      method: 'POST',
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        action:      'auto-attach',
+        memory_id:   memoryId,
+        memory_text: memoryText,
+        user_id:     _session.user.id,
+      }),
+    }).catch(function() {});
+  } catch (e) {}
 }
 
 async function deleteChat(id) {
@@ -1925,6 +2000,9 @@ async function sendMessage(text) {
   let ragData    = null;
   let browseData = null;
   const isCompound = _settings.model.startsWith('groq/compound');
+
+  // Fetch unified KG context (nodes + memories) -- fire in parallel, non-blocking
+  fetchKGContext(text).catch(function() {});
 
   // URL browse -- runs first, takes priority over RAG
   if (needsBrowse(text)) {
@@ -2379,7 +2457,7 @@ async function saveReferralIfNeeded(codeUsed) {
 window.openSettingsPage = function(page) {
   var pages = [
     'main','appearance','personas','voice','memory','personalization',
-    'tos','privacy','about','referral','supporter'
+    'tos','privacy','about','referral','supporter','improve'
   ];
   pages.forEach(function(p) {
     var el = document.getElementById('settings-page-' + p);
