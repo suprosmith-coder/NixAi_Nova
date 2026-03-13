@@ -1108,48 +1108,118 @@ function checkDailyLimit() {
   return true;
 }
 
-function showUpgradeModal() {
-  var existing = $('upgrade-modal');
-  if (existing) { show('upgrade-modal'); return; }
-  var overlay = document.createElement('div');
-  overlay.id = 'upgrade-modal';
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML =
-    '<div class="modal-sheet upgrade-sheet">' +
-      '<div class="upgrade-icon">&#9889;</div>' +
-      '<h2 class="upgrade-title">You' + String.fromCharCode(39) + 've hit your limit</h2>' +
-      '<p class="upgrade-desc">Free users get <strong>20 messages</strong> every 2 hours.<br>Your limit resets in <strong id="upgrade-reset-timer">' + getWindowResetTime() + '</strong>.</p>' +
-      '<div class="upgrade-perks">' +
-        '<div class="upgrade-perk"><span>&#9733;</span> Unlimited messages</div>' +
-        '<div class="upgrade-perk"><span>&#127756;</span> Exclusive themes</div>' +
-        '<div class="upgrade-perk"><span>&#129504;</span> Extended memory</div>' +
-        '<div class="upgrade-perk"><span>&#128640;</span> Early access to new features</div>' +
-      '</div>' +
-      '<div class="upgrade-actions">' +
-        '<button class="upgrade-wait-btn" id="upgrade-wait-btn">Wait for reset (' + getWindowResetTime() + ')</button>' +
-        '<button class="upgrade-close-btn" onclick="hide(&quot;upgrade-modal&quot;)">Maybe later</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', function(e) { if (e.target === overlay) hide('upgrade-modal'); });
+//  Rate Limit Banner 
+// Slides up from bottom, locks composer, shows live countdown,
+// auto-unlocks when window resets. Cannot be dismissed early.
+var _rateLimitInterval = null;
 
-  // Live countdown timer
-  var timerEl = overlay.querySelector('#upgrade-reset-timer');
-  var waitBtn = overlay.querySelector('#upgrade-wait-btn');
-  var interval = setInterval(function() {
-    var t = getWindowResetTime();
-    if (timerEl) timerEl.textContent = t;
-    if (waitBtn) waitBtn.textContent = 'Wait for reset (' + t + ')';
-    // Auto-close when window resets
-    if (t === '0 secs') {
-      clearInterval(interval);
+function showRateLimitBanner() {
+  // Lock composer immediately
+  lockComposer(true);
+
+  // Remove any existing banner
+  var old = document.getElementById('cx-rate-banner');
+  if (old) old.remove();
+
+  // Get seconds until reset
+  var now        = new Date();
+  var nextHour   = (Math.floor(now.getUTCHours() / 2) + 1) * 2;
+  var reset      = new Date(now);
+  reset.setUTCHours(nextHour, 0, 0, 0);
+  var totalSecs  = Math.max(1, Math.floor((reset - now) / 1000));
+  var remaining  = totalSecs;
+
+  // Build banner
+  var banner = document.createElement('div');
+  banner.id  = 'cx-rate-banner';
+  banner.innerHTML =
+    '<div class="cx-rate-inner">' +
+      '<div class="cx-rate-top">' +
+        '<div class="cx-rate-icon">&#9889;</div>' +
+        '<div class="cx-rate-text">' +
+          '<div class="cx-rate-title">Chat Limit Reached</div>' +
+          '<div class="cx-rate-sub">Free plan: 20 messages per 2-hour window</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cx-rate-countdown" id="cx-rate-countdown">' + formatCountdown(remaining) + '</div>' +
+      '<div class="cx-rate-progress-track"><div class="cx-rate-progress-bar" id="cx-rate-progress"></div></div>' +
+      '<div class="cx-rate-perks">' +
+        '<span class="cx-rate-perk">&#9733; Unlimited messages</span>' +
+        '<span class="cx-rate-perk">&#127756; Exclusive themes</span>' +
+        '<span class="cx-rate-perk">&#128640; Early access</span>' +
+      '</div>' +
+      '<button class="cx-rate-upgrade-btn" id="cx-rate-upgrade-btn">Upgrade to Supporter</button>' +
+    '</div>';
+
+  document.body.appendChild(banner);
+
+  // Wire upgrade button
+  var upgradeBtn = document.getElementById('cx-rate-upgrade-btn');
+  if (upgradeBtn) {
+    upgradeBtn.addEventListener('click', function() {
+      show('settings-modal');
+      if (window.openSettingsPage) window.openSettingsPage('supporter');
+    });
+  }
+
+  // Slide in after paint
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      banner.classList.add('cx-rate-visible');
+    });
+  });
+
+  // Start countdown
+  if (_rateLimitInterval) clearInterval(_rateLimitInterval);
+  _rateLimitInterval = setInterval(function() {
+    remaining--;
+    var cd = document.getElementById('cx-rate-countdown');
+    var pb = document.getElementById('cx-rate-progress');
+    if (cd) cd.textContent = formatCountdown(remaining);
+    if (pb) pb.style.width = Math.max(0, (1 - remaining / totalSecs) * 100) + '%';
+
+    if (remaining <= 0) {
+      clearInterval(_rateLimitInterval);
+      _rateLimitInterval = null;
       _usageToday = 0;
-      hide('upgrade-modal');
-      toast('Limit reset! You have 20 messages again.');
+      // Slide banner out
+      var b = document.getElementById('cx-rate-banner');
+      if (b) {
+        b.classList.remove('cx-rate-visible');
+        setTimeout(function() { if (b.parentNode) b.remove(); }, 400);
+      }
+      // Unlock composer
+      lockComposer(false);
       updateUsageDisplay();
+      // Subtle success feedback
+      var inp = $('composer-input');
+      if (inp) {
+        inp.placeholder = 'Ask Cyanix anything...';
+        inp.focus();
+      }
+      toast('Limit reset -- you' + String.fromCharCode(39) + 're good to go!');
     }
   }, 1000);
 }
+
+function formatCountdown(secs) {
+  if (secs <= 0) return '0:00';
+  var m = Math.floor(secs / 60);
+  var s = secs % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function lockComposer(locked) {
+  var inp     = $('composer-input');
+  var sendBtn = $('send-btn');
+  var box     = $('composer-box');
+  if (inp)     { inp.disabled     = locked; if (locked) inp.placeholder = 'Chat limit reached -- wait for reset...'; }
+  if (sendBtn) { sendBtn.disabled = locked; }
+  if (box)     { box.classList.toggle('cx-composer-locked', locked); }
+}
+
+// Keep old name as alias for any other callers
+function showUpgradeModal() { showRateLimitBanner(); }
 
 function applySupporter() {
   // -- Badge: show tier name --
@@ -1180,7 +1250,7 @@ function applySupporter() {
   updateUsageDisplay();
   populateThemeSelect();
   updateContextDepthUI();
-  window._chatHistoryLimit = _supporter.memoryPriority ? 40 : 20; // capped to avoid 413
+  window._chatHistoryLimit = _supporter.memoryPriority ? 16 : 10; // tight cap to avoid 413
 }
 
 function updateUsageDisplay() {
@@ -1736,7 +1806,7 @@ function buildLearnedContext() {
   if (examples.length) {
     var exBlock = '[STYLE EXAMPLES -- reference only, do not repeat verbatim]\n';
     exBlock += examples.map(function(ex, i) {
-      return 'Q: ' + ex.prompt.slice(0, 80) + '\nA: ' + ex.response.slice(0, 200);
+      return 'Q: ' + ex.prompt.slice(0, 60) + '\nA: ' + ex.response.slice(0, 120);
     }).join('\n');
     parts.push(exBlock);
   }
@@ -1756,8 +1826,8 @@ async function fetchKGContext(query) {
         action:       'retrieve',
         query:        query.slice(0, 300),
         user_id:      _session.user.id,
-        node_limit:   3,
-        memory_limit: 6,
+        node_limit:   2,
+        memory_limit: 4,
         depth:        2,
       }),
       signal: ctrl.signal,
@@ -1941,7 +2011,7 @@ function buildRAGContext(ragData) {
   if (ragData.abstract) parts.push('Summary: ' + ragData.abstract);
   if (ragData.results && ragData.results.length) {
     parts.push('Results:');
-    ragData.results.slice(0, 5).forEach(function(r, i) {
+    ragData.results.slice(0, 3).forEach(function(r, i) {
       parts.push('[' + (i+1) + '] ' + r.title + ' -- ' + r.snippet + ' (' + r.url + ')');
     });
   }
@@ -2056,18 +2126,24 @@ async function sendMessage(text) {
       'Ask one focused question to make sure you understand exactly what they have already tried. Then offer a clearly different approach than before.';
   }
 
-  // Hard cap on system prompt to prevent 413 -- 6000 chars ~ 1500 tokens
+  // Hard cap on system prompt -- 5000 chars ~ 1250 tokens leaves room for history + response
   var rawSystem = buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + frustrationCtx;
-  var systemContent = rawSystem.length > 6000 ? rawSystem.slice(0, 6000) + '\n[context truncated]' : rawSystem;
+  var systemContent = rawSystem.length > 5000 ? rawSystem.slice(0, 5000) + '\n[context truncated]' : rawSystem;
+  // Estimate total request size and warn if still large
+  var histChars = _history.slice(-(window._chatHistoryLimit || 10))
+    .reduce(function(s, m) { return s + (typeof m.content === 'string' ? Math.min(m.content.length, 400) : 200); }, 0);
+  if (systemContent.length + histChars > 12000) {
+    console.warn('[CyanixAI] Large request:', systemContent.length, 'sys +', histChars, 'hist =', systemContent.length + histChars, 'chars');
+  }
   const messages = [{ role: 'system', content: systemContent }]
-    .concat(_history.slice(-(window._chatHistoryLimit || 20)).map(function(m, idx, arr) {
+    .concat(_history.slice(-(window._chatHistoryLimit || 10)).map(function(m, idx, arr) {
       // For last user message: use multipart content if attachment was present
       if (idx === arr.length - 1 && m.role === 'user' && typeof userContent !== 'string') {
         return { role: 'user', content: userContent };
       }
       // Truncate very long history messages to avoid 413
-      var content = typeof m.content === 'string' && m.content.length > 1000
-        ? m.content.slice(0, 1000) + '...'
+      var content = typeof m.content === 'string' && m.content.length > 400
+        ? m.content.slice(0, 400) + '...'
         : m.content;
       return { role: m.role, content: content };
     }));
