@@ -1651,11 +1651,13 @@ async function fetchLearnedContext() {
 }
 
 function buildLearnedContext() {
-  if (!_learnedCtx) return '';
+  try {
+    if (typeof _learnedCtx === 'undefined' || !_learnedCtx) return '';
+  } catch(e) { return ''; }
   var parts = [];
-  var prefs = _learnedCtx.style_prefs;
-  var personal = _learnedCtx.personal_examples || [];
-  var global   = _learnedCtx.global_examples   || [];
+  var prefs       = _learnedCtx.style_prefs;
+  var personal    = _learnedCtx.personal_examples || [];
+  var globalEx    = _learnedCtx.global_examples   || [];
 
   //  Style preferences block 
   if (prefs && prefs.total_rated >= 3) {
@@ -1690,7 +1692,7 @@ function buildLearnedContext() {
   }
 
   //  Few-shot examples block 
-  var examples = personal.concat(global).slice(0, 4); // max 4 examples total
+  var examples = personal.concat(globalEx).slice(0, 4); // max 4 examples total
   if (examples.length) {
     var exBlock = '[EXAMPLES OF RESPONSES THIS USER RATED HIGHLY -- use these as style reference]\n';
     exBlock += examples.map(function(ex, i) {
