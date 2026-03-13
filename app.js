@@ -68,6 +68,7 @@ let _signedInUser = null;
 let _syncPending  = false; // race condition guard
 let _memories  = [];        // cross-chat memories loaded on sign-in
 let _memoriesLoaded = false;
+let _learnedCtx = null;     // { personal_examples, global_examples, style_prefs } -- loaded at login
 let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
