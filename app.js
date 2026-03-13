@@ -2056,13 +2056,20 @@ async function sendMessage(text) {
       'Ask one focused question to make sure you understand exactly what they have already tried. Then offer a clearly different approach than before.';
   }
 
-  const messages = [{ role: 'system', content: buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + frustrationCtx }]
-    .concat(_history.slice(-(window._chatHistoryLimit || 100)).map(function(m, idx, arr) {
+  // Hard cap on system prompt to prevent 413 -- 6000 chars ~ 1500 tokens
+  var rawSystem = buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + frustrationCtx;
+  var systemContent = rawSystem.length > 6000 ? rawSystem.slice(0, 6000) + '\n[context truncated]' : rawSystem;
+  const messages = [{ role: 'system', content: systemContent }]
+    .concat(_history.slice(-(window._chatHistoryLimit || 20)).map(function(m, idx, arr) {
       // For last user message: use multipart content if attachment was present
       if (idx === arr.length - 1 && m.role === 'user' && typeof userContent !== 'string') {
         return { role: 'user', content: userContent };
       }
-      return { role: m.role, content: m.content };
+      // Truncate very long history messages to avoid 413
+      var content = typeof m.content === 'string' && m.content.length > 1000
+        ? m.content.slice(0, 1000) + '...'
+        : m.content;
+      return { role: m.role, content: content };
     }));
 
   _abortCtrl = new AbortController();
@@ -2072,7 +2079,7 @@ async function sendMessage(text) {
     const res = await fetch(CHAT_URL, {
       method: 'POST', headers: edgeHeaders(), signal: _abortCtrl.signal,
       body: JSON.stringify({ model: _settings.model, messages: messages,
-        stream: _settings.streaming, max_tokens: 2048,
+        stream: _settings.streaming, max_tokens: 1024,
         chat_id: _currentId, user_message: text }),
     });
 
