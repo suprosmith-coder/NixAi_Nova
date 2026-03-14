@@ -15,8 +15,7 @@ const KG_URL            = SUPABASE_URL + '/functions/v1/knowledge-graph';
 const PIPELINE_URL  = SUPABASE_URL + '/functions/v1/feedback-pipeline';
 const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
 const BROWSE_URL    = SUPABASE_URL + '/functions/v1/browse-page';
-const REFLECT_URL   = SUPABASE_URL + '/functions/v1/cyanix-reflect';   // self-reflective memory
-const TITLE_URL     = SUPABASE_URL + '/functions/v1/generate-title';   // AI chat title generation
+const ARAG_URL      = SUPABASE_URL + '/functions/v1/arag';
 
 const WHISPER_URL   = SUPABASE_URL + '/functions/v1/whisper';
 const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
@@ -74,9 +73,9 @@ let _memories  = [];        // cross-chat memories loaded on sign-in
 let _memoriesLoaded = false;
 let _learnedCtx = null;     // { personal_examples, global_examples, style_prefs } -- loaded at login
 let _kgContext  = '';       // unified knowledge graph + memory context string
-let _reflections = [];      // self-reflective memory bites (Cyanix's own past responses)
-let _reflectionsLoaded = false;
 let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
+let _aragEnabled  = false;  // ARAG toggle state
+let _aragContext  = '';     // last ARAG result to inject into system prompt
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
   memoryPriority:false, dailyLimit:20, unlockedThemes:[],
@@ -326,9 +325,7 @@ function buildSystemPrompt(queryContext) {
   var kgBlock = _kgContext
     ? '\n\n' + _kgContext
     : '';
-  // Append self-reflective memory context
-  var reflectBlock = buildReflectionContext(queryContext);
-  return [identity, p, n, (kgBlock || memBlock)].filter(Boolean).join(' ') + buildLearnedContext() + reflectBlock + echoCtx;
+  return [identity, p, n, (kgBlock || memBlock)].filter(Boolean).join(' ') + buildLearnedContext() + echoCtx;
 }
 
 function edgeHeaders() {
@@ -653,7 +650,6 @@ async function onSignedIn(session) {
   await loadPreferences();
   await loadSupporter();
   await loadMemories();
-  await loadReflections();
   await loadChats();
   loadReferralData().catch(function() {});
   loadPersonas().catch(function() {});
@@ -1511,23 +1507,26 @@ function clearAttachment() {
 
 async function generateChatTitle(userText, aiText) {
   try {
-    // Route through Supabase edge function to keep API key server-side
-    var res = await fetch(TITLE_URL, {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: edgeHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        user_message: userText.slice(0, 300),
-        ai_response:  aiText.slice(0, 300),
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 30,
+        messages: [{
+          role: 'user',
+          content: 'Generate a short chat title (max 5 words, no quotes, no punctuation) for this conversation.\nUser: ' + userText.slice(0, 200) + '\nAssistant: ' + aiText.slice(0, 200)
+        }]
       })
     });
     if (!res.ok) return null;
     var data = await res.json();
-    var title = data.title ? data.title.trim() : null;
+    var title = data.content && data.content[0] && data.content[0].text ? data.content[0].text.trim() : null;
+    // Clean up -- remove quotes, trim to 50 chars
     if (title) title = title.replace(/['"]/g, '').slice(0, 50).trim();
     return title || null;
   } catch (e) {
-    // Fallback: derive title from user text
-    return userText.slice(0, 50).trim() || null;
+    return null;
   }
 }
 
@@ -1598,8 +1597,6 @@ async function bgSyncMessages(isNewChat, localChatId, userText, aiText, msgEl) {
     await maybeCollectTraining(userText, aiText);
     // Extract memories silently in background (don't await -- truly background)
     extractAndSaveMemories(_history, _currentId).catch(function() {});
-    // Store self-reflective memory bite -- background, non-blocking
-    storeReflection(userText, aiText, chatId).catch(function() {});
     await loadChats();
   } catch (e) {
     _syncPending = false;
@@ -1645,24 +1642,19 @@ async function extractAndSaveMemories(messages, sourceId) {
       'project=things user is building, technical=languages/frameworks/tools. ' +
       'If nothing worth remembering, return []. Max 5 items. Conversation:\n' + ctx;
 
-    var res = await fetch(CHAT_URL, {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: edgeHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:      'groq/llama-3.1-8b-instant',
-        stream:     false,
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 500,
-        messages:   [
-          { role: 'system', content: 'You are a memory extraction assistant. Return only valid JSON. No markdown, no explanation.' },
-          { role: 'user',   content: extractPrompt }
-        ],
+        messages: [{ role: 'user', content: extractPrompt }]
       })
     });
 
     if (!res.ok) return;
     var data = await res.json();
-    var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
-      ? data.choices[0].message.content.trim() : '';
+    var raw = data.content && data.content[0] && data.content[0].text ? data.content[0].text.trim() : '';
     if (!raw || raw === '[]') return;
 
     // Strip any markdown fences just in case
@@ -1731,225 +1723,6 @@ async function extractAndSaveMemories(messages, sourceId) {
     console.error('[CyanixAI] extractAndSaveMemories exception:', e);
   }
 }
-
-/* ==========================================================
-   SELF-REFLECTIVE MEMORY LOOP
-   Stores Cyanix's own outputs as "memory bites" with metadata.
-   These bites are injected into the system prompt on future
-   relevant interactions, so Cyanix learns from its own responses.
-========================================================== */
-
-async function loadReflections() {
-  if (!_sb || !_session) return;
-  try {
-    var res = await _sb.from('cyanix_reflections')
-      .select('id,user_intent,response_summary,topic_tags,quality_flag,correction,was_helpful,created_at')
-      .eq('user_id', _session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(60);
-    if (res.error) {
-      // Table may not exist yet -- fail silently, feature degrades gracefully
-      console.warn('[CyanixAI] loadReflections: table may not exist yet:', res.error.message);
-      _reflections = [];
-      return;
-    }
-    _reflections = res.data || [];
-    _reflectionsLoaded = true;
-    console.log('[CyanixAI] Loaded', _reflections.length, 'reflections');
-  } catch (e) {
-    console.warn('[CyanixAI] loadReflections exception:', e.message);
-    _reflections = [];
-  }
-}
-
-// Score a reflection's relevance to the current query (TF-IDF style, same as memories)
-function scoreReflectionRelevance(reflection, query) {
-  var searchText = [
-    reflection.user_intent || '',
-    reflection.response_summary || '',
-    (reflection.topic_tags || []).join(' ')
-  ].join(' ').toLowerCase();
-
-  var qWords = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 2; });
-  if (!qWords.length) return 0;
-
-  var score = 0;
-  qWords.forEach(function(word) {
-    if (searchText.indexOf(word) !== -1) score += 1;
-    // Boost intent matches more than summary matches
-    if ((reflection.user_intent || '').toLowerCase().indexOf(word) !== -1) score += 1;
-  });
-
-  // Recency boost (fades over 14 days)
-  if (reflection.created_at) {
-    var age = Date.now() - new Date(reflection.created_at).getTime();
-    var daysSince = age / (1000 * 60 * 60 * 24);
-    score += Math.max(0, 0.5 - daysSince / 28);
-  }
-
-  // Penalty for flagged (poor quality) reflections -- they still appear as corrections
-  if (reflection.quality_flag === 'flagged') score *= 0.4;
-
-  return score;
-}
-
-function retrieveRelevantReflections(query) {
-  if (!_reflections || !_reflections.length) return [];
-  // Separate good bites from corrected/flagged ones
-  var good     = _reflections.filter(function(r) { return r.quality_flag === 'good'; });
-  var flagged  = _reflections.filter(function(r) { return r.quality_flag === 'flagged' && r.correction; });
-
-  // Score and sort good bites
-  var scoredGood = good.map(function(r) {
-    return { ref: r, score: scoreReflectionRelevance(r, query) };
-  }).filter(function(s) { return s.score > 0; });
-  scoredGood.sort(function(a, b) { return b.score - a.score; });
-
-  // Score and sort corrections
-  var scoredBad = flagged.map(function(r) {
-    return { ref: r, score: scoreReflectionRelevance(r, query) };
-  }).filter(function(s) { return s.score > 0.3; });
-  scoredBad.sort(function(a, b) { return b.score - a.score; });
-
-  // Take top 3 good + top 1 correction
-  var results = scoredGood.slice(0, 3).map(function(s) { return s.ref; });
-  if (scoredBad.length) results.push(scoredBad[0].ref);
-  return results;
-}
-
-function buildReflectionContext(query) {
-  if (!query || !_reflections || !_reflections.length) return '';
-  var relevant = retrieveRelevantReflections(query);
-  if (!relevant.length) return '';
-
-  var goodBites   = relevant.filter(function(r) { return r.quality_flag === 'good'; });
-  var corrections = relevant.filter(function(r) { return r.quality_flag === 'flagged' && r.correction; });
-
-  var parts = [];
-
-  if (goodBites.length) {
-    var biteLines = goodBites.map(function(r) {
-      var tags = r.topic_tags && r.topic_tags.length ? ' [' + r.topic_tags.join(', ') + ']' : '';
-      return '- When asked about "' + r.user_intent + '"' + tags + ': ' + r.response_summary;
-    }).join('\n');
-    parts.push('[YOUR OWN PAST RESPONSES -- use these as style and accuracy references]\n' + biteLines);
-  }
-
-  if (corrections.length) {
-    var corrLines = corrections.map(function(r) {
-      return '- Topic: "' + r.user_intent + '"\n  PREVIOUS MISTAKE: ' + r.response_summary + '\n  CORRECT APPROACH: ' + r.correction;
-    }).join('\n');
-    parts.push('[CORRECTION LOG -- you made these errors before, do NOT repeat them]\n' + corrLines);
-  }
-
-  return parts.length ? '\n\n' + parts.join('\n\n') : '';
-}
-
-async function storeReflection(userText, aiText, chatId) {
-  if (!_sb || !_session) return;
-  if (!userText || !aiText) return;
-
-  try {
-    // Use the Anthropic API (same pattern as extractAndSaveMemories) to extract
-    // a compact metadata summary of this response -- stores the "bite", not raw text.
-    var extractPrompt =
-      'Analyze this AI conversation exchange and return ONLY a JSON object (no markdown, no preamble):\n' +
-      '{"user_intent":"1 sentence describing what the user wanted","response_summary":"2 sentences summarizing the AI response approach and key points","topic_tags":["tag1","tag2","tag3"]}\n' +
-      'topic_tags: 2-4 lowercase single-word tags (e.g. coding, debugging, python, writing, math).\n' +
-      'Keep response_summary under 200 chars. Do not include personal user data.\n\n' +
-      'User: ' + userText.slice(0, 300) + '\nAssistant: ' + aiText.slice(0, 500);
-
-    var res = await fetch(CHAT_URL, {
-      method: 'POST',
-      headers: edgeHeaders(),
-      body: JSON.stringify({
-        model:      'groq/llama-3.1-8b-instant',
-        stream:     false,
-        max_tokens: 200,
-        messages: [
-          { role: 'system', content: 'You extract metadata from AI conversations. Return only a valid JSON object. No markdown, no explanation.' },
-          { role: 'user',   content: extractPrompt }
-        ],
-      })
-    });
-
-    if (!res.ok) return;
-    var data = await res.json();
-    var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
-      ? data.choices[0].message.content.trim() : '';
-    if (!raw) return;
-
-    raw = raw.replace(/```json|```/g, '').trim();
-    var meta = JSON.parse(raw);
-    if (!meta.user_intent || !meta.response_summary) return;
-
-    var payload = {
-      user_id:          _session.user.id,
-      chat_id:          chatId || _currentId || null,
-      user_intent:      meta.user_intent.slice(0, 200),
-      response_summary: meta.response_summary.slice(0, 500),
-      topic_tags:       Array.isArray(meta.topic_tags) ? meta.topic_tags.slice(0, 5) : [],
-      quality_flag:     'good',
-      was_helpful:      true,
-      created_at:       new Date().toISOString(),
-      updated_at:       new Date().toISOString(),
-    };
-
-    // Enforce per-user limit: keep latest 60
-    var limit = _supporter.memoryPriority ? 200 : 60;
-    if (_reflections.length >= limit) {
-      var oldest = _reflections[_reflections.length - 1];
-      if (oldest && oldest.id) {
-        await _sb.from('cyanix_reflections').delete().eq('id', oldest.id).eq('user_id', _session.user.id);
-      }
-    }
-
-    var insertRes = await _sb.from('cyanix_reflections').insert(payload).select().single();
-    if (!insertRes.error && insertRes.data) {
-      _reflections.unshift(insertRes.data);
-      _reflections = _reflections.slice(0, limit); // trim in-memory array
-      console.log('[CyanixAI] Reflection stored:', meta.user_intent.slice(0, 60));
-    }
-  } catch (e) {
-    // Fail silently -- reflection storage is non-critical
-    console.warn('[CyanixAI] storeReflection failed:', e.message);
-  }
-}
-
-// Called when user gives 👎 feedback -- marks the reflection as flagged + stores correction hint
-async function flagReflection(messageId, correctionHint) {
-  if (!_sb || !_session || !messageId) return;
-  try {
-    // Find the reflection that matches this message's chat context
-    // We match by chat_id + approximate creation time (last reflection for this chat)
-    var match = _reflections.find(function(r) {
-      return r.chat_id === _currentId;
-    });
-    if (!match) return;
-
-    var update = {
-      quality_flag: 'flagged',
-      was_helpful:  false,
-      correction:   correctionHint ? correctionHint.slice(0, 400) : 'User indicated this response was unhelpful.',
-      updated_at:   new Date().toISOString(),
-    };
-
-    await _sb.from('cyanix_reflections')
-      .update(update)
-      .eq('id', match.id)
-      .eq('user_id', _session.user.id);
-
-    // Update in-memory state
-    var idx = _reflections.findIndex(function(r) { return r.id === match.id; });
-    if (idx >= 0) Object.assign(_reflections[idx], update);
-
-    console.log('[CyanixAI] Reflection flagged for improvement:', match.user_intent);
-  } catch (e) {
-    console.warn('[CyanixAI] flagReflection failed:', e.message);
-  }
-}
-
-/* ========================================================== */
 
 async function maybeCollectTraining(userText, aiText) {
   if (!_settings.trainingConsent || !_session) return;
@@ -2221,6 +1994,90 @@ async function fetchBrowseContext(text) {
   } catch(e) { return null; }
 }
 
+/* ==========================================================
+   ARAG  --  Adaptive Retrieval-Augmented Generation
+   Platform-aware web comprehension engine
+========================================================== */
+
+// Platform keywords that trigger ARAG automatically
+const ARAG_PLATFORM_SIGNALS = [
+  /\b(youtube|github|reddit|twitter|x\.com|hacker news|hn|product hunt)\b/i,
+  /\b(trending|viral|popular|top posts?|growing fast|gaining stars?)\b/i,
+  /\b(on (youtube|github|reddit|twitter)|subreddit|repo|channel|playlist)\b/i,
+  /https?:\/\/[^\s]+/,  // any URL in the message
+];
+
+function needsARAG(text) {
+  return ARAG_PLATFORM_SIGNALS.some(function(r) { return r.test(text); });
+}
+
+async function fetchARAGContext(query) {
+  try {
+    // Extract any explicit URLs from the query
+    var urlMatches = query.match(/https?:\/\/[^\s"'<>)]+/g) || [];
+    var ctrl = new AbortController();
+    var t    = setTimeout(function() { ctrl.abort(); }, 20000);
+
+    var res = await fetch(ARAG_URL, {
+      method:  'POST',
+      headers: edgeHeaders(),
+      signal:  ctrl.signal,
+      body:    JSON.stringify({
+        query:     query,
+        urls:      urlMatches.slice(0, 3),
+        use_cache: true,
+        store:     true,
+      }),
+    });
+    clearTimeout(t);
+
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data || null;
+  } catch (e) {
+    console.warn('[CyanixAI] ARAG fetch failed:', e.message);
+    return null;
+  }
+}
+
+function buildARAGSystemBlock(aragData) {
+  if (!aragData || !aragData.arag_context) return '';
+  return aragData.arag_context; // already formatted by the edge function
+}
+
+function appendARAGSources(bubbleEl, aragData) {
+  if (!bubbleEl || !aragData || !aragData.platforms_read || !aragData.platforms_read.length) return;
+
+  var src = document.createElement('div');
+  src.className = 'rag-sources';
+  var html = '<div class="rag-sources-label"> Platform Intelligence</div>';
+
+  aragData.platforms_read.forEach(function(p) {
+    html += '<a class="rag-source-item" href="' + esc(p.url) + '" target="_blank" rel="noopener">' +
+      '<div class="rag-source-dot" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)"></div>' +
+      '<span>' + esc(p.name) + (p.title ? ' — ' + esc(p.title.slice(0, 40)) : '') + '</span>' +
+      '</a>';
+  });
+
+  if (aragData.chunks_processed) {
+    html += '<div style="font-size:.7rem;color:var(--text-4);padding:4px 0 0 4px;">' +
+      aragData.chunks_processed + ' content chunks analysed' +
+      (aragData.from_cache ? ' (cached)' : ' (live read)') + '</div>';
+  }
+
+  src.innerHTML = html;
+  bubbleEl.appendChild(src);
+}
+
+function toggleARAG() {
+  _aragEnabled = !_aragEnabled;
+  var btn  = $('arag-toggle-btn');
+  var pill = $('arag-pill');
+  if (btn)  btn.classList.toggle('active', _aragEnabled);
+  if (pill) pill.classList.toggle('hidden', !_aragEnabled);
+  toast(_aragEnabled ? ' Platform Intelligence ON' : 'Platform Intelligence off');
+}
+
 function buildBrowseContext(browseData) {
   if (!browseData) return '';
   var label = browseData.page_type === 'youtube' ? 'YOUTUBE TRANSCRIPT SUMMARY' : 'PAGE CONTENT';
@@ -2299,6 +2156,7 @@ async function sendMessage(text) {
 
   let ragData    = null;
   let browseData = null;
+  let aragData   = null;
   const isCompound = _settings.model.startsWith('groq/compound');
 
   // Fetch unified KG context (nodes + memories) -- fire in parallel, non-blocking
@@ -2322,6 +2180,17 @@ async function sendMessage(text) {
     if (tl) tl.textContent = 'Searching the web...';
     ragData = await fetchRAGContext(text);
     if (tl) tl.textContent = 'Cyanix is thinking';
+  }
+
+  // ARAG: platform-aware deep read -- runs when toggled on OR auto-detected
+  if (!browseData && (_aragEnabled || needsARAG(text))) {
+    const tl = $('thinking-text');
+    if (tl) tl.textContent = 'Reading platform structure...';
+    aragData = await fetchARAGContext(text);
+    if (tl) tl.textContent = 'Cyanix is thinking';
+    if (aragData) {
+      console.log('[CyanixAI] ARAG: platforms read =', (aragData.platforms_read || []).map(function(p) { return p.name; }).join(', '));
+    }
   }
   if (isCompound) {
     const tl = $('thinking-text');
@@ -2357,7 +2226,8 @@ async function sendMessage(text) {
   }
 
   // Hard cap on system prompt -- 5000 chars ~ 1250 tokens leaves room for history + response
-  var rawSystem = buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + frustrationCtx;
+  var aragBlock = aragData ? buildARAGSystemBlock(aragData) : '';
+  var rawSystem = buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + aragBlock + frustrationCtx;
   var systemContent = rawSystem.length > 5000 ? rawSystem.slice(0, 5000) + '\n[context truncated]' : rawSystem;
   // Estimate total request size and warn if still large
   var histChars = _history.slice(-(window._chatHistoryLimit || 10))
@@ -2442,7 +2312,8 @@ async function sendMessage(text) {
         aiText = '';
       } else {
         bubbleEl.innerHTML = mdToHTML(aiText);
-        if (ragData) appendRAGSources(bubbleEl, ragData);
+        if (ragData)  appendRAGSources(bubbleEl, ragData);
+        if (aragData) appendARAGSources(bubbleEl, aragData);
       }
       if (aiText.trim()) {
         _history.push({ role: 'assistant', content: aiText });
@@ -2453,7 +2324,8 @@ async function sendMessage(text) {
       const data = await res.json();
       aiText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || 'No response received.';
       const rendered = renderMessage('ai', aiText, true);
-      if (ragData && rendered.bubbleEl) appendRAGSources(rendered.bubbleEl, ragData);
+      if (ragData  && rendered.bubbleEl) appendRAGSources(rendered.bubbleEl, ragData);
+      if (aragData && rendered.bubbleEl) appendARAGSources(rendered.bubbleEl, aragData);
       _history.push({ role: 'assistant', content: aiText });
       bgSyncMessages(isNewChat, _currentId, text, aiText, rendered.msgEl);
     }
@@ -2572,10 +2444,6 @@ async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
       fetch(PIPELINE_URL, { method: 'POST', headers: edgeHeaders(),
         body: JSON.stringify({ feedback: value, prompt: prompt.slice(0,1000), response: response.slice(0,3000), model: _settings.model })
       }).catch(function(){});
-    }
-    // Self-reflective loop: flag the most recent reflection for this chat as needing correction
-    if (value === -1) {
-      flagReflection(messageId, null).catch(function() {});
     }
   } catch (e) { toast('Could not save feedback.'); }
 }
