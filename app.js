@@ -15,6 +15,7 @@ const KG_URL            = SUPABASE_URL + '/functions/v1/knowledge-graph';
 const PIPELINE_URL  = SUPABASE_URL + '/functions/v1/feedback-pipeline';
 const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
 const BROWSE_URL    = SUPABASE_URL + '/functions/v1/browse-page';
+const AGENT_URL     = SUPABASE_URL + '/functions/v1/cyanix-agent';
 
 const WHISPER_URL   = SUPABASE_URL + '/functions/v1/whisper';
 const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
@@ -73,6 +74,8 @@ let _memoriesLoaded = false;
 let _learnedCtx = null;     // { personal_examples, global_examples, style_prefs } -- loaded at login
 let _kgContext  = '';       // unified knowledge graph + memory context string
 let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
+let _agentEnabled  = false; // agentic retrieval toggle
+let _lastAgentTrace = null; // trace from last agent call for UI display
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
   memoryPriority:false, dailyLimit:20, unlockedThemes:[],
@@ -91,7 +94,7 @@ let _settings = {
   contextDepth:    'light',  // light=5 | standard=15 | deep=30
   fontStyle:       'inter',  // inter | space-grotesk | syne | orbitron
   fontSize:        16,       // 8-20px
-  ttsVoice:        'Cherry',
+  ttsVoice:        'Celeste-PlayAI',
 };
 
 const PERSONALITIES = {
@@ -448,8 +451,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       onSignedIn(session);
     }
     if (event === 'SIGNED_OUT') onSignedOut();
-    // Community module auth hook
-    if (window._communityHookAuth) window._communityHookAuth(session);
   });
 
   try {
@@ -650,8 +651,6 @@ async function onSignedIn(session) {
   await loadSupporter();
   await loadMemories();
   await loadChats();
-  loadRateState().catch(function() {});
-  fetchLearnedContext().catch(function() {});
   loadReferralData().catch(function() {});
   loadPersonas().catch(function() {});
   // Redeem any pending referral from signup
@@ -750,7 +749,8 @@ function bindChatUI() {
     ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
   });
 
-  on('rag-toggle-btn', 'click', toggleRAG);
+  on('rag-toggle-btn',   'click', toggleRAG);
+  on('agent-toggle-btn', 'click', toggleAgent);
   on('attach-btn', 'click', function() {
     var inp = document.createElement('input');
     inp.type = 'file';
@@ -973,7 +973,7 @@ function syncSettingsToUI() {
   updateContextDepthUI();
   // Apply font settings
   var voiceSel = $('tts-voice-select');
-  if (voiceSel) voiceSel.value = _settings.ttsVoice || 'Cherry';
+  if (voiceSel) voiceSel.value = _settings.ttsVoice || 'Celeste-PlayAI';
   var fontSel = $('font-style-select');
   if (fontSel) fontSel.value = _settings.fontStyle || 'inter';
   applyFontStyle(_settings.fontStyle || 'inter');
@@ -984,18 +984,12 @@ function syncSettingsToUI() {
 function applyTheme(theme) { document.documentElement.dataset.theme = theme || 'light'; }
 
 var FONT_FAMILIES = {
-  'inter':          "'DM Sans', system-ui, sans-serif",        // remapped: Inter removed
-  'space-grotesk':  "'DM Sans', system-ui, sans-serif",        // remapped
-  'syne':           "'Playfair Display', Georgia, serif",      // remapped to display font
-  'orbitron':       "'DM Mono', 'SF Mono', monospace",         // remapped to mono
-  'dm-sans':        "'DM Sans', system-ui, sans-serif",
-  'playfair':       "'Playfair Display', Georgia, serif",
-  'dm-mono':        "'DM Mono', 'SF Mono', monospace",
+  'inter':        "'Inter', system-ui, sans-serif",
+  'space-grotesk':"'Space Grotesk', system-ui, sans-serif",
+  'syne':         "'Syne', system-ui, sans-serif",
+  'orbitron':     "'Orbitron', system-ui, sans-serif",
 };
-var FONT_NAMES = {
-  'inter':'DM Sans', 'space-grotesk':'DM Sans', 'syne':'Playfair Display',
-  'orbitron':'DM Mono', 'dm-sans':'DM Sans', 'playfair':'Playfair Display', 'dm-mono':'DM Mono',
-};
+var FONT_NAMES = { 'inter':'Inter', 'space-grotesk':'Space Grotesk', 'syne':'Syne', 'orbitron':'Orbitron' };
 var FONT_SIZE_LABELS = { 8:'Tiny', 9:'Tiny+', 10:'XS', 11:'XS+', 12:'Small', 13:'Small+', 14:'Medium-', 15:'Medium', 16:'Medium+', 17:'Large', 18:'Large+', 19:'XL', 20:'XXL' };
 
 function applyFontStyle(style) {
@@ -1091,222 +1085,127 @@ function getWindowResetTime() {
   return secs + ' sec' + (secs !== 1 ? 's' : '');
 }
 
-/* ==========================================================
-   RATE LIMITING  --  DeepSeek style
-   - No banner, no hard lock
-   - Inline chat thread messages for warn / slowdown / blocked
-   - 30s cooldown shown on send button, composer stays open
-   - Reads from user_rate_state via check_rate_limit() RPC
-   - Writes via record_message_sent() RPC after each response
-========================================================== */
-
-var _rateState  = null;   // last known rate state from DB { status, window_count, window_limit, ... }
-var _cooldownTimer = null; // setInterval for send button countdown
-
-async function loadRateState() {
-  if (!_sb || !_session) return;
+async function incrementUsage() {
+  if (!_session) return;
+  _usageToday++;
   try {
-    var res = await _sb.rpc('check_rate_limit', {
-      p_user_id: _session.user.id,
-      p_chat_id: _currentId || null,
-    });
-    if (res.data) {
-      _rateState = res.data;
-      updateUsageDisplay();
-    }
-  } catch (e) {
-    // Table may not exist yet -- degrade gracefully to old _usageToday counter
-    console.warn('[CyanixAI] loadRateState: using legacy counter fallback');
-  }
+    var windowKey = getUsageWindowKey();
+    await _sb.from('user_usage').upsert({ user_id: _session.user.id, usage_date: windowKey, prompt_count: _usageToday }, { onConflict: 'user_id,usage_date' });
+  } catch (e) {}
 }
 
-async function recordMessageSent(chatId) {
-  if (!_sb || !_session) return null;
-  try {
-    var res = await _sb.rpc('record_message_sent', {
-      p_user_id: _session.user.id,
-      p_chat_id: chatId || null,
-    });
-    if (res.data) {
-      _rateState = res.data;
-      _usageToday = res.data.window_count || _usageToday + 1;
-      updateUsageDisplay();
-      return res.data;
-    }
-  } catch (e) {
-    // Fallback: just increment local counter
-    _usageToday++;
-    console.warn('[CyanixAI] recordMessageSent fallback:', e.message);
+function checkDailyLimit() {
+  if (_supporter.dailyLimit === null) return true; // unlimited
+  // Apply referral bonus: each referral adds 5 extra messages per window
+  var bonusMessages = (window._referralBonus || 0) * 5;
+  var effectiveLimit = (_supporter.dailyLimit || 20) + bonusMessages;
+  if (_usageToday >= effectiveLimit) {
+    showUpgradeModal();
+    return false;
   }
-  return null;
+  // Soft warning at 80%
+  var pct = _usageToday / effectiveLimit;
+  if (pct >= 0.8) {
+    var left = effectiveLimit - _usageToday;
+    toast(left + ' message' + (left === 1 ? '' : 's') + ' left this window. Resets in ' + getWindowResetTime() + '.');
+  }
+  return true;
 }
 
-// Render an inline rate notice directly in the chat thread --
-// exactly like DeepSeek: appears where a response would be, no modal
-function renderRateNotice(message, type) {
-  // type: 'warn' | 'slowdown' | 'blocked'
-  var container = $('messages');
-  if (!container) return;
+//  Rate Limit Banner 
+// Slides up from bottom, locks composer, shows live countdown,
+// auto-unlocks when window resets. Cannot be dismissed early.
+var _rateLimitInterval = null;
 
-  // Remove any existing rate notice so they don't stack
-  var existing = container.querySelector('.cx-rate-notice');
-  if (existing) existing.remove();
+function showRateLimitBanner() {
+  // Lock composer immediately
+  lockComposer(true);
 
-  var icons = { warn: '&#9888;', slowdown: '&#9203;', blocked: '&#128683;' };
-  var row = document.createElement('div');
-  row.className = 'msg-row cx-rate-notice cx-rate-' + type;
-  row.innerHTML =
-    '<div class="cx-rate-notice-inner">' +
-      '<span class="cx-rate-notice-icon">' + (icons[type] || '&#8505;') + '</span>' +
-      '<span class="cx-rate-notice-text">' + esc(message) + '</span>' +
-      (type === 'blocked'
-        ? '<button class="cx-rate-upgrade-link" onclick="show(\'settings-modal\');window.openSettingsPage(\'supporter\')">Upgrade</button>'
-        : '') +
+  // Remove any existing banner
+  var old = document.getElementById('cx-rate-banner');
+  if (old) old.remove();
+
+  // Get seconds until reset
+  var now        = new Date();
+  var nextHour   = (Math.floor(now.getUTCHours() / 2) + 1) * 2;
+  var reset      = new Date(now);
+  reset.setUTCHours(nextHour, 0, 0, 0);
+  var totalSecs  = Math.max(1, Math.floor((reset - now) / 1000));
+  var remaining  = totalSecs;
+
+  // Build banner
+  var banner = document.createElement('div');
+  banner.id  = 'cx-rate-banner';
+  banner.innerHTML =
+    '<div class="cx-rate-inner">' +
+      '<div class="cx-rate-top">' +
+        '<div class="cx-rate-icon">&#9889;</div>' +
+        '<div class="cx-rate-text">' +
+          '<div class="cx-rate-title">Chat Limit Reached</div>' +
+          '<div class="cx-rate-sub">Free plan: 20 messages per 2-hour window</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cx-rate-countdown" id="cx-rate-countdown">' + formatCountdown(remaining) + '</div>' +
+      '<div class="cx-rate-progress-track"><div class="cx-rate-progress-bar" id="cx-rate-progress"></div></div>' +
+      '<div class="cx-rate-perks">' +
+        '<span class="cx-rate-perk">&#9733; Unlimited messages</span>' +
+        '<span class="cx-rate-perk">&#127756; Exclusive themes</span>' +
+        '<span class="cx-rate-perk">&#128640; Early access</span>' +
+      '</div>' +
+      '<button class="cx-rate-upgrade-btn" id="cx-rate-upgrade-btn">Upgrade to Supporter</button>' +
     '</div>';
-  container.appendChild(row);
-  scrollToBottom();
-}
 
-function removeRateNotice() {
-  var container = $('messages');
-  if (!container) return;
-  var existing = container.querySelector('.cx-rate-notice');
-  if (existing) {
-    existing.style.opacity = '0';
-    setTimeout(function() { if (existing.parentNode) existing.remove(); }, 250);
+  document.body.appendChild(banner);
+
+  // Wire upgrade button
+  var upgradeBtn = document.getElementById('cx-rate-upgrade-btn');
+  if (upgradeBtn) {
+    upgradeBtn.addEventListener('click', function() {
+      show('settings-modal');
+      if (window.openSettingsPage) window.openSettingsPage('supporter');
+    });
   }
-}
 
-// Show a countdown on the send button during cooldown
-function startCooldownBtn(seconds) {
-  var btn = $('send-btn');
-  if (!btn) return;
-  if (_cooldownTimer) clearInterval(_cooldownTimer);
+  // Slide in after paint
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      banner.classList.add('cx-rate-visible');
+    });
+  });
 
-  var remaining = seconds;
-  btn.classList.add('cx-cooldown');
-  btn.disabled = true;
-  btn.title    = 'Wait ' + remaining + 's';
-
-  // Replace icon with countdown number
-  function updateBtn() {
-    if (btn) btn.innerHTML =
-      '<span style="font-size:.75rem;font-weight:600;font-family:var(--font-mono);">' +
-      remaining + '</span>';
-  }
-  updateBtn();
-
-  _cooldownTimer = setInterval(function() {
+  // Start countdown
+  if (_rateLimitInterval) clearInterval(_rateLimitInterval);
+  _rateLimitInterval = setInterval(function() {
     remaining--;
+    var cd = document.getElementById('cx-rate-countdown');
+    var pb = document.getElementById('cx-rate-progress');
+    if (cd) cd.textContent = formatCountdown(remaining);
+    if (pb) pb.style.width = Math.max(0, (1 - remaining / totalSecs) * 100) + '%';
+
     if (remaining <= 0) {
-      clearInterval(_cooldownTimer);
-      _cooldownTimer = null;
-      if (btn) {
-        btn.disabled  = false;
-        btn.classList.remove('cx-cooldown');
-        btn.title     = 'Send';
-        setSendBtn('send');
+      clearInterval(_rateLimitInterval);
+      _rateLimitInterval = null;
+      _usageToday = 0;
+      // Slide banner out
+      var b = document.getElementById('cx-rate-banner');
+      if (b) {
+        b.classList.remove('cx-rate-visible');
+        setTimeout(function() { if (b.parentNode) b.remove(); }, 400);
       }
-      removeRateNotice();
-    } else {
-      updateBtn();
+      // Unlock composer
+      lockComposer(false);
+      updateUsageDisplay();
+      // Subtle success feedback
+      var inp = $('composer-input');
+      if (inp) {
+        inp.placeholder = 'Ask Cyanix anything...';
+        inp.focus();
+      }
+      toast('Limit reset -- you' + String.fromCharCode(39) + 're good to go!');
     }
   }, 1000);
 }
 
-// Main gate: call before sending. Returns true = allowed.
-// Falls back to legacy _usageToday if DB RPC unavailable.
-async function checkRateLimit() {
-  if (_supporter.isActive && _supporter.dailyLimit === null) return true; // unlimited
-
-  // Try DB-backed check first
-  if (_sb && _session) {
-    try {
-      var res = await _sb.rpc('check_rate_limit', {
-        p_user_id: _session.user.id,
-        p_chat_id: _currentId || null,
-      });
-      if (res.data) {
-        _rateState = res.data;
-        updateUsageDisplay();
-
-        if (res.data.status === 'ok') {
-          removeRateNotice();
-          return true;
-        }
-        if (res.data.status === 'warn') {
-          renderRateNotice(res.data.message, 'warn');
-          return true; // warn but still allow
-        }
-        if (res.data.status === 'slowdown') {
-          renderRateNotice(res.data.message, 'slowdown');
-          var cd = res.data.cooldown_remaining_secs || 30;
-          startCooldownBtn(cd);
-          return false;
-        }
-        if (res.data.status === 'blocked') {
-          renderRateNotice(res.data.message, 'blocked');
-          return false;
-        }
-      }
-    } catch (e) {
-      console.warn('[CyanixAI] checkRateLimit RPC failed, using legacy:', e.message);
-    }
-  }
-
-  // Legacy fallback
-  var bonusMessages = (window._referralBonus || 0) * 5;
-  var effectiveLimit = (_supporter.dailyLimit || 20) + bonusMessages;
-  if (_usageToday >= effectiveLimit) {
-    var resetIn = getWindowResetTime();
-    renderRateNotice(
-      'Message limit reached. Resets in ' + resetIn + '. Upgrade for unlimited messages.',
-      'blocked'
-    );
-    return false;
-  }
-  var pct = _usageToday / effectiveLimit;
-  if (pct >= 0.8) {
-    var left = effectiveLimit - _usageToday;
-    renderRateNotice(
-      (left) + ' message' + (left === 1 ? '' : 's') + ' remaining this window.',
-      'warn'
-    );
-  }
-  return true;
-}
-
-function updateUsageDisplay() {
-  var el = $('usage-display');
-  if (!el) return;
-  if (_rateState) {
-    if (_rateState.window_limit === null || _rateState.window_limit === undefined) {
-      el.textContent = _rateState.window_count + ' prompts (unlimited)';
-    } else {
-      var left = Math.max(0, (_rateState.window_limit || 20) - (_rateState.window_count || 0));
-      el.textContent = (_rateState.window_count || 0) + ' / ' + (_rateState.window_limit || 20) +
-        ' this window  \u2022  ' + left + ' left  \u2022  resets in ' + getWindowResetTime();
-    }
-  } else {
-    // Legacy display
-    if (_supporter.dailyLimit === null) {
-      el.textContent = _usageToday + ' prompts (unlimited)';
-    } else {
-      var left2 = Math.max(0, (_supporter.dailyLimit || 20) - _usageToday);
-      el.textContent = _usageToday + ' / ' + (_supporter.dailyLimit || 20) +
-        ' this window  \u2022  ' + left2 + ' left  \u2022  resets in ' + getWindowResetTime();
-    }
-  }
-}
-
-// Legacy alias kept so existing callers don't break
-function checkDailyLimit() {
-  // This is now async via checkRateLimit() -- synchronous callers
-  // should use checkRateLimit() instead. Returns true to not block.
-  return true;
-}
-
-// Keep formatCountdown for any remaining use
 function formatCountdown(secs) {
   if (secs <= 0) return '0:00';
   var m = Math.floor(secs / 60);
@@ -1314,7 +1213,17 @@ function formatCountdown(secs) {
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 
+function lockComposer(locked) {
+  var inp     = $('composer-input');
+  var sendBtn = $('send-btn');
+  var box     = $('composer-box');
+  if (inp)     { inp.disabled     = locked; if (locked) inp.placeholder = 'Chat limit reached -- wait for reset...'; }
+  if (sendBtn) { sendBtn.disabled = locked; }
+  if (box)     { box.classList.toggle('cx-composer-locked', locked); }
+}
 
+// Keep old name as alias for any other callers
+function showUpgradeModal() { showRateLimitBanner(); }
 
 function applySupporter() {
   // -- Badge: show tier name --
@@ -1607,7 +1516,7 @@ async function generateChatTitle(userText, aiText) {
         stream:     false,
         max_tokens: 20,
         messages: [
-          { role: 'system', content: 'Generate a short chat title (max 5 words, no quotes, no punctuation). Return only the title, nothing else.' },
+          { role: 'system', content: 'Generate a short chat title (max 5 words, no quotes, no punctuation). Return only the title.' },
           { role: 'user',   content: 'User: ' + userText.slice(0, 200) + '\nAssistant: ' + aiText.slice(0, 200) },
         ],
       }),
@@ -1671,9 +1580,6 @@ async function bgSyncMessages(isNewChat, localChatId, userText, aiText, msgEl) {
 
     const aiMsgId = await syncMessagesToDB(chatId, userText, aiText);
     if (aiMsgId && msgEl) addFeedbackButtons(msgEl, aiMsgId);
-
-    // Record message sent to rate limit DB (fire-and-forget)
-    recordMessageSent(chatId).catch(function() {});
 
     // Generate a proper AI title for new chats silently in background
     if (isNewChat && chatId) {
@@ -2095,6 +2001,94 @@ async function fetchBrowseContext(text) {
   } catch(e) { return null; }
 }
 
+/* ==========================================================
+   AGENTIC RETRIEVAL
+   Routes messages through the cyanix-agent edge function which
+   runs a multi-step router → tool loop → compressor pipeline.
+   Falls back to direct CHAT_URL if agent call fails.
+========================================================== */
+
+// Signals that suggest the agent would add value over direct generation
+const AGENT_TRIGGERS = [
+  /\b(find|search|look up|compare|versus|vs)\b/i,
+  /\b(youtube|github|reddit|twitter|x\.com|hacker news|product hunt)\b/i,
+  /\b(trending|latest|recent|current|today|right now)\b/i,
+  /\b(summarize|summarise).*(url|http|link|article|page|video)\b/i,
+  /https?:\/\//,
+  /\b(explain .+ and .+|compare .+ (with|to|versus|vs))/i,
+  /\b(what('?s| is) .+ (doing|trending|popular|growing|gaining))\b/i,
+];
+
+function needsAgent(text) {
+  if (_agentEnabled) return true; // manual override
+  return AGENT_TRIGGERS.some(function(r) { return r.test(text); });
+}
+
+function toggleAgent() {
+  _agentEnabled = !_agentEnabled;
+  var btn  = $('agent-toggle-btn');
+  var pill = $('agent-pill');
+  if (btn)  btn.classList.toggle('active', _agentEnabled);
+  if (pill) pill.classList.toggle('hidden', !_agentEnabled);
+  toast(_agentEnabled ? '⚡ Agentic mode ON' : 'Agentic mode off');
+}
+
+// Render the agent iteration trace as a collapsible block above the response
+function renderAgentTrace(bubbleEl, trace, iterations, elapsedMs) {
+  if (!bubbleEl || !trace || !trace.length) return;
+  var existing = bubbleEl.querySelector('.agent-trace');
+  if (existing) existing.remove();
+
+  var toolCounts = {};
+  trace.forEach(function(t) { toolCounts[t.tool] = (toolCounts[t.tool] || 0) + 1; });
+  var toolSummary = Object.entries(toolCounts).map(function(e) {
+    return e[1] + '\u00d7 ' + e[0];
+  }).join(' · ');
+
+  var traceEl = document.createElement('div');
+  traceEl.className = 'agent-trace';
+  traceEl.innerHTML =
+    '<details class="agent-trace-details">' +
+      '<summary class="agent-trace-summary">' +
+        '<span class="agent-trace-icon">&#9881;</span>' +
+        '<span>' + iterations + ' retrieval step' + (iterations === 1 ? '' : 's') +
+          ' · ' + toolSummary +
+          ' · ' + (elapsedMs ? elapsedMs + 'ms' : '') +
+        '</span>' +
+      '</summary>' +
+      '<div class="agent-trace-steps">' +
+        trace.map(function(t, i) {
+          var icons = { arag: '&#127760;', rag: '&#128269;', browse: '&#128279;', memory: '&#129504;' };
+          return '<div class="agent-trace-step">' +
+            '<span class="agent-trace-step-icon">' + (icons[t.tool] || '&#9632;') + '</span>' +
+            '<span class="agent-trace-step-tool">' + esc(t.tool) + '</span>' +
+            '<span class="agent-trace-step-query">' + esc(t.query.slice(0, 80)) + '</span>' +
+            '<span class="agent-trace-step-size">' + (t.chars > 0 ? Math.round(t.chars / 100) / 10 + 'k' : 'empty') + '</span>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</details>';
+
+  // Insert before the response text
+  bubbleEl.insertBefore(traceEl, bubbleEl.firstChild);
+}
+
+// Update the thinking indicator with current agent step
+function setAgentThinkingStep(step, tool) {
+  var tl = $('thinking-text');
+  if (!tl) return;
+  var labels = {
+    routing:   'Planning retrieval...',
+    arag:      'Reading platform...',
+    rag:       'Searching the web...',
+    browse:    'Reading page...',
+    memory:    'Checking your memory...',
+    compress:  'Compressing context...',
+    generate:  'Generating response...',
+  };
+  tl.textContent = labels[tool || step] || 'Thinking...';
+}
+
 function buildBrowseContext(browseData) {
   if (!browseData) return '';
   var label = browseData.page_type === 'youtube' ? 'YOUTUBE TRANSCRIPT SUMMARY' : 'PAGE CONTENT';
@@ -2149,9 +2143,7 @@ function handleSend() {
 async function sendMessage(text) {
   if (!_session) { toast('Please sign in to chat.'); return; }
   if (_responding) return;
-  // Async DeepSeek-style rate check
-  var allowed = await checkRateLimit();
-  if (!allowed) return;
+  if (!checkDailyLimit()) return;
   _responding = true;
   setSendBtn('stop');
 
@@ -2254,21 +2246,73 @@ async function sendMessage(text) {
       return { role: m.role, content: content };
     }));
 
+  // Decide which endpoint to use
+  // Agent route: when message triggers agentic retrieval patterns OR manually enabled
+  // Direct route: all other messages (faster, cheaper)
+  var useAgent = !browseData && !ragData && needsAgent(text);
+  var endpoint = useAgent ? AGENT_URL : CHAT_URL;
+
+  if (useAgent) {
+    setAgentThinkingStep('routing');
+    console.log('[CyanixAI] Using agentic retrieval pipeline');
+  }
+
   _abortCtrl = new AbortController();
   let aiText = '';
 
   try {
-    const res = await fetch(CHAT_URL, {
-      method: 'POST', headers: edgeHeaders(), signal: _abortCtrl.signal,
-      body: JSON.stringify({ model: _settings.model, messages: messages,
-        stream: _settings.streaming, max_tokens: 1024,
-        chat_id: _currentId, user_message: text }),
+    // Agent endpoint takes messages + system separately and handles retrieval internally
+    // Direct endpoint takes the pre-built messages array with system already embedded
+    var fetchBody = useAgent
+      ? JSON.stringify({
+          messages:       _history.slice(-(window._chatHistoryLimit || 10)).map(function(m, idx, arr) {
+            if (idx === arr.length - 1 && m.role === 'user' && typeof userContent !== 'string') {
+              return { role: 'user', content: userContent };
+            }
+            var content = typeof m.content === 'string' && m.content.length > 400
+              ? m.content.slice(0, 400) + '...' : m.content;
+            return { role: m.role, content: content };
+          }),
+          model:          _settings.model,
+          stream:         _settings.streaming,
+          max_tokens:     1024,
+          system:         buildSystemPrompt(text) + frustrationCtx,
+          max_iterations: 3,
+        })
+      : JSON.stringify({
+          model:        _settings.model,
+          messages:     messages,
+          stream:       _settings.streaming,
+          max_tokens:   1024,
+          chat_id:      _currentId,
+          user_message: text,
+        });
+
+    const res = await fetch(endpoint, {
+      method: 'POST', headers: edgeHeaders(),
+      signal: _abortCtrl.signal,
+      body:   fetchBody,
     });
 
     hide('typing-row');
     stopThoughtStream();
 
     if (!res.ok) {
+      // Agent failed — retry with direct endpoint
+      if (useAgent) {
+        console.warn('[CyanixAI] Agent failed, falling back to CHAT_URL');
+        const fallback = await fetch(CHAT_URL, {
+          method: 'POST', headers: edgeHeaders(), signal: _abortCtrl.signal,
+          body: JSON.stringify({ model: _settings.model, messages: messages,
+            stream: _settings.streaming, max_tokens: 1024 }),
+        });
+        if (!fallback.ok) {
+          const errText = await fallback.text().catch(function() { return 'Unknown error'; });
+          throw new Error('API ' + fallback.status + ': ' + errText);
+        }
+        // Continue with fallback response -- reassign res reference via wrapper
+        return await handleStreamOrJson(fallback, false, null, text, isNewChat, ragData);
+      }
       const errText = await res.text().catch(function() { return 'Unknown error'; });
       throw new Error('API ' + res.status + ': ' + errText);
     }
@@ -2278,6 +2322,12 @@ async function sendMessage(text) {
       const bubbleEl = rendered.bubbleEl;
       const msgEl    = rendered.msgEl;
       bubbleEl.innerHTML = '<span class="stream-cursor"></span>';
+
+      // Read agent metadata headers before streaming body
+      var agentIterations = parseInt(res.headers.get('X-Agent-Iterations') || '0', 10);
+      var agentTools      = (res.headers.get('X-Agent-Tools') || '').split(',').filter(Boolean);
+      var agentElapsed    = parseInt(res.headers.get('X-Agent-Elapsed-Ms') || '0', 10);
+      var agentNeedsTools = res.headers.get('X-Agent-Needs-Tools') === 'true';
 
       const reader = res.body.getReader();
       const dec    = new TextDecoder();
@@ -2319,6 +2369,11 @@ async function sendMessage(text) {
       } else {
         bubbleEl.innerHTML = mdToHTML(aiText);
         if (ragData) appendRAGSources(bubbleEl, ragData);
+        // Render agent trace if tools were used
+        if (useAgent && agentNeedsTools && agentTools.length > 0) {
+          var traceData = agentTools.map(function(t) { return { tool: t, query: '', chars: 0, iteration: 1 }; });
+          renderAgentTrace(bubbleEl, traceData, agentIterations, agentElapsed);
+        }
       }
       if (aiText.trim()) {
         _history.push({ role: 'assistant', content: aiText });
@@ -2330,6 +2385,10 @@ async function sendMessage(text) {
       aiText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || 'No response received.';
       const rendered = renderMessage('ai', aiText, true);
       if (ragData && rendered.bubbleEl) appendRAGSources(rendered.bubbleEl, ragData);
+      // Render agent trace from non-streamed response metadata
+      if (useAgent && data._agent && rendered.bubbleEl) {
+        renderAgentTrace(rendered.bubbleEl, data._agent.trace, data._agent.iterations, data._agent.elapsed_ms);
+      }
       _history.push({ role: 'assistant', content: aiText });
       bgSyncMessages(isNewChat, _currentId, text, aiText, rendered.msgEl);
     }
@@ -2432,6 +2491,24 @@ function addFeedbackButtons(msgEl, messageId) {
   // Buttons already rendered in HTML. Just stamp the DB ID on the row.
   if (!msgEl || !messageId) return;
   msgEl.dataset.msgId = messageId;
+}
+
+async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
+  clickedBtn.classList.add('voted'); otherBtn.classList.remove('voted');
+  try {
+    await _sb.from('message_feedback').upsert({ message_id: messageId, chat_id: _currentId, user_id: _session.user.id, feedback: value }, { onConflict: 'message_id,user_id' });
+    toast(value === 1 ? 'Thanks!' : 'Got it, we' + String.fromCharCode(39) + 'll improve.');
+    // Fire feedback pipeline -- find prompt/response from DOM
+    var msgRow   = document.querySelector('[data-msg-id="' + messageId + '"]');
+    var prevRow  = msgRow && msgRow.previousElementSibling;
+    var prompt   = prevRow  ? (prevRow.querySelector('.msg-bubble')  || {}).innerText || '' : '';
+    var response = msgRow   ? (msgRow.querySelector('.msg-bubble')   || {}).innerText || '' : '';
+    if (prompt && response && _settings.trainingConsent) {
+      fetch(PIPELINE_URL, { method: 'POST', headers: edgeHeaders(),
+        body: JSON.stringify({ feedback: value, prompt: prompt.slice(0,1000), response: response.slice(0,3000), model: _settings.model })
+      }).catch(function(){});
+    }
+  } catch (e) { toast('Could not save feedback.'); }
 }
 
 // -- Memory Manager --------------------------------------------------
@@ -2592,8 +2669,8 @@ async function loadReferralData() {
     // Show +2hr badge if they have any referrals
     if (badgeEl) badgeEl.style.display = count > 0 ? 'inline-block' : 'none';
 
-    // Apply bonus: each referral adds 5 extra messages per window
-    window._referralBonus = count; // raw count; checkRateLimit multiplies by 5
+    // Apply bonus: each referral adds 2hr window extension (stored in state)
+    window._referralBonus = count * 2; // extra hours per window
 
   } catch (e) {
     console.error('[CyanixAI] loadReferralData:', e);
@@ -2636,7 +2713,8 @@ window.openSettingsPage = function(page) {
   });
 };
 
-// Settings sub-page navigation
+// Reset to main page when settings modal opens
+var _origOpenSettings = window.openSettings;
 
 // -- Personas -------------------------------------------------------
 var _personas       = [];
