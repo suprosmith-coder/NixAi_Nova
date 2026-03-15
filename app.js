@@ -15,7 +15,6 @@ const KG_URL            = SUPABASE_URL + '/functions/v1/knowledge-graph';
 const PIPELINE_URL  = SUPABASE_URL + '/functions/v1/feedback-pipeline';
 const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
 const BROWSE_URL    = SUPABASE_URL + '/functions/v1/browse-page';
-const ARAG_URL      = SUPABASE_URL + '/functions/v1/arag';
 
 const WHISPER_URL   = SUPABASE_URL + '/functions/v1/whisper';
 const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
@@ -74,8 +73,6 @@ let _memoriesLoaded = false;
 let _learnedCtx = null;     // { personal_examples, global_examples, style_prefs } -- loaded at login
 let _kgContext  = '';       // unified knowledge graph + memory context string
 let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
-let _aragEnabled  = false;  // ARAG toggle state
-let _aragContext  = '';     // last ARAG result to inject into system prompt
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
   memoryPriority:false, dailyLimit:20, unlockedThemes:[],
@@ -94,7 +91,7 @@ let _settings = {
   contextDepth:    'light',  // light=5 | standard=15 | deep=30
   fontStyle:       'inter',  // inter | space-grotesk | syne | orbitron
   fontSize:        16,       // 8-20px
-  ttsVoice:        'Celeste-PlayAI',
+  ttsVoice:        'Cherry',
 };
 
 const PERSONALITIES = {
@@ -451,6 +448,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       onSignedIn(session);
     }
     if (event === 'SIGNED_OUT') onSignedOut();
+    // Community module auth hook
+    if (window._communityHookAuth) window._communityHookAuth(session);
   });
 
   try {
@@ -651,6 +650,8 @@ async function onSignedIn(session) {
   await loadSupporter();
   await loadMemories();
   await loadChats();
+  loadRateState().catch(function() {});
+  fetchLearnedContext().catch(function() {});
   loadReferralData().catch(function() {});
   loadPersonas().catch(function() {});
   // Redeem any pending referral from signup
@@ -972,7 +973,7 @@ function syncSettingsToUI() {
   updateContextDepthUI();
   // Apply font settings
   var voiceSel = $('tts-voice-select');
-  if (voiceSel) voiceSel.value = _settings.ttsVoice || 'Celeste-PlayAI';
+  if (voiceSel) voiceSel.value = _settings.ttsVoice || 'Cherry';
   var fontSel = $('font-style-select');
   if (fontSel) fontSel.value = _settings.fontStyle || 'inter';
   applyFontStyle(_settings.fontStyle || 'inter');
@@ -983,12 +984,18 @@ function syncSettingsToUI() {
 function applyTheme(theme) { document.documentElement.dataset.theme = theme || 'light'; }
 
 var FONT_FAMILIES = {
-  'inter':        "'Inter', system-ui, sans-serif",
-  'space-grotesk':"'Space Grotesk', system-ui, sans-serif",
-  'syne':         "'Syne', system-ui, sans-serif",
-  'orbitron':     "'Orbitron', system-ui, sans-serif",
+  'inter':          "'DM Sans', system-ui, sans-serif",        // remapped: Inter removed
+  'space-grotesk':  "'DM Sans', system-ui, sans-serif",        // remapped
+  'syne':           "'Playfair Display', Georgia, serif",      // remapped to display font
+  'orbitron':       "'DM Mono', 'SF Mono', monospace",         // remapped to mono
+  'dm-sans':        "'DM Sans', system-ui, sans-serif",
+  'playfair':       "'Playfair Display', Georgia, serif",
+  'dm-mono':        "'DM Mono', 'SF Mono', monospace",
 };
-var FONT_NAMES = { 'inter':'Inter', 'space-grotesk':'Space Grotesk', 'syne':'Syne', 'orbitron':'Orbitron' };
+var FONT_NAMES = {
+  'inter':'DM Sans', 'space-grotesk':'DM Sans', 'syne':'Playfair Display',
+  'orbitron':'DM Mono', 'dm-sans':'DM Sans', 'playfair':'Playfair Display', 'dm-mono':'DM Mono',
+};
 var FONT_SIZE_LABELS = { 8:'Tiny', 9:'Tiny+', 10:'XS', 11:'XS+', 12:'Small', 13:'Small+', 14:'Medium-', 15:'Medium', 16:'Medium+', 17:'Large', 18:'Large+', 19:'XL', 20:'XXL' };
 
 function applyFontStyle(style) {
@@ -1084,127 +1091,222 @@ function getWindowResetTime() {
   return secs + ' sec' + (secs !== 1 ? 's' : '');
 }
 
-async function incrementUsage() {
-  if (!_session) return;
-  _usageToday++;
+/* ==========================================================
+   RATE LIMITING  --  DeepSeek style
+   - No banner, no hard lock
+   - Inline chat thread messages for warn / slowdown / blocked
+   - 30s cooldown shown on send button, composer stays open
+   - Reads from user_rate_state via check_rate_limit() RPC
+   - Writes via record_message_sent() RPC after each response
+========================================================== */
+
+var _rateState  = null;   // last known rate state from DB { status, window_count, window_limit, ... }
+var _cooldownTimer = null; // setInterval for send button countdown
+
+async function loadRateState() {
+  if (!_sb || !_session) return;
   try {
-    var windowKey = getUsageWindowKey();
-    await _sb.from('user_usage').upsert({ user_id: _session.user.id, usage_date: windowKey, prompt_count: _usageToday }, { onConflict: 'user_id,usage_date' });
-  } catch (e) {}
-}
-
-function checkDailyLimit() {
-  if (_supporter.dailyLimit === null) return true; // unlimited
-  // Apply referral bonus: each referral adds 5 extra messages per window
-  var bonusMessages = (window._referralBonus || 0) * 5;
-  var effectiveLimit = (_supporter.dailyLimit || 20) + bonusMessages;
-  if (_usageToday >= effectiveLimit) {
-    showUpgradeModal();
-    return false;
-  }
-  // Soft warning at 80%
-  var pct = _usageToday / effectiveLimit;
-  if (pct >= 0.8) {
-    var left = effectiveLimit - _usageToday;
-    toast(left + ' message' + (left === 1 ? '' : 's') + ' left this window. Resets in ' + getWindowResetTime() + '.');
-  }
-  return true;
-}
-
-//  Rate Limit Banner 
-// Slides up from bottom, locks composer, shows live countdown,
-// auto-unlocks when window resets. Cannot be dismissed early.
-var _rateLimitInterval = null;
-
-function showRateLimitBanner() {
-  // Lock composer immediately
-  lockComposer(true);
-
-  // Remove any existing banner
-  var old = document.getElementById('cx-rate-banner');
-  if (old) old.remove();
-
-  // Get seconds until reset
-  var now        = new Date();
-  var nextHour   = (Math.floor(now.getUTCHours() / 2) + 1) * 2;
-  var reset      = new Date(now);
-  reset.setUTCHours(nextHour, 0, 0, 0);
-  var totalSecs  = Math.max(1, Math.floor((reset - now) / 1000));
-  var remaining  = totalSecs;
-
-  // Build banner
-  var banner = document.createElement('div');
-  banner.id  = 'cx-rate-banner';
-  banner.innerHTML =
-    '<div class="cx-rate-inner">' +
-      '<div class="cx-rate-top">' +
-        '<div class="cx-rate-icon">&#9889;</div>' +
-        '<div class="cx-rate-text">' +
-          '<div class="cx-rate-title">Chat Limit Reached</div>' +
-          '<div class="cx-rate-sub">Free plan: 20 messages per 2-hour window</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="cx-rate-countdown" id="cx-rate-countdown">' + formatCountdown(remaining) + '</div>' +
-      '<div class="cx-rate-progress-track"><div class="cx-rate-progress-bar" id="cx-rate-progress"></div></div>' +
-      '<div class="cx-rate-perks">' +
-        '<span class="cx-rate-perk">&#9733; Unlimited messages</span>' +
-        '<span class="cx-rate-perk">&#127756; Exclusive themes</span>' +
-        '<span class="cx-rate-perk">&#128640; Early access</span>' +
-      '</div>' +
-      '<button class="cx-rate-upgrade-btn" id="cx-rate-upgrade-btn">Upgrade to Supporter</button>' +
-    '</div>';
-
-  document.body.appendChild(banner);
-
-  // Wire upgrade button
-  var upgradeBtn = document.getElementById('cx-rate-upgrade-btn');
-  if (upgradeBtn) {
-    upgradeBtn.addEventListener('click', function() {
-      show('settings-modal');
-      if (window.openSettingsPage) window.openSettingsPage('supporter');
+    var res = await _sb.rpc('check_rate_limit', {
+      p_user_id: _session.user.id,
+      p_chat_id: _currentId || null,
     });
-  }
-
-  // Slide in after paint
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      banner.classList.add('cx-rate-visible');
-    });
-  });
-
-  // Start countdown
-  if (_rateLimitInterval) clearInterval(_rateLimitInterval);
-  _rateLimitInterval = setInterval(function() {
-    remaining--;
-    var cd = document.getElementById('cx-rate-countdown');
-    var pb = document.getElementById('cx-rate-progress');
-    if (cd) cd.textContent = formatCountdown(remaining);
-    if (pb) pb.style.width = Math.max(0, (1 - remaining / totalSecs) * 100) + '%';
-
-    if (remaining <= 0) {
-      clearInterval(_rateLimitInterval);
-      _rateLimitInterval = null;
-      _usageToday = 0;
-      // Slide banner out
-      var b = document.getElementById('cx-rate-banner');
-      if (b) {
-        b.classList.remove('cx-rate-visible');
-        setTimeout(function() { if (b.parentNode) b.remove(); }, 400);
-      }
-      // Unlock composer
-      lockComposer(false);
+    if (res.data) {
+      _rateState = res.data;
       updateUsageDisplay();
-      // Subtle success feedback
-      var inp = $('composer-input');
-      if (inp) {
-        inp.placeholder = 'Ask Cyanix anything...';
-        inp.focus();
+    }
+  } catch (e) {
+    // Table may not exist yet -- degrade gracefully to old _usageToday counter
+    console.warn('[CyanixAI] loadRateState: using legacy counter fallback');
+  }
+}
+
+async function recordMessageSent(chatId) {
+  if (!_sb || !_session) return null;
+  try {
+    var res = await _sb.rpc('record_message_sent', {
+      p_user_id: _session.user.id,
+      p_chat_id: chatId || null,
+    });
+    if (res.data) {
+      _rateState = res.data;
+      _usageToday = res.data.window_count || _usageToday + 1;
+      updateUsageDisplay();
+      return res.data;
+    }
+  } catch (e) {
+    // Fallback: just increment local counter
+    _usageToday++;
+    console.warn('[CyanixAI] recordMessageSent fallback:', e.message);
+  }
+  return null;
+}
+
+// Render an inline rate notice directly in the chat thread --
+// exactly like DeepSeek: appears where a response would be, no modal
+function renderRateNotice(message, type) {
+  // type: 'warn' | 'slowdown' | 'blocked'
+  var container = $('messages');
+  if (!container) return;
+
+  // Remove any existing rate notice so they don't stack
+  var existing = container.querySelector('.cx-rate-notice');
+  if (existing) existing.remove();
+
+  var icons = { warn: '&#9888;', slowdown: '&#9203;', blocked: '&#128683;' };
+  var row = document.createElement('div');
+  row.className = 'msg-row cx-rate-notice cx-rate-' + type;
+  row.innerHTML =
+    '<div class="cx-rate-notice-inner">' +
+      '<span class="cx-rate-notice-icon">' + (icons[type] || '&#8505;') + '</span>' +
+      '<span class="cx-rate-notice-text">' + esc(message) + '</span>' +
+      (type === 'blocked'
+        ? '<button class="cx-rate-upgrade-link" onclick="show(\'settings-modal\');window.openSettingsPage(\'supporter\')">Upgrade</button>'
+        : '') +
+    '</div>';
+  container.appendChild(row);
+  scrollToBottom();
+}
+
+function removeRateNotice() {
+  var container = $('messages');
+  if (!container) return;
+  var existing = container.querySelector('.cx-rate-notice');
+  if (existing) {
+    existing.style.opacity = '0';
+    setTimeout(function() { if (existing.parentNode) existing.remove(); }, 250);
+  }
+}
+
+// Show a countdown on the send button during cooldown
+function startCooldownBtn(seconds) {
+  var btn = $('send-btn');
+  if (!btn) return;
+  if (_cooldownTimer) clearInterval(_cooldownTimer);
+
+  var remaining = seconds;
+  btn.classList.add('cx-cooldown');
+  btn.disabled = true;
+  btn.title    = 'Wait ' + remaining + 's';
+
+  // Replace icon with countdown number
+  function updateBtn() {
+    if (btn) btn.innerHTML =
+      '<span style="font-size:.75rem;font-weight:600;font-family:var(--font-mono);">' +
+      remaining + '</span>';
+  }
+  updateBtn();
+
+  _cooldownTimer = setInterval(function() {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(_cooldownTimer);
+      _cooldownTimer = null;
+      if (btn) {
+        btn.disabled  = false;
+        btn.classList.remove('cx-cooldown');
+        btn.title     = 'Send';
+        setSendBtn('send');
       }
-      toast('Limit reset -- you' + String.fromCharCode(39) + 're good to go!');
+      removeRateNotice();
+    } else {
+      updateBtn();
     }
   }, 1000);
 }
 
+// Main gate: call before sending. Returns true = allowed.
+// Falls back to legacy _usageToday if DB RPC unavailable.
+async function checkRateLimit() {
+  if (_supporter.isActive && _supporter.dailyLimit === null) return true; // unlimited
+
+  // Try DB-backed check first
+  if (_sb && _session) {
+    try {
+      var res = await _sb.rpc('check_rate_limit', {
+        p_user_id: _session.user.id,
+        p_chat_id: _currentId || null,
+      });
+      if (res.data) {
+        _rateState = res.data;
+        updateUsageDisplay();
+
+        if (res.data.status === 'ok') {
+          removeRateNotice();
+          return true;
+        }
+        if (res.data.status === 'warn') {
+          renderRateNotice(res.data.message, 'warn');
+          return true; // warn but still allow
+        }
+        if (res.data.status === 'slowdown') {
+          renderRateNotice(res.data.message, 'slowdown');
+          var cd = res.data.cooldown_remaining_secs || 30;
+          startCooldownBtn(cd);
+          return false;
+        }
+        if (res.data.status === 'blocked') {
+          renderRateNotice(res.data.message, 'blocked');
+          return false;
+        }
+      }
+    } catch (e) {
+      console.warn('[CyanixAI] checkRateLimit RPC failed, using legacy:', e.message);
+    }
+  }
+
+  // Legacy fallback
+  var bonusMessages = (window._referralBonus || 0) * 5;
+  var effectiveLimit = (_supporter.dailyLimit || 20) + bonusMessages;
+  if (_usageToday >= effectiveLimit) {
+    var resetIn = getWindowResetTime();
+    renderRateNotice(
+      'Message limit reached. Resets in ' + resetIn + '. Upgrade for unlimited messages.',
+      'blocked'
+    );
+    return false;
+  }
+  var pct = _usageToday / effectiveLimit;
+  if (pct >= 0.8) {
+    var left = effectiveLimit - _usageToday;
+    renderRateNotice(
+      (left) + ' message' + (left === 1 ? '' : 's') + ' remaining this window.',
+      'warn'
+    );
+  }
+  return true;
+}
+
+function updateUsageDisplay() {
+  var el = $('usage-display');
+  if (!el) return;
+  if (_rateState) {
+    if (_rateState.window_limit === null || _rateState.window_limit === undefined) {
+      el.textContent = _rateState.window_count + ' prompts (unlimited)';
+    } else {
+      var left = Math.max(0, (_rateState.window_limit || 20) - (_rateState.window_count || 0));
+      el.textContent = (_rateState.window_count || 0) + ' / ' + (_rateState.window_limit || 20) +
+        ' this window  \u2022  ' + left + ' left  \u2022  resets in ' + getWindowResetTime();
+    }
+  } else {
+    // Legacy display
+    if (_supporter.dailyLimit === null) {
+      el.textContent = _usageToday + ' prompts (unlimited)';
+    } else {
+      var left2 = Math.max(0, (_supporter.dailyLimit || 20) - _usageToday);
+      el.textContent = _usageToday + ' / ' + (_supporter.dailyLimit || 20) +
+        ' this window  \u2022  ' + left2 + ' left  \u2022  resets in ' + getWindowResetTime();
+    }
+  }
+}
+
+// Legacy alias kept so existing callers don't break
+function checkDailyLimit() {
+  // This is now async via checkRateLimit() -- synchronous callers
+  // should use checkRateLimit() instead. Returns true to not block.
+  return true;
+}
+
+// Keep formatCountdown for any remaining use
 function formatCountdown(secs) {
   if (secs <= 0) return '0:00';
   var m = Math.floor(secs / 60);
@@ -1212,17 +1314,7 @@ function formatCountdown(secs) {
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 
-function lockComposer(locked) {
-  var inp     = $('composer-input');
-  var sendBtn = $('send-btn');
-  var box     = $('composer-box');
-  if (inp)     { inp.disabled     = locked; if (locked) inp.placeholder = 'Chat limit reached -- wait for reset...'; }
-  if (sendBtn) { sendBtn.disabled = locked; }
-  if (box)     { box.classList.toggle('cx-composer-locked', locked); }
-}
 
-// Keep old name as alias for any other callers
-function showUpgradeModal() { showRateLimitBanner(); }
 
 function applySupporter() {
   // -- Badge: show tier name --
@@ -1507,26 +1599,27 @@ function clearAttachment() {
 
 async function generateChatTitle(userText, aiText) {
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch(CHAT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: edgeHeaders(),
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 30,
-        messages: [{
-          role: 'user',
-          content: 'Generate a short chat title (max 5 words, no quotes, no punctuation) for this conversation.\nUser: ' + userText.slice(0, 200) + '\nAssistant: ' + aiText.slice(0, 200)
-        }]
-      })
+        model:      'groq/llama-3.1-8b-instant',
+        stream:     false,
+        max_tokens: 20,
+        messages: [
+          { role: 'system', content: 'Generate a short chat title (max 5 words, no quotes, no punctuation). Return only the title, nothing else.' },
+          { role: 'user',   content: 'User: ' + userText.slice(0, 200) + '\nAssistant: ' + aiText.slice(0, 200) },
+        ],
+      }),
     });
     if (!res.ok) return null;
-    var data = await res.json();
-    var title = data.content && data.content[0] && data.content[0].text ? data.content[0].text.trim() : null;
-    // Clean up -- remove quotes, trim to 50 chars
+    var data  = await res.json();
+    var title = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+      ? data.choices[0].message.content.trim() : null;
     if (title) title = title.replace(/['"]/g, '').slice(0, 50).trim();
     return title || null;
   } catch (e) {
-    return null;
+    return userText.slice(0, 50).trim() || null;
   }
 }
 
@@ -1578,6 +1671,9 @@ async function bgSyncMessages(isNewChat, localChatId, userText, aiText, msgEl) {
 
     const aiMsgId = await syncMessagesToDB(chatId, userText, aiText);
     if (aiMsgId && msgEl) addFeedbackButtons(msgEl, aiMsgId);
+
+    // Record message sent to rate limit DB (fire-and-forget)
+    recordMessageSent(chatId).catch(function() {});
 
     // Generate a proper AI title for new chats silently in background
     if (isNewChat && chatId) {
@@ -1642,19 +1738,24 @@ async function extractAndSaveMemories(messages, sourceId) {
       'project=things user is building, technical=languages/frameworks/tools. ' +
       'If nothing worth remembering, return []. Max 5 items. Conversation:\n' + ctx;
 
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch(CHAT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: edgeHeaders(),
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model:      'groq/llama-3.1-8b-instant',
+        stream:     false,
         max_tokens: 500,
-        messages: [{ role: 'user', content: extractPrompt }]
-      })
+        messages: [
+          { role: 'system', content: 'You extract factual memories from conversations. Return only valid JSON arrays, no markdown, no explanation.' },
+          { role: 'user',   content: extractPrompt },
+        ],
+      }),
     });
 
     if (!res.ok) return;
     var data = await res.json();
-    var raw = data.content && data.content[0] && data.content[0].text ? data.content[0].text.trim() : '';
+    var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+      ? data.choices[0].message.content.trim() : '';
     if (!raw || raw === '[]') return;
 
     // Strip any markdown fences just in case
@@ -1994,90 +2095,6 @@ async function fetchBrowseContext(text) {
   } catch(e) { return null; }
 }
 
-/* ==========================================================
-   ARAG  --  Adaptive Retrieval-Augmented Generation
-   Platform-aware web comprehension engine
-========================================================== */
-
-// Platform keywords that trigger ARAG automatically
-const ARAG_PLATFORM_SIGNALS = [
-  /\b(youtube|github|reddit|twitter|x\.com|hacker news|hn|product hunt)\b/i,
-  /\b(trending|viral|popular|top posts?|growing fast|gaining stars?)\b/i,
-  /\b(on (youtube|github|reddit|twitter)|subreddit|repo|channel|playlist)\b/i,
-  /https?:\/\/[^\s]+/,  // any URL in the message
-];
-
-function needsARAG(text) {
-  return ARAG_PLATFORM_SIGNALS.some(function(r) { return r.test(text); });
-}
-
-async function fetchARAGContext(query) {
-  try {
-    // Extract any explicit URLs from the query
-    var urlMatches = query.match(/https?:\/\/[^\s"'<>)]+/g) || [];
-    var ctrl = new AbortController();
-    var t    = setTimeout(function() { ctrl.abort(); }, 20000);
-
-    var res = await fetch(ARAG_URL, {
-      method:  'POST',
-      headers: edgeHeaders(),
-      signal:  ctrl.signal,
-      body:    JSON.stringify({
-        query:     query,
-        urls:      urlMatches.slice(0, 3),
-        use_cache: true,
-        store:     true,
-      }),
-    });
-    clearTimeout(t);
-
-    if (!res.ok) return null;
-    var data = await res.json();
-    return data || null;
-  } catch (e) {
-    console.warn('[CyanixAI] ARAG fetch failed:', e.message);
-    return null;
-  }
-}
-
-function buildARAGSystemBlock(aragData) {
-  if (!aragData || !aragData.arag_context) return '';
-  return aragData.arag_context; // already formatted by the edge function
-}
-
-function appendARAGSources(bubbleEl, aragData) {
-  if (!bubbleEl || !aragData || !aragData.platforms_read || !aragData.platforms_read.length) return;
-
-  var src = document.createElement('div');
-  src.className = 'rag-sources';
-  var html = '<div class="rag-sources-label"> Platform Intelligence</div>';
-
-  aragData.platforms_read.forEach(function(p) {
-    html += '<a class="rag-source-item" href="' + esc(p.url) + '" target="_blank" rel="noopener">' +
-      '<div class="rag-source-dot" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)"></div>' +
-      '<span>' + esc(p.name) + (p.title ? ' — ' + esc(p.title.slice(0, 40)) : '') + '</span>' +
-      '</a>';
-  });
-
-  if (aragData.chunks_processed) {
-    html += '<div style="font-size:.7rem;color:var(--text-4);padding:4px 0 0 4px;">' +
-      aragData.chunks_processed + ' content chunks analysed' +
-      (aragData.from_cache ? ' (cached)' : ' (live read)') + '</div>';
-  }
-
-  src.innerHTML = html;
-  bubbleEl.appendChild(src);
-}
-
-function toggleARAG() {
-  _aragEnabled = !_aragEnabled;
-  var btn  = $('arag-toggle-btn');
-  var pill = $('arag-pill');
-  if (btn)  btn.classList.toggle('active', _aragEnabled);
-  if (pill) pill.classList.toggle('hidden', !_aragEnabled);
-  toast(_aragEnabled ? ' Platform Intelligence ON' : 'Platform Intelligence off');
-}
-
 function buildBrowseContext(browseData) {
   if (!browseData) return '';
   var label = browseData.page_type === 'youtube' ? 'YOUTUBE TRANSCRIPT SUMMARY' : 'PAGE CONTENT';
@@ -2132,7 +2149,9 @@ function handleSend() {
 async function sendMessage(text) {
   if (!_session) { toast('Please sign in to chat.'); return; }
   if (_responding) return;
-  if (!checkDailyLimit()) return;
+  // Async DeepSeek-style rate check
+  var allowed = await checkRateLimit();
+  if (!allowed) return;
   _responding = true;
   setSendBtn('stop');
 
@@ -2156,7 +2175,6 @@ async function sendMessage(text) {
 
   let ragData    = null;
   let browseData = null;
-  let aragData   = null;
   const isCompound = _settings.model.startsWith('groq/compound');
 
   // Fetch unified KG context (nodes + memories) -- fire in parallel, non-blocking
@@ -2180,17 +2198,6 @@ async function sendMessage(text) {
     if (tl) tl.textContent = 'Searching the web...';
     ragData = await fetchRAGContext(text);
     if (tl) tl.textContent = 'Cyanix is thinking';
-  }
-
-  // ARAG: platform-aware deep read -- runs when toggled on OR auto-detected
-  if (!browseData && (_aragEnabled || needsARAG(text))) {
-    const tl = $('thinking-text');
-    if (tl) tl.textContent = 'Reading platform structure...';
-    aragData = await fetchARAGContext(text);
-    if (tl) tl.textContent = 'Cyanix is thinking';
-    if (aragData) {
-      console.log('[CyanixAI] ARAG: platforms read =', (aragData.platforms_read || []).map(function(p) { return p.name; }).join(', '));
-    }
   }
   if (isCompound) {
     const tl = $('thinking-text');
@@ -2226,8 +2233,7 @@ async function sendMessage(text) {
   }
 
   // Hard cap on system prompt -- 5000 chars ~ 1250 tokens leaves room for history + response
-  var aragBlock = aragData ? buildARAGSystemBlock(aragData) : '';
-  var rawSystem = buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + aragBlock + frustrationCtx;
+  var rawSystem = buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + frustrationCtx;
   var systemContent = rawSystem.length > 5000 ? rawSystem.slice(0, 5000) + '\n[context truncated]' : rawSystem;
   // Estimate total request size and warn if still large
   var histChars = _history.slice(-(window._chatHistoryLimit || 10))
@@ -2312,8 +2318,7 @@ async function sendMessage(text) {
         aiText = '';
       } else {
         bubbleEl.innerHTML = mdToHTML(aiText);
-        if (ragData)  appendRAGSources(bubbleEl, ragData);
-        if (aragData) appendARAGSources(bubbleEl, aragData);
+        if (ragData) appendRAGSources(bubbleEl, ragData);
       }
       if (aiText.trim()) {
         _history.push({ role: 'assistant', content: aiText });
@@ -2324,8 +2329,7 @@ async function sendMessage(text) {
       const data = await res.json();
       aiText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || 'No response received.';
       const rendered = renderMessage('ai', aiText, true);
-      if (ragData  && rendered.bubbleEl) appendRAGSources(rendered.bubbleEl, ragData);
-      if (aragData && rendered.bubbleEl) appendARAGSources(rendered.bubbleEl, aragData);
+      if (ragData && rendered.bubbleEl) appendRAGSources(rendered.bubbleEl, ragData);
       _history.push({ role: 'assistant', content: aiText });
       bgSyncMessages(isNewChat, _currentId, text, aiText, rendered.msgEl);
     }
@@ -2428,24 +2432,6 @@ function addFeedbackButtons(msgEl, messageId) {
   // Buttons already rendered in HTML. Just stamp the DB ID on the row.
   if (!msgEl || !messageId) return;
   msgEl.dataset.msgId = messageId;
-}
-
-async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
-  clickedBtn.classList.add('voted'); otherBtn.classList.remove('voted');
-  try {
-    await _sb.from('message_feedback').upsert({ message_id: messageId, chat_id: _currentId, user_id: _session.user.id, feedback: value }, { onConflict: 'message_id,user_id' });
-    toast(value === 1 ? 'Thanks!' : 'Got it, we' + String.fromCharCode(39) + 'll improve.');
-    // Fire feedback pipeline -- find prompt/response from DOM
-    var msgRow   = document.querySelector('[data-msg-id="' + messageId + '"]');
-    var prevRow  = msgRow && msgRow.previousElementSibling;
-    var prompt   = prevRow  ? (prevRow.querySelector('.msg-bubble')  || {}).innerText || '' : '';
-    var response = msgRow   ? (msgRow.querySelector('.msg-bubble')   || {}).innerText || '' : '';
-    if (prompt && response && _settings.trainingConsent) {
-      fetch(PIPELINE_URL, { method: 'POST', headers: edgeHeaders(),
-        body: JSON.stringify({ feedback: value, prompt: prompt.slice(0,1000), response: response.slice(0,3000), model: _settings.model })
-      }).catch(function(){});
-    }
-  } catch (e) { toast('Could not save feedback.'); }
 }
 
 // -- Memory Manager --------------------------------------------------
@@ -2606,8 +2592,8 @@ async function loadReferralData() {
     // Show +2hr badge if they have any referrals
     if (badgeEl) badgeEl.style.display = count > 0 ? 'inline-block' : 'none';
 
-    // Apply bonus: each referral adds 2hr window extension (stored in state)
-    window._referralBonus = count * 2; // extra hours per window
+    // Apply bonus: each referral adds 5 extra messages per window
+    window._referralBonus = count; // raw count; checkRateLimit multiplies by 5
 
   } catch (e) {
     console.error('[CyanixAI] loadReferralData:', e);
@@ -2650,8 +2636,7 @@ window.openSettingsPage = function(page) {
   });
 };
 
-// Reset to main page when settings modal opens
-var _origOpenSettings = window.openSettings;
+// Settings sub-page navigation
 
 // -- Personas -------------------------------------------------------
 var _personas       = [];

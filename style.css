@@ -1128,113 +1128,84 @@ kbd{display:inline-flex;align-items:center;padding:3px 8px;background:var(--surf
   }
 }
 
-/* ================================================================
-   RATE LIMIT BANNER
-   Slides up from bottom, locks composer
-================================================================ */
-#cx-rate-banner {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 9999;
-  transform: translateY(100%);
-  transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
-  pointer-events: none;
+/* === DEEPSEEK-STYLE INLINE RATE NOTICES ================ */
+/* Appear in the chat thread exactly where a response would -- no modals, no locks */
+.cx-rate-notice {
+  padding: 2px 0;
+  animation: msgIn .3s var(--ease-spring);
 }
-#cx-rate-banner.cx-rate-visible {
-  transform: translateY(0);
-  pointer-events: all;
-}
-.cx-rate-inner {
-  background: var(--bg-2, #1a1a2e);
-  border-top: 1px solid var(--border, rgba(0,200,255,0.15));
-  border-radius: 20px 20px 0 0;
-  padding: 20px 20px 32px;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
-  max-width: 600px;
+.cx-rate-notice-inner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-lg);
+  font-size: .85rem;
+  max-width: var(--msg-max);
+  width: 100%;
   margin: 0 auto;
 }
-.cx-rate-top {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
+/* warn -- subtle yellow tint */
+.cx-rate-warn .cx-rate-notice-inner {
+  background: rgba(245,158,11,.07);
+  border: 1px solid rgba(245,158,11,.18);
+  color: #92400e;
 }
-.cx-rate-icon {
-  font-size: 1.6rem;
-  line-height: 1;
-  flex-shrink: 0;
+[data-theme="dark"] .cx-rate-warn .cx-rate-notice-inner {
+  background: rgba(245,158,11,.10);
+  border-color: rgba(245,158,11,.25);
+  color: #fcd34d;
 }
-.cx-rate-title {
+/* slowdown -- soft orange */
+.cx-rate-slowdown .cx-rate-notice-inner {
+  background: rgba(249,115,22,.07);
+  border: 1px solid rgba(249,115,22,.18);
+  color: #9a3412;
+}
+[data-theme="dark"] .cx-rate-slowdown .cx-rate-notice-inner {
+  background: rgba(249,115,22,.10);
+  border-color: rgba(249,115,22,.25);
+  color: #fdba74;
+}
+/* blocked -- neutral, no red alarm -- matches DeepSeek calm tone */
+.cx-rate-blocked .cx-rate-notice-inner {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+}
+.cx-rate-notice-icon {
   font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-1, #fff);
-  margin-bottom: 2px;
+  flex-shrink: 0;
+  line-height: 1;
 }
-.cx-rate-sub {
+.cx-rate-notice-text {
+  flex: 1;
+  line-height: 1.5;
+}
+.cx-rate-upgrade-link {
+  flex-shrink: 0;
   font-size: .78rem;
-  color: var(--text-2, rgba(255,255,255,0.5));
+  font-weight: 600;
+  color: var(--cyan-d);
+  background: var(--cyan-50);
+  border: 1px solid var(--cyan-100);
+  border-radius: var(--r-full);
+  padding: 4px 12px;
+  transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-spring);
 }
-.cx-rate-countdown {
-  font-size: 2.4rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent, #00c8ff);
-  letter-spacing: -1px;
-  text-align: center;
-  margin: 4px 0 12px;
-  font-family: 'SF Mono', 'Fira Code', monospace, sans-serif;
-}
-.cx-rate-progress-track {
-  width: 100%;
-  height: 4px;
-  background: var(--border, rgba(255,255,255,0.08));
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-.cx-rate-progress-bar {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--accent, #00c8ff), #7b61ff);
-  border-radius: 4px;
-  transition: width 1s linear;
-}
-.cx-rate-perks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-  justify-content: center;
-}
-.cx-rate-perk {
-  font-size: .75rem;
-  color: var(--text-2, rgba(255,255,255,0.5));
-  background: var(--bg-3, rgba(255,255,255,0.05));
-  border: 1px solid var(--border, rgba(255,255,255,0.08));
-  border-radius: 20px;
-  padding: 4px 10px;
-}
-.cx-rate-upgrade-btn {
-  width: 100%;
-  padding: 13px;
-  background: linear-gradient(135deg, var(--accent, #00c8ff), #7b61ff);
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  font-size: .9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
-}
-.cx-rate-upgrade-btn:hover { opacity: .9; transform: translateY(-1px); }
-.cx-rate-upgrade-btn:active { transform: translateY(0); opacity: 1; }
+.cx-rate-upgrade-link:hover { background: var(--cyan-100); transform: translateY(-1px); }
 
-/* Locked composer state */
-.cx-composer-locked {
-  opacity: 0.45;
-  pointer-events: none;
-  filter: grayscale(0.3);
-  transition: opacity 0.3s, filter 0.3s;
+/* Cooldown state on send button */
+.send-btn.cx-cooldown {
+  background: var(--surface-3);
+  color: var(--text-3);
+  animation: none;
+  cursor: not-allowed;
+  box-shadow: none;
 }
+.send-btn.cx-cooldown:hover {
+  background: var(--surface-3);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Remove old banner styles -- no longer used */
+
