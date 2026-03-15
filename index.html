@@ -44,7 +44,7 @@
   <link rel="apple-touch-icon"            href="https://suprosmith-coder.github.io/NixAi_Nova/icons/ios/apple-touch-icon-180x180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=15" />
 
     <!-- Error banner for debugging -->
@@ -188,43 +188,47 @@
 
   <!-- LEFT SIDEBAR -->
   <aside class="sidebar" id="sidebar">
-    <div class="sb-top">
-      <div class="sb-logo-row">
-        <img src="cyanix_emblem.png" class="sb-emblem" alt="" />
-        <span class="sb-brand">Cyanix <em>AI</em></span>
-        <button type="button" class="sb-collapse-btn" id="sb-collapse-btn" title="Close sidebar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
 
-      <!-- Sidebar tabs: Chats | Community -->
-      <div class="sb-tabs">
-        <button type="button" class="sb-tab active" id="sb-tab-chats" onclick="window.switchSidebarTab('chats')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Chats
-        </button>
-        <button type="button" class="sb-tab" id="sb-tab-community" onclick="window.switchSidebarTab('community')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Community
-        </button>
-      </div>
+    <!-- Profile row at top -->
+    <div class="sb-profile">
+      <button type="button" class="sb-user-btn" id="user-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name-row">
+          <span class="user-name" id="user-name">Loading…</span>
+          <span class="supporter-badge" id="supporter-badge" style="display:none"></span>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      </button>
+    </div>
+
+    <!-- Sidebar tabs: Chats | Community -->
+    <div class="sb-tabs">
+      <button type="button" class="sb-tab active" id="sb-tab-chats" onclick="window.switchSidebarTab('chats')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chats
+      </button>
+      <button type="button" class="sb-tab" id="sb-tab-community" onclick="window.switchSidebarTab('community')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Community
+      </button>
     </div>
 
     <!--  CHATS PANEL  -->
     <div id="sb-panel-chats" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
-      <button type="button" class="sb-new-btn" id="new-chat-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        New chat
-      </button>
-      <div class="sb-section">Recent</div>
+      <div class="sb-actions">
+        <button type="button" class="sb-new-btn" id="new-chat-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New chat
+        </button>
+      </div>
+      <div class="sb-section-label">Recent</div>
       <div class="sb-list" id="chat-list">
         <div class="sb-empty">No conversations yet</div>
       </div>
     </div>
 
-    <!-- -- COMMUNITY PANEL -- -->
+    <!-- COMMUNITY PANEL -->
     <div id="sb-panel-community" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-      <!-- Category tabs -->
       <div class="comm-cats">
         <button type="button" class="comm-cat active" data-cat="all" onclick="window.communitySetCat(this,'all')">All</button>
         <button type="button" class="comm-cat" data-cat="code" onclick="window.communitySetCat(this,'code')">Code</button>
@@ -232,35 +236,26 @@
         <button type="button" class="comm-cat" data-cat="doc" onclick="window.communitySetCat(this,'doc')">Docs</button>
         <button type="button" class="comm-cat" data-cat="image" onclick="window.communitySetCat(this,'image')">Images</button>
       </div>
-      <!-- Post feed -->
       <div class="sb-list" id="community-feed">
         <div class="sb-empty" id="comm-empty">Loading...</div>
       </div>
-      <!-- New post button -->
       <div style="padding:10px 12px 6px;">
         <button type="button" class="sb-new-btn" onclick="window.openNewPostModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New post
         </button>
       </div>
     </div>
 
+    <!-- Bottom nav -->
     <div class="sb-bottom">
-      <button type="button" class="sb-nav-btn" id="help-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
-        Help
-      </button>
       <button type="button" class="sb-nav-btn" id="settings-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
       </button>
-      <button type="button" class="sb-user-btn" id="user-btn">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <div class="user-name-row">
-          <span class="user-name" id="user-name">Loading...</span>
-          <span class="supporter-badge" id="supporter-badge" style="display:none"></span>
-        </div>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      <button type="button" class="sb-nav-btn" id="help-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+        Help
       </button>
     </div>
   </aside>
@@ -284,27 +279,28 @@
     <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-left">
-        <button type="button" class="topbar-icon" id="sidebar-toggle">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <button type="button" class="topbar-icon" id="sidebar-toggle" title="Toggle sidebar">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <span class="chat-title" id="chat-title">New chat</span>
       </div>
       <div class="topbar-right">
-        <!-- RAG indicator -->
+        <!-- Active pills -->
         <div class="rag-pill hidden" id="rag-pill" title="Web search active">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Web
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Search
         </div>
+        <div class="agent-pill hidden" id="agent-pill">&#9881; Agent</div>
         <!-- Model picker -->
         <div class="model-picker" id="model-picker">
           <button type="button" class="model-pill" id="model-btn">
-            <span id="model-name-label">GPT OSS 20B</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            <span id="model-name-label">Compound</span>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="model-dropdown hidden" id="model-dropdown"></div>
         </div>
         <button type="button" class="topbar-icon" id="new-chat-top" title="New chat">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </div>
     </header>
@@ -349,27 +345,38 @@
 
     <!-- Composer -->
     <div class="composer-area">
-      <div class="composer-box" id="composer-box">
-        <div class="composer-tools">
-          <button type="button" class="tool-btn" id="rag-toggle-btn" title="Toggle web search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </button>
-          <button type="button" class="tool-btn" id="attach-btn" title="Attach file">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          </button>
-        </div>
-        <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything..." rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
-        <div class="composer-actions">
-          <button type="button" class="mic-btn" id="mic-btn" title="Voice input">
-            <svg id="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </button>
-          <button type="button" class="send-btn" id="send-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
+
+      <!-- Echo mode banner - proper structure -->
+      <div class="echo-banner hidden" id="echo-banner">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>Echo Mode — Cyanix writes in your voice</span>
+        <button type="button" onclick="window.toggleEchoMode()">Turn off</button>
       </div>
-        <span style="font-size:.72rem;color:var(--purple);font-weight:600;">Echo Mode ON &mdash; Cyanix will write in your voice</span>
-        <button type="button" onclick="window.toggleEchoMode()" style="margin-left:auto;font-size:.68rem;color:var(--text-3);background:none;border:none;cursor:pointer;">Turn off</button>
+
+      <div class="composer-box" id="composer-box">
+        <!-- Single unified row: tools · textarea · actions -->
+        <div class="composer-row">
+          <div class="composer-tools">
+            <button type="button" class="tool-btn" id="rag-toggle-btn" title="Web search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button type="button" class="tool-btn" id="agent-toggle-btn" title="Agentic retrieval">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            </button>
+            <button type="button" class="tool-btn" id="attach-btn" title="Attach file">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+          </div>
+          <textarea id="composer-input" class="composer-input" placeholder="Ask Cyanix anything…" rows="1" autocomplete="off" autocorrect="on" spellcheck="true"></textarea>
+          <div class="composer-actions">
+            <button type="button" class="mic-btn" id="mic-btn" title="Voice input">
+              <svg id="mic-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            <button type="button" class="send-btn" id="send-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
       <p class="composer-hint">Cyanix AI can make mistakes. Verify important info.</p>
     </div>
