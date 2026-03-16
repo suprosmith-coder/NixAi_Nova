@@ -2163,6 +2163,8 @@ window.copyGenPrompt = function(btn) {
   var p = btn.dataset.prompt || '';
   navigator.clipboard.writeText(p).then(function() { toast('Prompt copied!'); });
 };
+
+function buildBrowseContext(browseData) {
   if (!browseData) return '';
   var label = browseData.page_type === 'youtube' ? 'YOUTUBE TRANSCRIPT SUMMARY' : 'PAGE CONTENT';
   var out = '\n\n[' + label + ']\n';
