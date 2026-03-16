@@ -15,7 +15,9 @@ const KG_URL            = SUPABASE_URL + '/functions/v1/knowledge-graph';
 const PIPELINE_URL  = SUPABASE_URL + '/functions/v1/feedback-pipeline';
 const RAG_URL       = SUPABASE_URL + '/functions/v1/rag-search';
 const BROWSE_URL    = SUPABASE_URL + '/functions/v1/browse-page';
-const AGENT_URL     = SUPABASE_URL + '/functions/v1/cyanix-agent';
+const IMAGE_GEN_URL = SUPABASE_URL + '/functions/v1/image-gen';
+const GROQ_TTS_URL  = SUPABASE_URL + '/functions/v1/groq-tts';
+const GROQ_STT_URL  = SUPABASE_URL + '/functions/v1/groq-stt';
 
 const WHISPER_URL   = SUPABASE_URL + '/functions/v1/whisper';
 const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
@@ -74,8 +76,6 @@ let _memoriesLoaded = false;
 let _learnedCtx = null;     // { personal_examples, global_examples, style_prefs } -- loaded at login
 let _kgContext  = '';       // unified knowledge graph + memory context string
 let _attachment = null;     // { type, name, data, mediaType } -- current pending attachment
-let _agentEnabled  = false; // agentic retrieval toggle
-let _lastAgentTrace = null; // trace from last agent call for UI display
 let _supporter = {
   isActive:false, earlyAccess:false, premiumForever:false,
   memoryPriority:false, dailyLimit:20, unlockedThemes:[],
@@ -95,6 +95,8 @@ let _settings = {
   fontStyle:       'inter',  // inter | space-grotesk | syne | orbitron
   fontSize:        16,       // 8-20px
   ttsVoice:        'Celeste-PlayAI',
+  ttsSpeed:        1.0,
+  imgSize:         '1:1',
 };
 
 const PERSONALITIES = {
@@ -217,26 +219,6 @@ function retrieveRelevantMemories(query) {
   var topN = scored.slice(0, limit).map(function(s) { return s.mem; });
   return topN;
 }
-
-/* -- Echo Mode ------------------------------------------- */
-var _echoMode = false;
-
-window.toggleEchoMode = function() {
-  _echoMode = !_echoMode;
-  var banner = document.getElementById('echo-banner');
-  if (banner) {
-    if (_echoMode) banner.classList.remove('hidden');
-    else banner.classList.add('hidden');
-  }
-  toast(_echoMode ? 'Echo Mode ON — Cyanix writes in your voice' : 'Echo Mode off');
-};
-
-window.getEchoModeContext = function() {
-  if (!_echoMode) return '';
-  return ' ECHO MODE: The user wants you to write in their voice and style. ' +
-    'Match their tone, vocabulary, and sentence patterns precisely. ' +
-    'Read their previous messages in this conversation carefully and mirror how they write.';
-};
 
 function buildSystemPrompt(queryContext) {
   var p = PERSONALITIES[_settings.personality] || PERSONALITIES.friendly;
@@ -769,12 +751,26 @@ function bindChatUI() {
     ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
   });
 
-  on('rag-toggle-btn',   'click', toggleRAG);
-  on('agent-toggle-btn', 'click', toggleAgent);
+  on('rag-toggle-btn', 'click', toggleRAG);
   on('attach-btn', 'click', function() {
     var inp = document.createElement('input');
     inp.type = 'file';
-    inp.accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,text/markdown,.md,.js,.ts,.py,.html,.css,.json,.txt,.csv,.xml,.yaml,.yml,.sh,.rb,.go,.rs,.cpp,.c,.java,.kt,.swift';
+    inp.accept = [
+      // Images
+      'image/jpeg,image/png,image/webp,image/gif',
+      // Documents
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // .docx
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',        // .xlsx
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',// .pptx
+      'application/msword',        // .doc
+      // Text / code
+      'text/plain,text/markdown,text/csv,text/html,text/css',
+      '.md,.js,.ts,.py,.html,.css,.json,.txt,.csv,.xml,.yaml,.yml,.sh,.rb,.go,.rs,.cpp,.c,.java,.kt,.swift,.sql,.env',
+      // Audio (for transcription)
+      'audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm,audio/flac,audio/x-m4a',
+      '.mp3,.wav,.ogg,.m4a,.flac,.weba',
+    ].join(',');
     inp.onchange = function() {
       var file = inp.files && inp.files[0];
       if (!file) return;
@@ -1453,29 +1449,85 @@ async function syncMessagesToDB(chatId, userText, aiText) {
 }
 
 function handleAttachment(file) {
-  var reader = new FileReader();
-  var isImage = file.type.startsWith('image/');
-  var isPDF   = file.type === 'application/pdf';
-  var isText  = !isImage && !isPDF; // treat everything else as text
+  var isImage  = file.type.startsWith('image/');
+  var isPDF    = file.type === 'application/pdf';
+  var isAudio  = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac|webm)$/i.test(file.name);
+  var isVideo  = file.type.startsWith('video/') || /\.(mp4|webm|mov|mkv)$/i.test(file.name);
+  var isOffice = /\.(docx|xlsx|pptx|doc|xls|ppt)$/i.test(file.name);
+  var isCSV    = file.type === 'text/csv' || /\.csv$/i.test(file.name);
 
-  reader.onload = function(e) {
-    var result = e.target.result;
-    if (isImage || isPDF) {
-      // result is data URL like "data:image/png;base64,xxxx"
-      var parts = result.split(',');
-      var b64   = parts[1];
-      _attachment = { type: isImage ? 'image' : 'pdf', name: file.name, data: b64, mediaType: file.type };
-    } else {
-      // Text/code -- store as plain text
-      _attachment = { type: 'text', name: file.name, data: result, mediaType: file.type };
+  // Audio/video: transcribe via Groq Whisper then attach as text
+  if (isAudio || isVideo) {
+    toast('Transcribing audio…', 30000);
+    var fd = new FormData();
+    fd.append('file', file, file.name);
+    var headers = {};
+    if (_session && _session.access_token) {
+      headers['Authorization'] = 'Bearer ' + _session.access_token;
+      headers['apikey'] = SUPABASE_ANON;
     }
-    showAttachPreview();
-    toast('Attached: ' + file.name);
-  };
+    fetch(GROQ_STT_URL, { method: 'POST', headers: headers, body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var toastEl = $('toast'); if (toastEl) hide(toastEl);
+        if (d.error) { toast('Transcription failed: ' + d.error); return; }
+        var transcript = d.text || '';
+        if (!transcript) { toast('Could not transcribe audio.'); return; }
+        _attachment = {
+          type: 'transcript', name: file.name, data: transcript,
+          mediaType: file.type, duration: d.duration, language: d.language,
+        };
+        showAttachPreview();
+        toast('\u2713 Transcribed: ' + file.name + (d.duration ? ' (' + Math.round(d.duration) + 's)' : ''));
+      })
+      .catch(function(e) {
+        var toastEl = $('toast'); if (toastEl) hide(toastEl);
+        toast('Transcription error: ' + e.message);
+      });
+    return;
+  }
+
+  // Office docs: read as ArrayBuffer, extract text client-side (basic extraction)
+  if (isOffice) {
+    toast('Reading document…', 8000);
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var toastEl = $('toast'); if (toastEl) hide(toastEl);
+      // We can't do full docx parsing in vanilla JS without a library
+      // Store as base64 and let the AI know it's an office doc
+      var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(e.target.result)));
+      var ext = file.name.split('.').pop().toLowerCase();
+      _attachment = {
+        type: 'office', name: file.name, data: b64, mediaType: file.type,
+        ext: ext,
+      };
+      showAttachPreview();
+      toast('Attached: ' + file.name);
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
+  var reader = new FileReader();
 
   if (isImage || isPDF) {
+    reader.onload = function(e) {
+      var result = e.target.result;
+      var parts  = result.split(',');
+      var b64    = parts[1];
+      _attachment = { type: isImage ? 'image' : 'pdf', name: file.name, data: b64, mediaType: file.type };
+      showAttachPreview();
+      toast('Attached: ' + file.name);
+    };
     reader.readAsDataURL(file);
   } else {
+    // CSV, plain text, code files
+    reader.onload = function(e) {
+      var result = e.target.result;
+      _attachment = { type: isCSV ? 'csv' : 'text', name: file.name, data: result, mediaType: file.type };
+      showAttachPreview();
+      toast('Attached: ' + file.name);
+    };
     reader.readAsText(file);
   }
 }
@@ -1492,28 +1544,33 @@ function showAttachPreview() {
   preview.id = 'attach-preview';
   preview.className = 'attach-preview';
 
-  var icon = _attachment.type === 'image'
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
-    : _attachment.type === 'pdf'
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
-    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+  var icons = {
+    image:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
+    pdf:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    transcript: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>',
+    office:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    csv:        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    text:       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  };
+  var icon = icons[_attachment.type] || icons.text;
+  var label = _attachment.type === 'transcript' ? 'Transcript' : '';
 
   preview.innerHTML = '<div class="attach-chip">' +
     '<span class="attach-chip-icon">' + icon + '</span>' +
+    (label ? '<span class="attach-chip-label">' + label + '</span>' : '') +
     '<span class="attach-chip-name">' + esc(_attachment.name) + '</span>' +
-    '<button class="attach-chip-remove" title="Remove attachment">' +
+    '<button class="attach-chip-remove" title="Remove">' +
       '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
     '</button></div>';
 
-  preview.querySelector('.attach-chip-remove').addEventListener('click', function() {
-    clearAttachment();
-  });
+  preview.querySelector('.attach-chip-remove').addEventListener('click', clearAttachment);
 
-  // Insert before textarea
-  var textarea = document.getElementById('composer-input');
-  if (textarea) box.insertBefore(preview, textarea);
+  // Insert before the composer-row (inside composer-box)
+  var row = document.getElementById('composer-box');
+  var composerRow = row && row.querySelector('.composer-row');
+  if (composerRow) row.insertBefore(preview, composerRow);
+  else if (row) row.insertBefore(preview, row.firstChild);
 
-  // Highlight attach button
   var btn = document.getElementById('attach-btn');
   if (btn) btn.classList.add('active');
 }
@@ -1529,19 +1586,19 @@ function clearAttachment() {
 async function generateChatTitle(userText, aiText) {
   try {
     var res = await fetch(CHAT_URL, {
-      method: 'POST',
+      method:  'POST',
       headers: edgeHeaders(),
-      body: JSON.stringify({
+      body:    JSON.stringify({
         model:      'groq/llama-3.1-8b-instant',
         stream:     false,
         max_tokens: 20,
         messages: [
-          { role: 'system', content: 'Generate a short chat title (max 5 words, no quotes, no punctuation). Return only the title.' },
+          { role: 'system', content: 'Generate a short chat title (max 5 words, no quotes, no punctuation). Return only the title text, nothing else.' },
           { role: 'user',   content: 'User: ' + userText.slice(0, 200) + '\nAssistant: ' + aiText.slice(0, 200) },
         ],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return userText.slice(0, 50).trim() || null;
     var data  = await res.json();
     var title = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
       ? data.choices[0].message.content.trim() : null;
@@ -1665,14 +1722,14 @@ async function extractAndSaveMemories(messages, sourceId) {
       'If nothing worth remembering, return []. Max 5 items. Conversation:\n' + ctx;
 
     var res = await fetch(CHAT_URL, {
-      method: 'POST',
+      method:  'POST',
       headers: edgeHeaders(),
-      body: JSON.stringify({
+      body:    JSON.stringify({
         model:      'groq/llama-3.1-8b-instant',
         stream:     false,
         max_tokens: 500,
         messages: [
-          { role: 'system', content: 'You extract factual memories from conversations. Return only valid JSON arrays, no markdown, no explanation.' },
+          { role: 'system', content: 'You extract factual memories from conversations. Return ONLY a valid JSON array, no markdown, no explanation, no preamble.' },
           { role: 'user',   content: extractPrompt },
         ],
       }),
@@ -1680,7 +1737,7 @@ async function extractAndSaveMemories(messages, sourceId) {
 
     if (!res.ok) return;
     var data = await res.json();
-    var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+    var raw  = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
       ? data.choices[0].message.content.trim() : '';
     if (!raw || raw === '[]') return;
 
@@ -2022,94 +2079,90 @@ async function fetchBrowseContext(text) {
 }
 
 /* ==========================================================
-   AGENTIC RETRIEVAL
-   Routes messages through the cyanix-agent edge function which
-   runs a multi-step router → tool loop → compressor pipeline.
-   Falls back to direct CHAT_URL if agent call fails.
+   IMAGE GENERATION
+   Detects image-generation intent, calls image-gen edge fn,
+   renders the result as an inline <img> in the chat thread
+   with download + copy-prompt actions.
 ========================================================== */
 
-// Signals that suggest the agent would add value over direct generation
-const AGENT_TRIGGERS = [
-  /\b(find|search|look up|compare|versus|vs)\b/i,
-  /\b(youtube|github|reddit|twitter|x\.com|hacker news|product hunt)\b/i,
-  /\b(trending|latest|recent|current|today|right now)\b/i,
-  /\b(summarize|summarise).*(url|http|link|article|page|video)\b/i,
-  /https?:\/\//,
-  /\b(explain .+ and .+|compare .+ (with|to|versus|vs))/i,
-  /\b(what('?s| is) .+ (doing|trending|popular|growing|gaining))\b/i,
+// Patterns that indicate the user wants an image generated
+const IMAGE_GEN_TRIGGERS = [
+  /^(generate|create|make|draw|design|paint|render|produce|show me)\s+(a|an|the|me\s+(a|an))?\s*(image|photo|picture|illustration|portrait|artwork|wallpaper|logo|icon|poster|banner|thumbnail|drawing)/i,
+  /^(image|photo|picture|illustration)\s+(of|showing|depicting)/i,
+  /\b(generate|create|draw|make)\s+(an?\s+)?(image|photo|picture|illustration)\b/i,
 ];
 
-function needsAgent(text) {
-  if (_agentEnabled) return true; // manual override
-  return AGENT_TRIGGERS.some(function(r) { return r.test(text); });
+function isImageGenRequest(text) {
+  return IMAGE_GEN_TRIGGERS.some(function(r) { return r.test(text.trim()); });
 }
 
-function toggleAgent() {
-  _agentEnabled = !_agentEnabled;
-  var btn  = $('agent-toggle-btn');
-  var pill = $('agent-pill');
-  if (btn)  btn.classList.toggle('active', _agentEnabled);
-  if (pill) pill.classList.toggle('hidden', !_agentEnabled);
-  toast(_agentEnabled ? '⚡ Agentic mode ON' : 'Agentic mode off');
+// Extract image size hint from prompt text
+function extractImageSize(text) {
+  if (/\b(portrait|vertical|tall|9.16|phone|mobile)\b/i.test(text)) return '9:16';
+  if (/\b(landscape|horizontal|wide|16.9|widescreen|banner)\b/i.test(text)) return '16:9';
+  if (/\b(4.3|standard)\b/i.test(text)) return '4:3';
+  return _settings.imgSize || '1:1';
 }
 
-// Render the agent iteration trace as a collapsible block above the response
-function renderAgentTrace(bubbleEl, trace, iterations, elapsedMs) {
-  if (!bubbleEl || !trace || !trace.length) return;
-  var existing = bubbleEl.querySelector('.agent-trace');
-  if (existing) existing.remove();
+async function generateImage(prompt) {
+  const size = extractImageSize(prompt);
+  try {
+    const res = await fetch(IMAGE_GEN_URL, {
+      method:  'POST',
+      headers: edgeHeaders(),
+      body:    JSON.stringify({ prompt, size }),
+      signal:  AbortSignal.timeout(65000),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(function() { return {}; });
+      throw new Error(err.error || 'Image generation failed (' + res.status + ')');
+    }
+    return await res.json(); // { url, b64, revised_prompt, provider, size }
+  } catch (e) {
+    throw e;
+  }
+}
 
-  var toolCounts = {};
-  trace.forEach(function(t) { toolCounts[t.tool] = (toolCounts[t.tool] || 0) + 1; });
-  var toolSummary = Object.entries(toolCounts).map(function(e) {
-    return e[1] + '\u00d7 ' + e[0];
-  }).join(' · ');
+// Render the generated image as an AI message with actions
+function renderGeneratedImage(prompt, imgData, msgEl) {
+  var container = $('messages');
+  if (!container) return;
 
-  var traceEl = document.createElement('div');
-  traceEl.className = 'agent-trace';
-  traceEl.innerHTML =
-    '<details class="agent-trace-details">' +
-      '<summary class="agent-trace-summary">' +
-        '<span class="agent-trace-icon">&#9881;</span>' +
-        '<span>' + iterations + ' retrieval step' + (iterations === 1 ? '' : 's') +
-          ' · ' + toolSummary +
-          ' · ' + (elapsedMs ? elapsedMs + 'ms' : '') +
-        '</span>' +
-      '</summary>' +
-      '<div class="agent-trace-steps">' +
-        trace.map(function(t, i) {
-          var icons = { arag: '&#127760;', rag: '&#128269;', browse: '&#128279;', memory: '&#129504;' };
-          return '<div class="agent-trace-step">' +
-            '<span class="agent-trace-step-icon">' + (icons[t.tool] || '&#9632;') + '</span>' +
-            '<span class="agent-trace-step-tool">' + esc(t.tool) + '</span>' +
-            '<span class="agent-trace-step-query">' + esc(t.query.slice(0, 80)) + '</span>' +
-            '<span class="agent-trace-step-size">' + (t.chars > 0 ? Math.round(t.chars / 100) / 10 + 'k' : 'empty') + '</span>' +
-          '</div>';
-        }).join('') +
+  // If we already have a placeholder bubble from streaming, use it;
+  // otherwise create a new one
+  var bubbleEl = msgEl && msgEl.querySelector('.msg-bubble');
+  if (!bubbleEl) return;
+
+  var imgSrc = imgData.url || ('data:image/png;base64,' + imgData.b64);
+
+  bubbleEl.innerHTML =
+    '<div class="img-gen-result">' +
+      '<img class="img-gen-img" src="' + esc(imgSrc) + '" alt="' + esc(prompt.slice(0, 80)) + '" loading="lazy" />' +
+      '<div class="img-gen-meta">' +
+        '<span class="img-gen-size">' + esc(imgData.size || '') + '</span>' +
+        '<span class="img-gen-provider">' + esc(imgData.provider || 'AI') + '</span>' +
       '</div>' +
-    '</details>';
-
-  // Insert before the response text
-  bubbleEl.insertBefore(traceEl, bubbleEl.firstChild);
+      '<div class="img-gen-actions">' +
+        '<button class="img-gen-btn" onclick="downloadGenImage(this)" data-src="' + esc(imgSrc) + '" data-name="cyanix-' + Date.now() + '.png">Download</button>' +
+        '<button class="img-gen-btn" onclick="copyGenPrompt(this)" data-prompt="' + esc(imgData.revised_prompt || prompt) + '">Copy prompt</button>' +
+      '</div>' +
+    '</div>';
 }
 
-// Update the thinking indicator with current agent step
-function setAgentThinkingStep(step, tool) {
-  var tl = $('thinking-text');
-  if (!tl) return;
-  var labels = {
-    routing:   'Planning retrieval...',
-    arag:      'Reading platform...',
-    rag:       'Searching the web...',
-    browse:    'Reading page...',
-    memory:    'Checking your memory...',
-    compress:  'Compressing context...',
-    generate:  'Generating response...',
-  };
-  tl.textContent = labels[tool || step] || 'Thinking...';
-}
+window.downloadGenImage = function(btn) {
+  var src  = btn.dataset.src;
+  var name = btn.dataset.name || 'cyanix-image.png';
+  var a    = document.createElement('a');
+  a.href   = src;
+  a.download = name;
+  a.click();
+  toast('Downloading image…');
+};
 
-function buildBrowseContext(browseData) {
+window.copyGenPrompt = function(btn) {
+  var p = btn.dataset.prompt || '';
+  navigator.clipboard.writeText(p).then(function() { toast('Prompt copied!'); });
+};
   if (!browseData) return '';
   var label = browseData.page_type === 'youtube' ? 'YOUTUBE TRANSCRIPT SUMMARY' : 'PAGE CONTENT';
   var out = '\n\n[' + label + ']\n';
@@ -2177,11 +2230,36 @@ async function sendMessage(text) {
   }
 
   hide('welcome-state');
-  _history.push({ role: 'user', content: text }); // image data excluded from history to save tokens
+  _history.push({ role: 'user', content: text });
   renderMessage('user', text, true, null, _attachment && _attachment.type === 'image' ? _attachment.data : null);
   var pendingAttachment = _attachment;
   clearAttachment();
   show('typing-row');
+
+  // ── Image generation short-circuit ──────────────────────────
+  if (!pendingAttachment && isImageGenRequest(text)) {
+    var tl2 = $('thinking-text');
+    if (tl2) tl2.textContent = 'Generating image…';
+    startThoughtStream(text, false);
+    scrollToBottom();
+    try {
+      var imgData = await generateImage(text);
+      hide('typing-row'); stopThoughtStream();
+      var imgRendered = renderMessage('ai', '', true);
+      renderGeneratedImage(text, imgData, imgRendered.msgEl);
+      _history.push({ role: 'assistant', content: '[Generated image for: ' + text.slice(0, 100) + ']' });
+      bgSyncMessages(isNewChat, _currentId, text, '[image generated]', imgRendered.msgEl);
+    } catch (imgErr) {
+      hide('typing-row'); stopThoughtStream();
+      renderMessage('ai', 'Image generation failed: ' + esc(imgErr.message || String(imgErr)) + '. Check that TOGETHER_API_KEY or FAL_API_KEY is set in your edge function secrets.', true);
+    } finally {
+      _responding = false;
+      setSendBtn('send');
+      _abortCtrl = null;
+    }
+    return;
+  }
+
   startThoughtStream(text, _ragEnabled);
   scrollToBottom();
 
@@ -2227,7 +2305,16 @@ async function sendMessage(text) {
         { type: 'text', text: text }
       ];
     } else if (pendingAttachment.type === 'pdf') {
-      userContent = text + '\n\n[Attached PDF: ' + pendingAttachment.name + ']\nNote: PDF content attached as base64. Please analyze it.' + pendingAttachment.data.slice(0, 4000);
+      userContent = text + '\n\n[Attached PDF: ' + pendingAttachment.name + ']\n' + pendingAttachment.data.slice(0, 4000);
+    } else if (pendingAttachment.type === 'transcript') {
+      var durStr = pendingAttachment.duration ? ' (' + Math.round(pendingAttachment.duration) + 's)' : '';
+      var langStr = pendingAttachment.language ? ', language: ' + pendingAttachment.language : '';
+      userContent = text + '\n\n[Audio transcript from: ' + pendingAttachment.name + durStr + langStr + ']\n' + pendingAttachment.data.slice(0, 8000);
+    } else if (pendingAttachment.type === 'office') {
+      userContent = text + '\n\n[Attached ' + (pendingAttachment.ext || 'office').toUpperCase() + ' file: ' + pendingAttachment.name + ']\n' +
+        'Note: This is a binary office document. Please help the user with their question about this file type, and let them know you cannot directly read the file content in this format — suggest they paste the text content directly.';
+    } else if (pendingAttachment.type === 'csv') {
+      userContent = text + '\n\n[Attached CSV: ' + pendingAttachment.name + ']\n```csv\n' + pendingAttachment.data.slice(0, 10000) + '\n```';
     } else {
       var ext = pendingAttachment.name.split('.').pop() || 'text';
       userContent = text + '\n\n**Attached file: ' + pendingAttachment.name + '**\n```' + ext + '\n' + pendingAttachment.data.slice(0, 12000) + '\n```';
@@ -2266,73 +2353,21 @@ async function sendMessage(text) {
       return { role: m.role, content: content };
     }));
 
-  // Decide which endpoint to use
-  // Agent route: when message triggers agentic retrieval patterns OR manually enabled
-  // Direct route: all other messages (faster, cheaper)
-  var useAgent = !browseData && !ragData && needsAgent(text);
-  var endpoint = useAgent ? AGENT_URL : CHAT_URL;
-
-  if (useAgent) {
-    setAgentThinkingStep('routing');
-    console.log('[CyanixAI] Using agentic retrieval pipeline');
-  }
-
   _abortCtrl = new AbortController();
   let aiText = '';
 
   try {
-    // Agent endpoint takes messages + system separately and handles retrieval internally
-    // Direct endpoint takes the pre-built messages array with system already embedded
-    var fetchBody = useAgent
-      ? JSON.stringify({
-          messages:       _history.slice(-(window._chatHistoryLimit || 10)).map(function(m, idx, arr) {
-            if (idx === arr.length - 1 && m.role === 'user' && typeof userContent !== 'string') {
-              return { role: 'user', content: userContent };
-            }
-            var content = typeof m.content === 'string' && m.content.length > 400
-              ? m.content.slice(0, 400) + '...' : m.content;
-            return { role: m.role, content: content };
-          }),
-          model:          _settings.model,
-          stream:         _settings.streaming,
-          max_tokens:     1024,
-          system:         buildSystemPrompt(text) + frustrationCtx,
-          max_iterations: 3,
-        })
-      : JSON.stringify({
-          model:        _settings.model,
-          messages:     messages,
-          stream:       _settings.streaming,
-          max_tokens:   1024,
-          chat_id:      _currentId,
-          user_message: text,
-        });
-
-    const res = await fetch(endpoint, {
-      method: 'POST', headers: edgeHeaders(),
-      signal: _abortCtrl.signal,
-      body:   fetchBody,
+    const res = await fetch(CHAT_URL, {
+      method: 'POST', headers: edgeHeaders(), signal: _abortCtrl.signal,
+      body: JSON.stringify({ model: _settings.model, messages: messages,
+        stream: _settings.streaming, max_tokens: 1024,
+        chat_id: _currentId, user_message: text }),
     });
 
     hide('typing-row');
     stopThoughtStream();
 
     if (!res.ok) {
-      // Agent failed — retry with direct endpoint
-      if (useAgent) {
-        console.warn('[CyanixAI] Agent failed, falling back to CHAT_URL');
-        const fallback = await fetch(CHAT_URL, {
-          method: 'POST', headers: edgeHeaders(), signal: _abortCtrl.signal,
-          body: JSON.stringify({ model: _settings.model, messages: messages,
-            stream: _settings.streaming, max_tokens: 1024 }),
-        });
-        if (!fallback.ok) {
-          const errText = await fallback.text().catch(function() { return 'Unknown error'; });
-          throw new Error('API ' + fallback.status + ': ' + errText);
-        }
-        // Continue with fallback response -- reassign res reference via wrapper
-        return await handleStreamOrJson(fallback, false, null, text, isNewChat, ragData);
-      }
       const errText = await res.text().catch(function() { return 'Unknown error'; });
       throw new Error('API ' + res.status + ': ' + errText);
     }
@@ -2342,12 +2377,6 @@ async function sendMessage(text) {
       const bubbleEl = rendered.bubbleEl;
       const msgEl    = rendered.msgEl;
       bubbleEl.innerHTML = '<span class="stream-cursor"></span>';
-
-      // Read agent metadata headers before streaming body
-      var agentIterations = parseInt(res.headers.get('X-Agent-Iterations') || '0', 10);
-      var agentTools      = (res.headers.get('X-Agent-Tools') || '').split(',').filter(Boolean);
-      var agentElapsed    = parseInt(res.headers.get('X-Agent-Elapsed-Ms') || '0', 10);
-      var agentNeedsTools = res.headers.get('X-Agent-Needs-Tools') === 'true';
 
       const reader = res.body.getReader();
       const dec    = new TextDecoder();
@@ -2389,11 +2418,6 @@ async function sendMessage(text) {
       } else {
         bubbleEl.innerHTML = mdToHTML(aiText);
         if (ragData) appendRAGSources(bubbleEl, ragData);
-        // Render agent trace if tools were used
-        if (useAgent && agentNeedsTools && agentTools.length > 0) {
-          var traceData = agentTools.map(function(t) { return { tool: t, query: '', chars: 0, iteration: 1 }; });
-          renderAgentTrace(bubbleEl, traceData, agentIterations, agentElapsed);
-        }
       }
       if (aiText.trim()) {
         _history.push({ role: 'assistant', content: aiText });
@@ -2405,10 +2429,6 @@ async function sendMessage(text) {
       aiText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || 'No response received.';
       const rendered = renderMessage('ai', aiText, true);
       if (ragData && rendered.bubbleEl) appendRAGSources(rendered.bubbleEl, ragData);
-      // Render agent trace from non-streamed response metadata
-      if (useAgent && data._agent && rendered.bubbleEl) {
-        renderAgentTrace(rendered.bubbleEl, data._agent.trace, data._agent.iterations, data._agent.elapsed_ms);
-      }
       _history.push({ role: 'assistant', content: aiText });
       bgSyncMessages(isNewChat, _currentId, text, aiText, rendered.msgEl);
     }
@@ -2495,7 +2515,7 @@ function renderMessage(role, content, animate, msgId, imageData) {
         '<div class="msg-ts">' + timeStr() + '</div>' +
         '<div class="msg-actions">' +
           '<button type="button" class="msg-action-btn" onclick="copyMsg(this)">Copy</button>' +
-          '<button type="button" class="msg-action-btn" onclick="speakMsg(this)">&#9654; Listen</button>' +
+          '<button type="button" class="msg-action-btn tts-btn" data-speaking="0" onclick="speakMsg(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Listen</button>' +
           '<button type="button" class="msg-action-btn fb-up" onclick="inlineFeedback(this,1)" title="Good response">&#128077;</button>' +
           '<button type="button" class="msg-action-btn fb-down" onclick="inlineFeedback(this,-1)" title="Bad response">&#128078;</button>' +
         '</div>' +
@@ -3186,72 +3206,143 @@ window.copyMsg = function(btn) {
 };
 
 /* ==========================================================
-   VOICE INPUT
+   VOICE INPUT  --  Groq Whisper large-v3-turbo
+   Records via MediaRecorder → sends to groq-stt edge fn
+   Falls back to Web Speech API if mic denied
 ========================================================== */
 async function toggleVoiceInput() {
-  const btn = $('mic-btn'); const input = $('composer-input');
+  const btn   = $('mic-btn');
+  const input = $('composer-input');
   if (!btn || !input) return;
 
+  // Stop if already active
   if (_sttActive) {
     _sttActive = false;
     btn.classList.remove('mic-recording');
     btn.title = 'Voice input';
-    if (_mediaRec && _mediaRec.state !== 'inactive') _mediaRec.stop();
+    if (_mediaRec && _mediaRec.state !== 'inactive') {
+      _mediaRec.stop(); // onstop will handle the rest
+    }
     return;
   }
 
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    if (window.SpeechRecognition || window.webkitSpeechRecognition) startWebSpeech(btn, input);
-    else toast('Voice input not supported in this browser.');
-    return;
-  }
+  // Try MediaRecorder → Groq Whisper
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
-                 MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-    _mediaRec = new MediaRecorder(stream, { mimeType: mime });
-    _sttChunks = []; _sttActive = true;
-    btn.classList.add('mic-recording');
-    btn.title = 'Tap to stop';
-    toast('Listening\u2026', 60000);
+      // Pick best mime
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+                 : MediaRecorder.isTypeSupported('audio/webm')             ? 'audio/webm'
+                 : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')  ? 'audio/ogg;codecs=opus'
+                 : 'audio/ogg';
 
-    _mediaRec.ondataavailable = function(e) { if (e.data && e.data.size > 0) _sttChunks.push(e.data); };
-    _mediaRec.onstop = async function() {
-      stream.getTracks().forEach(function(t) { t.stop(); });
-      btn.classList.remove('mic-recording');
-      btn.classList.add('mic-transcribing');
-      btn.title = 'Transcribing\u2026';
-      const toastEl = $('toast'); if (toastEl) hide(toastEl);
-      try {
-        const blob = new Blob(_sttChunks, { type: mime });
-        const fd = new FormData();
-        fd.append('file', blob, 'audio.' + (mime.includes('webm') ? 'webm' : 'ogg'));
-        const res = await fetch(WHISPER_URL, {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + ((_session && _session.access_token) ? _session.access_token : SUPABASE_ANON), 'apikey': SUPABASE_ANON },
-          body: fd,
-        });
-        btn.classList.remove('mic-transcribing'); btn.title = 'Voice input';
-        if (!res.ok) throw new Error('STT error ' + res.status);
-        const data = await res.json();
-        const transcript = data.text ? data.text.trim() : '';
-        if (!transcript) { toast('Could not understand audio -- try again.'); return; }
-        const cur = input.value.trim();
-        input.value = cur ? cur + ' ' + transcript : transcript;
-        input.style.height = 'auto';
-        input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-        input.focus();
-        toast('\u2713 Voice transcribed!');
-      } catch (err) {
-        btn.classList.remove('mic-transcribing'); btn.title = 'Voice input';
-        toast('Transcription failed: ' + err.message);
+      _mediaRec  = new MediaRecorder(stream, { mimeType: mime });
+      _sttChunks = [];
+      _sttActive = true;
+
+      btn.classList.add('mic-recording');
+      btn.title = 'Tap to stop';
+      haptic([8, 50, 8]);
+
+      // Show animated waveform toast
+      var waveToast = document.getElementById('stt-wave-toast');
+      if (!waveToast) {
+        waveToast = document.createElement('div');
+        waveToast.id = 'stt-wave-toast';
+        waveToast.className = 'stt-wave-toast';
+        waveToast.innerHTML =
+          '<div class="stt-wave">' +
+            '<span></span><span></span><span></span><span></span><span></span>' +
+          '</div>' +
+          '<span class="stt-wave-label">Listening…</span>' +
+          '<button onclick="toggleVoiceInput()">Stop</button>';
+        document.body.appendChild(waveToast);
       }
-    };
-    _mediaRec.start(250);
-  } catch (err) {
-    if (window.SpeechRecognition || window.webkitSpeechRecognition) startWebSpeech(btn, input);
-    else toast('Microphone access denied.');
+      waveToast.classList.add('visible');
+
+      _mediaRec.ondataavailable = function(e) {
+        if (e.data && e.data.size > 0) _sttChunks.push(e.data);
+      };
+
+      _mediaRec.onstop = async function() {
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        btn.classList.remove('mic-recording');
+        btn.classList.add('mic-transcribing');
+        btn.title = 'Transcribing…';
+
+        var wt = document.getElementById('stt-wave-toast');
+        if (wt) {
+          wt.querySelector('.stt-wave-label').textContent = 'Transcribing…';
+        }
+
+        try {
+          const blob = new Blob(_sttChunks, { type: mime });
+          const ext  = mime.includes('webm') ? 'webm' : 'ogg';
+
+          const fd = new FormData();
+          fd.append('file', blob, 'audio.' + ext);
+          // Feed existing composer text as context hint to improve accuracy
+          const hint = input.value.trim().slice(0, 200);
+          if (hint) fd.append('prompt', hint);
+
+          const headers = {};
+          if (_session && _session.access_token) {
+            headers['Authorization'] = 'Bearer ' + _session.access_token;
+            headers['apikey'] = SUPABASE_ANON;
+          }
+
+          const res = await fetch(GROQ_STT_URL, {
+            method:  'POST',
+            headers: headers,
+            body:    fd,
+            signal:  AbortSignal.timeout(30000),
+          });
+
+          btn.classList.remove('mic-transcribing');
+          btn.title = 'Voice input';
+
+          if (!res.ok) throw new Error('STT error ' + res.status);
+          const data = await res.json();
+          const transcript = (data.text || '').trim();
+
+          if (!transcript) {
+            toast('Nothing detected — try again.');
+          } else {
+            const cur = input.value.trim();
+            input.value = cur ? cur + ' ' + transcript : transcript;
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+            input.focus();
+            haptic(10);
+            toast('\u2713 Transcribed' + (data.language ? ' [' + data.language + ']' : ''));
+          }
+        } catch (err) {
+          btn.classList.remove('mic-transcribing');
+          btn.title = 'Voice input';
+          toast('Transcription failed: ' + err.message);
+          console.error('[CyanixAI] STT error:', err);
+        } finally {
+          _sttActive = false;
+          var wt2 = document.getElementById('stt-wave-toast');
+          if (wt2) { wt2.classList.remove('visible'); setTimeout(function() { if (wt2.parentNode) wt2.remove(); }, 300); }
+        }
+      };
+
+      _mediaRec.start(250); // collect chunks every 250ms
+      return;
+
+    } catch (err) {
+      // Mic denied or not available — fall through to Web Speech
+      console.warn('[CyanixAI] Mic access failed:', err.message);
+    }
+  }
+
+  // Web Speech API fallback
+  if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+    startWebSpeech(btn, input);
+  } else {
+    toast('Microphone not available. Please allow mic access and try again.');
   }
 }
 
@@ -3285,35 +3376,88 @@ function startWebSpeech(btn, input) {
 }
 
 window.speakMsg = async function(btn) {
-  const bel = btn.closest('.msg-content').querySelector('.msg-bubble'); if (!bel) return;
-  const clone = bel.cloneNode(true);
-  clone.querySelectorAll('button,.msg-actions,.code-block-header').forEach(function(el) { el.remove(); });
-  const text = (clone.innerText || clone.textContent || '').trim().slice(0, 2000);
-  if (!text) return;
-  if (_ttsSpeaking) {
-    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio.src = ''; _ttsAudio = null; }
+  const bel = btn.closest('.msg-content').querySelector('.msg-bubble');
+  if (!bel) return;
+
+  // If already speaking this button — stop
+  if (btn.dataset.speaking === '1') {
+    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio.currentTime = 0; URL.revokeObjectURL(_ttsAudio._blobUrl || ''); _ttsAudio = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    _ttsSpeaking = false; btn.innerHTML = '&#9654; Listen'; return;
+    _ttsSpeaking = false;
+    btn.dataset.speaking = '0';
+    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Listen';
+    return;
   }
-  btn.innerHTML = '&#9632; Stop'; _ttsSpeaking = true;
+
+  // Stop any other speaking button
+  if (_ttsSpeaking) {
+    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio.currentTime = 0; _ttsAudio = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    _ttsSpeaking = false;
+    document.querySelectorAll('.tts-btn[data-speaking="1"]').forEach(function(b) {
+      b.dataset.speaking = '0';
+      b.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Listen';
+    });
+  }
+
+  // Extract readable text from bubble
+  const clone = bel.cloneNode(true);
+  clone.querySelectorAll('.msg-actions,.agent-trace,.img-gen-result,.code-block-header,button').forEach(function(el) { el.remove(); });
+  const text = (clone.innerText || clone.textContent || '').trim().slice(0, 3500);
+  if (!text) return;
+
+  btn.dataset.speaking = '1';
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Loading…';
+  _ttsSpeaking = true;
+
+  const voice = _settings.ttsVoice || 'Celeste-PlayAI';
+  const speed = _settings.ttsSpeed || 1.0;
+
+  function resetBtn() {
+    _ttsSpeaking = false;
+    btn.dataset.speaking = '0';
+    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Listen';
+  }
+
   try {
-    const res = await fetch(TTS_URL, { method: 'POST', headers: edgeHeaders(), body: JSON.stringify({ text: text, voice: _settings.ttsVoice || 'Celeste-PlayAI' }) });
-    if (!res.ok) { const e = await res.json().catch(function(){return {};}); throw new Error(e.error || 'TTS error ' + res.status); }
-    const buf = await res.arrayBuffer();
-    const url = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    const res = await fetch(GROQ_TTS_URL, {
+      method:  'POST',
+      headers: edgeHeaders(),
+      body:    JSON.stringify({ text, voice, speed }),
+      signal:  AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) {
+      throw new Error('TTS error ' + res.status);
+    }
+
+    const buf  = await res.arrayBuffer();
+    const blob = new Blob([buf], { type: 'audio/mpeg' });
+    const url  = URL.createObjectURL(blob);
+
     _ttsAudio = new Audio(url);
-    _ttsAudio.onended = function() { _ttsSpeaking = false; btn.innerHTML = '&#9654; Listen'; URL.revokeObjectURL(url); };
-    _ttsAudio.onerror = function() { _ttsSpeaking = false; btn.innerHTML = '&#9654; Listen'; URL.revokeObjectURL(url); };
+    _ttsAudio._blobUrl = url;
+
+    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+
+    _ttsAudio.onended = function() { URL.revokeObjectURL(url); resetBtn(); };
+    _ttsAudio.onerror = function() { URL.revokeObjectURL(url); resetBtn(); toast('Playback error.'); };
     await _ttsAudio.play();
+
   } catch (err) {
-    _ttsSpeaking = false; btn.innerHTML = '&#9654; Listen';
+    console.warn('[CyanixAI] Groq TTS failed, falling back to Web Speech:', err.message);
+    // Web Speech API fallback
     if (window.speechSynthesis) {
       const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = 'en-GB'; utt.rate = 0.95; utt.pitch = 0.9;
-      btn.innerHTML = '&#9632; Stop'; _ttsSpeaking = true;
-      utt.onend = utt.onerror = function() { _ttsSpeaking = false; btn.innerHTML = '&#9654; Listen'; };
+      utt.lang = 'en-US'; utt.rate = speed; utt.pitch = 1.0;
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+      utt.onend  = function() { resetBtn(); };
+      utt.onerror = function() { resetBtn(); };
       window.speechSynthesis.speak(utt);
-    } else { toast('Voice unavailable.'); }
+    } else {
+      resetBtn();
+      toast('Voice unavailable. Check GROQ_API_KEY.');
+    }
   }
 };
 
