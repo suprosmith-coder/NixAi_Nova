@@ -365,7 +365,7 @@
         <div class="cx-composer-footer">
           <!-- Left: file attach + web search + voice -->
           <div class="cx-footer-left">
-            <button type="button" class="cx-foot-btn" id="attach-btn" title="Attach file (image, txt, md)">
+            <button type="button" class="cx-foot-btn" id="attach-btn" title="Attach image or code/text file"  >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
             <button type="button" class="cx-foot-btn" id="rag-toggle-btn" title="Toggle web search">
@@ -636,13 +636,26 @@
         <div style="width:32px"></div>
       </div>
       <div class="modal-body">
+
+        <!-- Identity -->
+        <div class="settings-group-label">IDENTITY</div>
         <div class="settings-card">
           <div class="settings-card-row">
             <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
             <div class="scr-body"><div class="scr-label">Your Name</div><div class="scr-desc">How Cyanix addresses you</div></div>
-            <input type="text" id="display-name-input" class="scr-inline-input" placeholder="e.g. Alex..." maxlength="40" autocomplete="off" />
+            <input type="text" id="display-name-input" class="scr-inline-input" placeholder="e.g. Alex…" maxlength="40" autocomplete="off" />
           </div>
           <div class="settings-card-divider"></div>
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Response Language</div><div class="scr-desc">Language Cyanix replies in</div></div>
+            <select class="scr-select" id="language-select"></select>
+          </div>
+        </div>
+
+        <!-- Communication Style -->
+        <div class="settings-group-label" style="margin-top:16px;">COMMUNICATION STYLE</div>
+        <div class="settings-card">
           <div class="settings-card-row col">
             <div class="scr-row-top">
               <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div>
@@ -657,25 +670,8 @@
               <button type="button" class="p-chip" data-value="witty">&#128516; Witty</button>
             </div>
           </div>
-          <div class="settings-card-divider"></div>
-          <div class="settings-card-row">
-            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-            <div class="scr-body"><div class="scr-label">Model</div></div>
-            <select class="scr-select" id="model-select"></select>
-          </div>
-          <div class="settings-card-divider"></div>
-          <div class="settings-card-row">
-            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-            <div class="scr-body"><div class="scr-label">Streaming</div><div class="scr-desc">Show text as it generates</div></div>
-            <label class="toggle"><input type="checkbox" id="streaming-toggle" checked /><span class="track"></span></label>
-          </div>
-          <div class="settings-card-divider"></div>
-          <div class="settings-card-row" id="rag-toggle-row">
-            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-            <div class="scr-body"><div class="scr-label">Auto Web Search</div><div class="scr-desc" id="rag-auto-desc">Search when questions need current info</div></div>
-            <label class="toggle"><input type="checkbox" id="rag-auto-toggle" /><span class="track"></span></label>
-          </div>
         </div>
+
         <div style="height:24px"></div>
       </div>
     </div>
@@ -906,12 +902,52 @@
       </div>
       <div class="modal-body">
 
-        <!-- Section: RAG -->
+        <!-- Section: Model & Output -->
         <div class="qwen-section-label">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Context &amp; Retrieval
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Model &amp; Output
         </div>
         <div class="settings-card qwen-card">
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(37,99,235,.12);color:#2563eb;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Model</div>
+              <div class="scr-desc">Active AI model for responses</div>
+            </div>
+            <select class="scr-select" id="model-select"></select>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(16,185,129,.12);color:#10b981;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Streaming Responses</div>
+              <div class="scr-desc">Show text as it generates in real-time</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="streaming-toggle" checked /><span class="track"></span></label>
+          </div>
+        </div>
+
+        <!-- Section: Web & Retrieval -->
+        <div class="qwen-section-label" style="margin-top:18px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Web &amp; Retrieval
+        </div>
+        <div class="settings-card qwen-card">
+          <div class="settings-card-row qwen-row" id="rag-toggle-row">
+            <div class="qwen-row-icon" style="background:rgba(59,130,246,.12);color:#3b82f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Auto Web Search</div>
+              <div class="scr-desc" id="rag-auto-desc">Search when questions need current info</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="rag-auto-toggle" /><span class="track"></span></label>
+          </div>
+          <div class="settings-card-divider"></div>
           <div class="settings-card-row qwen-row">
             <div class="qwen-row-icon" style="background:rgba(6,182,212,.12);color:#06b6d4;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
@@ -933,17 +969,6 @@
             </div>
             <label class="toggle"><input type="checkbox" id="groq-ctx-settings-toggle" checked /><span class="track"></span></label>
           </div>
-          <div class="settings-card-divider"></div>
-          <div class="settings-card-row qwen-row" id="rag-toggle-row">
-            <div class="qwen-row-icon" style="background:rgba(59,130,246,.12);color:#3b82f6;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <div class="scr-body">
-              <div class="scr-label">Auto Web Search</div>
-              <div class="scr-desc" id="rag-auto-desc">Search when questions need current info</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="rag-auto-toggle" /><span class="track"></span></label>
-          </div>
         </div>
 
         <!-- Section: Reasoning -->
@@ -962,17 +987,6 @@
             </div>
             <label class="toggle"><input type="checkbox" id="cot-settings-toggle" /><span class="track"></span></label>
           </div>
-          <div class="settings-card-divider"></div>
-          <div class="settings-card-row qwen-row">
-            <div class="qwen-row-icon" style="background:rgba(16,185,129,.12);color:#10b981;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div class="scr-body">
-              <div class="scr-label">Streaming Responses</div>
-              <div class="scr-desc">Show text as it generates in real-time</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="streaming-toggle" checked /><span class="track"></span></label>
-          </div>
         </div>
 
         <!-- Section: Response Quality -->
@@ -990,21 +1004,6 @@
               <div class="scr-desc">One-tap AI improvement of any response</div>
             </div>
             <span class="qwen-badge qwen-badge--on">Active</span>
-          </div>
-          <div class="settings-card-divider"></div>
-          <div class="settings-card-row qwen-row" id="context-depth-row">
-            <div class="qwen-row-icon" style="background:rgba(37,99,235,.12);color:#2563eb;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-            </div>
-            <div class="scr-body">
-              <div class="scr-label">Memory Recall Depth</div>
-              <div class="scr-desc" id="context-depth-desc">Past context injected per message</div>
-            </div>
-            <select class="scr-select" id="context-depth-select">
-              <option value="light">Light (5)</option>
-              <option value="standard">Standard (15)</option>
-              <option value="deep">Deep (30)</option>
-            </select>
           </div>
         </div>
 

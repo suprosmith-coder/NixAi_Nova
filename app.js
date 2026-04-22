@@ -3172,15 +3172,29 @@ async function handleAttachment(file) {
 
   if (file.size > 20 * 1024 * 1024) { toast('File too large. Max 20MB.'); return; }
 
-  // Cyanix only reads images, plain text (.txt), and Markdown (.md) files.
+  // Images
   var isImage = type.startsWith('image/') || /^(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff?)$/.test(ext);
-  var isTxt   = ext === 'txt' || type === 'text/plain';
-  var isMd    = ext === 'md'  || ext === 'markdown' || type === 'text/markdown';
 
-  if (!isImage && !isTxt && !isMd) {
-    toast('\u274C Cyanix only accepts images, .txt, and .md files.');
+  // All text & code file extensions Cyanix can read
+  var CODE_EXTS = /^(txt|md|markdown|js|jsx|mjs|cjs|ts|tsx|json|json5|html|htm|xml|xhtml|css|scss|sass|less|styl|py|pyc|rb|go|rs|java|kt|kts|swift|c|cc|cpp|cxx|cs|h|hpp|php|lua|r|m|pl|sh|bash|zsh|fish|ps1|bat|cmd|yaml|yml|toml|ini|cfg|conf|env|dotenv|sql|graphql|gql|vue|svelte|dart|ex|exs|erl|hs|clj|cljs|scala|tf|hcl|dockerfile|makefile|cmake|gradle|lock|gitignore|editorconfig|prettierrc|eslintrc|babelrc|nvmrc)$/i;
+  var isText = CODE_EXTS.test(ext) || type.startsWith('text/') || type === 'application/json';
+
+  if (!isImage && !isText) {
+    toast('\u274C Cyanix can read images and text/code files only (e.g. .js, .py, .html, .json, .txt, .md\u2026)');
     return;
   }
+
+  // Guess a friendly label for the chip
+  var CODE_LABELS = {
+    js:'JavaScript', jsx:'React JSX', ts:'TypeScript', tsx:'React TSX',
+    py:'Python', rb:'Ruby', go:'Go', rs:'Rust', java:'Java', kt:'Kotlin',
+    swift:'Swift', cs:'C#', c:'C', cpp:'C++', php:'PHP',
+    html:'HTML', css:'CSS', scss:'SCSS', json:'JSON', yaml:'YAML', yml:'YAML',
+    sql:'SQL', sh:'Shell', bash:'Bash', md:'Markdown', txt:'Text',
+    xml:'XML', graphql:'GraphQL', vue:'Vue', svelte:'Svelte', dart:'Dart',
+    dockerfile:'Dockerfile', toml:'TOML', env:'Env', gitignore:'Gitignore',
+  };
+  var friendlyLabel = CODE_LABELS[ext] || (isImage ? 'Image' : 'Code');
 
   _attachment = { type: 'loading', name: name, data: '', mediaType: type };
   showAttachPreview();
@@ -3190,12 +3204,10 @@ async function handleAttachment(file) {
     if (isImage) {
       var b64 = await readFileAs(file, 'dataURL');
       _attachment = { type: 'image', name: name, data: b64.split(',')[1], mediaType: type };
-
     } else {
-      // Plain text (.txt) or Markdown (.md)
       var text = await readFileAs(file, 'text');
-      _attachment = { type: 'text', name: name, data: text.slice(0, 20000), mediaType: type,
-        label: isMd ? 'Markdown' : 'Text' };
+      _attachment = { type: 'code', name: name, data: text.slice(0, 20000), mediaType: type,
+        label: friendlyLabel };
     }
 
     var toastEl = $('toast'); if (toastEl) hide(toastEl);
@@ -3206,8 +3218,7 @@ async function handleAttachment(file) {
   } catch (e) {
     console.error('[CyanixAI] File read error:', e);
     _attachment = null;
-    var ex = document.getElementById('attach-preview'); if (ex) ex.remove();
-    var ab = document.getElementById('attach-btn'); if (ab) ab.classList.remove('active');
+    showAttachPreview(); // will hide it since _attachment is null
     toast('\u274C Could not read ' + name + ': ' + (e.message || 'Unknown error'), 6000);
   }
 }
@@ -3227,20 +3238,21 @@ function readFileAs(file, format) {
 
 
 function showAttachPreview() {
-  var existing = document.getElementById('attach-preview');
-  if (existing) existing.remove();
-  if (!_attachment) return;
+  // Reuse the static #attach-preview element that already lives inside composer-box.
+  // Never remove-and-reinsert it — that caused the insertBefore crash when the
+  // textarea was not a direct child of composer-box.
+  var preview = document.getElementById('attach-preview');
+  if (!preview) return;
 
-  var box = document.getElementById('composer-box');
-  if (!box) return;
-
-  var preview = document.createElement('div');
-  preview.id = 'attach-preview';
-  preview.className = 'attach-preview';
+  if (!_attachment) {
+    preview.innerHTML = '';
+    preview.classList.add('hidden');
+    return;
+  }
 
   var icons = {
     image:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
-    pdf:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    code:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
     document: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
     text:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
     loading:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>',
@@ -3259,11 +3271,10 @@ function showAttachPreview() {
     '</button>' : '') +
     '</div>';
 
+  preview.classList.remove('hidden');
+
   var removeBtn = preview.querySelector('.attach-chip-remove');
   if (removeBtn) removeBtn.addEventListener('click', function() { clearAttachment(); });
-
-  var textarea = document.getElementById('composer-input');
-  if (textarea) box.insertBefore(preview, textarea);
 
   var btn = document.getElementById('attach-btn');
   if (btn) btn.classList.toggle('active', _attachment.type !== 'loading');
@@ -3271,8 +3282,8 @@ function showAttachPreview() {
 
 function clearAttachment() {
   _attachment = null;
-  var existing = document.getElementById('attach-preview');
-  if (existing) existing.remove();
+  var preview = document.getElementById('attach-preview');
+  if (preview) { preview.innerHTML = ''; preview.classList.add('hidden'); }
   var btn = document.getElementById('attach-btn');
   if (btn) btn.classList.remove('active');
 }
@@ -8199,383 +8210,3 @@ function scrollToBottom() {
 
 })();
 
-
-/* ==============================================================
-   CYANIX AI — TERMUX BRIDGE  v1.0
-   Connects to termux_server.py running on localhost:8765.
-   Features:
-     · Auto-detects if bridge is online
-     · Parses ```bash / ```sh code blocks from AI responses
-     · Renders terminal cards (Running · stdout · Copy · Kill)
-     · Read / write .txt and .md files on device
-     · Status indicator in topbar
-   Attach this block at the bottom of app.js (before the last })
-============================================================== */
-
-(function() {
-  'use strict';
-
-  var BRIDGE_URL  = 'http://127.0.0.1:8765';
-  var _bridgeOnline = false;
-  var _bridgePollTimer = null;
-
-  /* ── Status indicator ──────────────────────────────────────── */
-
-  function injectBridgeStatusDot() {
-    if (document.getElementById('termux-status-dot')) return;
-    var dot = document.createElement('div');
-    dot.id = 'termux-status-dot';
-    dot.title = 'Termux Bridge: checking…';
-    dot.className = 'termux-status-dot termux-status-checking';
-    dot.innerHTML = '<span class="termux-status-label">Termux</span>';
-
-    // Place it in the topbar actions area
-    var topbar = document.querySelector('.topbar-actions') ||
-                 document.querySelector('.topbar')         ||
-                 document.querySelector('header');
-    if (topbar) topbar.appendChild(dot);
-  }
-
-  function setBridgeStatus(online) {
-    _bridgeOnline = online;
-    var dot = document.getElementById('termux-status-dot');
-    if (!dot) return;
-    dot.className = 'termux-status-dot ' + (online ? 'termux-status-online' : 'termux-status-offline');
-    dot.title = 'Termux Bridge: ' + (online ? 'Connected ✓' : 'Offline — start termux_server.py');
-  }
-
-  async function pingBridge() {
-    try {
-      var ctrl = new AbortController();
-      var t = setTimeout(function() { ctrl.abort(); }, 2000);
-      var res = await fetch(BRIDGE_URL + '/ping', { signal: ctrl.signal });
-      clearTimeout(t);
-      setBridgeStatus(res.ok);
-    } catch (_) {
-      setBridgeStatus(false);
-    }
-  }
-
-  function startBridgePoller() {
-    pingBridge();
-    _bridgePollTimer = setInterval(pingBridge, 12000); // check every 12s
-  }
-
-  /* ── Expose bridge helpers to global scope ─────────────────── */
-
-  window.termuxBridge = {
-    get online() { return _bridgeOnline; },
-
-    async run(cmd, opts) {
-      opts = opts || {};
-      if (!_bridgeOnline) {
-        return { error: 'Termux bridge is offline. Open Termux and run: python termux_server.py' };
-      }
-      var id = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
-      var res = await fetch(BRIDGE_URL + '/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id, cmd: cmd, cwd: opts.cwd || '' }),
-      });
-      return { id: id, stream: res.body };
-    },
-
-    async kill(id) {
-      return fetch(BRIDGE_URL + '/kill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id }),
-      });
-    },
-
-    async readFile(relPath) {
-      if (!_bridgeOnline) return { error: 'Bridge offline' };
-      var res = await fetch(BRIDGE_URL + '/read?file=' + encodeURIComponent(relPath));
-      return res.json();
-    },
-
-    async writeFile(relPath, content) {
-      if (!_bridgeOnline) return { error: 'Bridge offline' };
-      var res = await fetch(BRIDGE_URL + '/write', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: relPath, content: content }),
-      });
-      return res.json();
-    },
-
-    async ls(dir) {
-      if (!_bridgeOnline) return { error: 'Bridge offline' };
-      var res = await fetch(BRIDGE_URL + '/ls?dir=' + encodeURIComponent(dir || ''));
-      return res.json();
-    },
-  };
-
-  /* ── Terminal card renderer ─────────────────────────────────── */
-
-  /**
-   * Creates a live terminal card DOM element.
-   * Returns { el, run(cmd) }
-   */
-  function createTerminalCard(cmd, lang) {
-    var cardId = 'txcard-' + Math.random().toString(36).slice(2, 9);
-    var currentProcId = null;
-    var running = false;
-
-    var card = document.createElement('div');
-    card.className = 'tx-card';
-    card.id = cardId;
-    card.innerHTML =
-      '<div class="tx-card-header">' +
-        '<div class="tx-header-left">' +
-          '<span class="tx-status-pill tx-status-idle">TERMUX</span>' +
-          '<span class="tx-cmd-label">' + escHtml(cmd) + '</span>' +
-        '</div>' +
-        '<div class="tx-header-right">' +
-          '<button class="tx-btn tx-btn-run" title="Run command">' +
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run' +
-          '</button>' +
-          '<button class="tx-btn tx-btn-kill hidden" title="Stop process">' +
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Stop' +
-          '</button>' +
-          '<button class="tx-btn tx-btn-copy" title="Copy output">Copy</button>' +
-          '<button class="tx-btn tx-btn-clear" title="Clear output">Clear</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="tx-output" role="log" aria-live="polite"></div>' +
-      '<div class="tx-card-footer">' +
-        '<span class="tx-exit-code hidden"></span>' +
-        '<span class="tx-duration hidden"></span>' +
-        '<span class="tx-offline-warn hidden">⚡ Termux bridge offline</span>' +
-      '</div>';
-
-    var outputEl   = card.querySelector('.tx-output');
-    var statusPill = card.querySelector('.tx-status-pill');
-    var runBtn     = card.querySelector('.tx-btn-run');
-    var killBtn    = card.querySelector('.tx-btn-kill');
-    var copyBtn    = card.querySelector('.tx-btn-copy');
-    var clearBtn   = card.querySelector('.tx-btn-clear');
-    var exitEl     = card.querySelector('.tx-exit-code');
-    var durEl      = card.querySelector('.tx-duration');
-    var warnEl     = card.querySelector('.tx-offline-warn');
-
-    function setStatus(s) {
-      statusPill.className = 'tx-status-pill tx-status-' + s;
-      statusPill.textContent = { idle: 'TERMUX', running: 'RUNNING', done: 'DONE', error: 'ERROR' }[s] || 'TERMUX';
-    }
-
-    function appendLine(text, cls) {
-      var line = document.createElement('div');
-      line.className = 'tx-line' + (cls ? ' ' + cls : '');
-      line.textContent = text;
-      outputEl.appendChild(line);
-      outputEl.scrollTop = outputEl.scrollHeight;
-    }
-
-    function clearOutput() {
-      outputEl.innerHTML = '';
-      exitEl.classList.add('hidden');
-      durEl.classList.add('hidden');
-      setStatus('idle');
-    }
-
-    async function runCmd() {
-      if (running) return;
-      if (!_bridgeOnline) {
-        warnEl.classList.remove('hidden');
-        setStatus('error');
-        appendLine('⚡ Termux bridge is offline.', 'tx-line-err');
-        appendLine('Open Termux and run: python termux_server.py', 'tx-line-meta');
-        return;
-      }
-      warnEl.classList.add('hidden');
-      clearOutput();
-      running = true;
-      runBtn.classList.add('hidden');
-      killBtn.classList.remove('hidden');
-      setStatus('running');
-      appendLine('$ ' + cmd, 'tx-line-cmd');
-
-      var result = await window.termuxBridge.run(cmd);
-      if (result.error) {
-        appendLine('Error: ' + result.error, 'tx-line-err');
-        setStatus('error');
-        running = false;
-        runBtn.classList.remove('hidden');
-        killBtn.classList.add('hidden');
-        return;
-      }
-      currentProcId = result.id;
-
-      var reader = result.stream.getReader();
-      var decoder = new TextDecoder();
-      var buffer = '';
-
-      function processSSE(raw) {
-        var events = raw.split('\n\n');
-        events.forEach(function(ev) {
-          if (!ev.trim()) return;
-          var lines = ev.split('\n');
-          var eventType = 'message', dataStr = '';
-          lines.forEach(function(l) {
-            if (l.startsWith('event: ')) eventType = l.slice(7).trim();
-            if (l.startsWith('data: '))  dataStr   = l.slice(6).trim();
-          });
-          if (!dataStr) return;
-          try {
-            var d = JSON.parse(dataStr);
-            if (eventType === 'stdout') {
-              appendLine(d.line, '');
-            } else if (eventType === 'stderr') {
-              appendLine(d.line, 'tx-line-err');
-            } else if (eventType === 'done') {
-              running = false;
-              currentProcId = null;
-              runBtn.classList.remove('hidden');
-              killBtn.classList.add('hidden');
-              setStatus(d.exit === 0 ? 'done' : 'error');
-              exitEl.textContent = 'Exit ' + d.exit;
-              exitEl.className   = 'tx-exit-code ' + (d.exit === 0 ? 'tx-exit-ok' : 'tx-exit-err');
-              exitEl.classList.remove('hidden');
-              durEl.textContent = d.duration + 's';
-              durEl.classList.remove('hidden');
-            } else if (eventType === 'error') {
-              appendLine('Error: ' + d.message, 'tx-line-err');
-              running = false;
-              runBtn.classList.remove('hidden');
-              killBtn.classList.add('hidden');
-              setStatus('error');
-            }
-          } catch (_) {}
-        });
-      }
-
-      async function read() {
-        try {
-          while (true) {
-            var chunk = await reader.read();
-            if (chunk.done) break;
-            buffer += decoder.decode(chunk.value, { stream: true });
-            var parts = buffer.split('\n\n');
-            buffer = parts.pop();
-            processSSE(parts.join('\n\n') + '\n\n');
-          }
-        } catch (_) {
-          // Stream ended (killed or disconnected)
-        }
-        if (running) {
-          running = false;
-          runBtn.classList.remove('hidden');
-          killBtn.classList.add('hidden');
-          setStatus('idle');
-        }
-      }
-      read();
-    }
-
-    runBtn.addEventListener('click', runCmd);
-
-    killBtn.addEventListener('click', function() {
-      if (currentProcId) {
-        window.termuxBridge.kill(currentProcId);
-        appendLine('[Killed by user]', 'tx-line-meta');
-      }
-    });
-
-    copyBtn.addEventListener('click', function() {
-      var lines = outputEl.querySelectorAll('.tx-line');
-      var text  = Array.from(lines).map(function(l) { return l.textContent; }).join('\n');
-      navigator.clipboard.writeText(text).then(function() {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1400);
-      });
-    });
-
-    clearBtn.addEventListener('click', clearOutput);
-
-    return { el: card, run: runCmd };
-  }
-
-  /* ── Intercept code block rendering for bash/sh ────────────── */
-
-  /**
-   * After the AI message is rendered into the DOM, scan for
-   * bash/sh/shell code blocks and inject terminal cards below them.
-   */
-  function injectTerminalCards(bubbleEl) {
-    if (!bubbleEl) return;
-    var codeBlocks = bubbleEl.querySelectorAll('.code-block');
-    codeBlocks.forEach(function(block) {
-      var langLabel = block.querySelector('.code-lang-label');
-      if (!langLabel) return;
-      var lang = langLabel.textContent.trim().toLowerCase();
-      if (!['bash', 'sh', 'shell', 'zsh'].includes(lang)) return;
-      // Don't inject twice
-      if (block.querySelector('.tx-card')) return;
-      var pre = block.querySelector('pre');
-      var cmd = pre ? (pre.innerText || pre.textContent || '').trim() : '';
-      if (!cmd) return;
-      var widget = createTerminalCard(cmd, lang);
-      block.appendChild(widget.el);
-    });
-  }
-
-  /* ── Patch renderMessage to inject cards after AI replies ───── */
-
-  // We watch for new .msg-bubble elements added to the chat
-  var _txObserver = new MutationObserver(function(mutations) {
-    mutations.forEach(function(m) {
-      m.addedNodes.forEach(function(node) {
-        if (node.nodeType !== 1) return;
-        // Newly added AI bubble
-        var bubble = node.classList && node.classList.contains('msg-bubble')
-          ? node
-          : node.querySelector && node.querySelector('.msg-row:not(.user) .msg-bubble');
-        if (bubble) injectTerminalCards(bubble);
-
-        // When streaming finishes, the bubble content changes
-        if (node.classList && node.classList.contains('msg-row') && !node.classList.contains('user')) {
-          var b = node.querySelector('.msg-bubble');
-          if (b) {
-            var contentObs = new MutationObserver(function() {
-              injectTerminalCards(b);
-            });
-            contentObs.observe(b, { childList: true, subtree: false });
-            // Disconnect after 30s to avoid leaks
-            setTimeout(function() { contentObs.disconnect(); }, 30000);
-          }
-        }
-      });
-    });
-  });
-
-  /* ── Init ───────────────────────────────────────────────────── */
-
-  function init() {
-    injectBridgeStatusDot();
-    startBridgePoller();
-
-    // Attach observer to the chat messages container
-    var chatMain = document.getElementById('chat-messages') ||
-                   document.querySelector('.chat-messages') ||
-                   document.querySelector('.chat-main') ||
-                   document.querySelector('main');
-    if (chatMain) {
-      _txObserver.observe(chatMain, { childList: true, subtree: true });
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-
-  /* ── Tiny esc helper (local) ────────────────────────────────── */
-  function escHtml(s) {
-    return String(s)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-})();
