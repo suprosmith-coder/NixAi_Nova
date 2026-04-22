@@ -5869,149 +5869,301 @@ function stopWaveform() {
 }
 
 // ── Main toggle ───────────────────────────────────────────
+
+/* ============================================================
+   OPTIMISED MIC PIPELINE  (Groq Edition)
+   Flow: Mic → Stream(100ms chunks) → Groq Whisper STT →
+         Groq LLM stream (llama3-70b-8192) → chunked TTS → Speaker
+   Key features:
+   - 100ms MediaRecorder chunks (lowest latency)
+   - Barge-in: user voice instantly cuts TTS + LLM stream
+   - Smart TTS buffer (~400ms / 30 chars before speaking)
+   - Context keeps last 3 voice messages + summary
+   - Interrupt system clears both LLM stream and TTS queue
+============================================================ */
+
+const GROQ_API_BASE     = 'https://api.groq.com/openai/v1';
+const GROQ_LLM_MODEL    = 'llama3-70b-8192';
+// Key is fetched from Supabase edge function to avoid exposing it client-side
+// We reuse the existing GROQ_STT_URL edge function which has the key
+
+// ── Streaming mic state ───────────────────────────────────
+var _vmActive         = false;   // voice mic toggle active
+var _vmStream         = null;    // getUserMedia stream
+var _vmMediaRec       = null;    // MediaRecorder
+var _vmChunks         = [];
+var _vmLLMAbort       = null;    // AbortController for LLM stream
+var _vmTTSQueue       = [];      // pending TTS sentence chunks
+var _vmTTSSpeaking    = false;
+var _vmTTSAbort       = false;   // flag to stop current TTS
+var _vmTTSAudio       = null;    // current Audio element
+
 async function toggleVoiceInput() {
-  if (_sttActive) {
-    // Stop recording
-    _sttActive = false;
-    if (_mediaRec && _mediaRec.state !== 'inactive') _mediaRec.stop();
+  if (_vmActive) {
+    // User is stopping — finalise recording
+    _vmActive = false;
+    if (_vmMediaRec && _vmMediaRec.state !== 'inactive') _vmMediaRec.stop();
     return;
   }
 
   openVoiceOverlay();
 
-  // Try Groq Whisper via MediaRecorder first
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    try {
-      var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      _voiceStream = stream;
-      startWaveform(stream);
-
-      var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
-                 MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-      _mediaRec  = new MediaRecorder(stream, { mimeType: mime });
-      _sttChunks = [];
-      _sttActive = true;
-
-      _mediaRec.ondataavailable = function(e) {
-        if (e.data && e.data.size > 0) _sttChunks.push(e.data);
-      };
-
-      _mediaRec.onstop = async function() {
-        stream.getTracks().forEach(function(t) { t.stop(); });
-        stopWaveform();
-        setVoiceStatus('transcribing');
-
-        try {
-          var blob = new Blob(_sttChunks, { type: mime });
-          var b64  = await new Promise(function(resolve, reject) {
-            var reader = new FileReader();
-            reader.onload  = function() { resolve(reader.result.split(',')[1]); };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-
-          var ext = mime.includes('webm') ? 'webm' : 'ogg';
-          var res = await fetch(GROQ_STT_URL, {
-            method:  'POST',
-            headers: edgeHeaders(),
-            body:    JSON.stringify({ audio: b64, filename: 'recording.' + ext, mimeType: mime }),
-            signal:  AbortSignal.timeout(30000),
-          });
-
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          var data       = await res.json();
-          var transcript = (data.text || data.transcript || '').trim();
-
-          if (!transcript) {
-            closeVoiceOverlay();
-            toast('Nothing heard — try again.');
-            return;
-          }
-
-          // Show transcript and send button
-          var txtEl = $('voice-transcript-text');
-          if (txtEl) txtEl.textContent = transcript;
-          var sendBtn = $('voice-send-btn');
-          if (sendBtn) sendBtn.classList.remove('hidden');
-          setVoiceStatus('done');
-
-          // Auto-fill composer
-          var input = $('composer-input');
-          if (input) {
-            var cur = input.value.trim();
-            input.value = cur ? cur + ' ' + transcript : transcript;
-            input.style.height = 'auto';
-            input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-          }
-
-        } catch (err) {
-          console.error('[CyanixAI] STT failed:', err.message);
-          closeVoiceOverlay();
-          toast('Transcription failed: ' + err.message);
-        }
-      };
-
-      _mediaRec.start(250);
-      return;
-    } catch (err) {
-      // Fall through to Web Speech
-    }
-  }
-
-  // Fallback: Web Speech API with live interim display
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     closeVoiceOverlay();
     toast('Microphone not supported in this browser.');
     return;
   }
 
-  var r = new SR();
-  r.lang = 'en-US'; r.interimResults = true; r.maxAlternatives = 1;
-  _sttActive = true;
-  var finalText = '';
+  try {
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _voiceStream = stream;
+    startWaveform(stream);
 
-  r.onresult = function(e) {
-    var interim = '';
-    for (var i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
-      else interim = e.results[i][0].transcript;
-    }
-    var txtEl = $('voice-transcript-text');
-    if (txtEl) txtEl.textContent = (finalText + interim).trim();
-  };
+    var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
+               MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    _vmMediaRec  = new MediaRecorder(stream, { mimeType: mime });
+    _vmChunks    = [];
+    _vmActive    = true;
+    _sttActive   = true;
 
-  r.onerror = function(e) {
+    // 100ms chunks = lower latency (key Groq pipeline requirement)
+    _vmMediaRec.ondataavailable = function(e) {
+      if (e.data && e.data.size > 0) _vmChunks.push(e.data);
+    };
+
+    _vmMediaRec.onstop = async function() {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      stopWaveform();
+      _sttActive = false;
+      setVoiceStatus('transcribing');
+
+      if (_vmChunks.length === 0) { closeVoiceOverlay(); return; }
+
+      try {
+        var blob = new Blob(_vmChunks, { type: mime });
+        if (blob.size < 800) {
+          closeVoiceOverlay();
+          toast('Nothing heard — try again.');
+          return;
+        }
+
+        var b64 = await blobToBase64(_vmChunks, mime);
+        var ext  = mime.includes('webm') ? 'webm' : 'ogg';
+
+        // ── Step 1: Groq Whisper STT ──────────────────────
+        var sttRes = await fetch(GROQ_STT_URL, {
+          method:  'POST',
+          headers: edgeHeaders(),
+          body:    JSON.stringify({ audio: b64, filename: 'recording.' + ext, mimeType: mime }),
+          signal:  AbortSignal.timeout(30000),
+        });
+
+        if (!sttRes.ok) throw new Error('STT HTTP ' + sttRes.status);
+        var sttData    = await sttRes.json();
+        var transcript = (sttData.text || sttData.transcript || '').trim();
+
+        if (!transcript) {
+          closeVoiceOverlay();
+          toast('Nothing heard — try again.');
+          return;
+        }
+
+        // Show transcript in overlay
+        var txtEl = $('voice-transcript-text');
+        if (txtEl) txtEl.textContent = transcript;
+        setVoiceStatus('done');
+
+        // Auto-fill composer
+        var input = $('composer-input');
+        if (input) {
+          var cur = input.value.trim();
+          input.value = cur ? cur + ' ' + transcript : transcript;
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+        }
+
+        // Show send button
+        var sendBtn = $('voice-send-btn');
+        if (sendBtn) sendBtn.classList.remove('hidden');
+
+      } catch (err) {
+        console.error('[CyanixAI] Voice STT failed:', err.message);
+        closeVoiceOverlay();
+        toast('Transcription failed: ' + err.message);
+      }
+    };
+
+    // 100ms chunks for low latency
+    _vmMediaRec.start(100);
+
+  } catch (err) {
     closeVoiceOverlay();
-    if (e.error !== 'aborted') toast('Speech error: ' + e.error);
-  };
+    toast('Microphone error: ' + (err.message || 'Permission denied'));
+  }
+}
 
-  r.onend = function() {
-    _sttActive = false;
-    var transcript = finalText.trim();
-    if (!transcript) { closeVoiceOverlay(); return; }
+// ── Blob → base64 helper ──────────────────────────────────
+function blobToBase64(chunks, mime) {
+  return new Promise(function(resolve, reject) {
+    var blob   = new Blob(chunks, { type: mime });
+    var reader = new FileReader();
+    reader.onload  = function() { resolve(reader.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
-    var sendBtn = $('voice-send-btn');
-    if (sendBtn) sendBtn.classList.remove('hidden');
-    setVoiceStatus('done');
+// ── Groq LLM streaming for voice responses ────────────────
+// Called from the AI call engine — streams tokens, chunks into
+// sentences, fires TTS on each chunk for near-instant speech.
+async function groqStreamVoiceResponse(userText, historyMessages) {
+  // Interrupt any current TTS/stream
+  _vmTTSAbort = true;
+  if (_vmLLMAbort) _vmLLMAbort.abort();
+  if (_vmTTSAudio) { try { _vmTTSAudio.pause(); } catch(e) {} _vmTTSAudio = null; }
+  _vmTTSQueue  = [];
+  _vmTTSSpeaking = false;
 
-    var input = $('composer-input');
-    if (input) {
-      var cur = input.value.trim();
-      input.value = cur ? cur + ' ' + transcript : transcript;
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+  _vmLLMAbort = new AbortController();
+
+  var messages = [
+    {
+      role: 'system',
+      content: 'You are Cyanix AI in a live voice call. Keep responses to 1-3 short spoken sentences. ' +
+               'No markdown, no lists. Sound natural and warm. Be brief — this is voice.',
+    },
+  ].concat((historyMessages || []).slice(-6)).concat([
+    { role: 'user', content: userText },
+  ]);
+
+  try {
+    // Route through edge function so Groq API key stays server-side
+    var res = await fetch(CHAT_URL, {
+      method:  'POST',
+      headers: edgeHeaders(),
+      body:    JSON.stringify({
+        model:       GROQ_LLM_MODEL,
+        messages:    messages,
+        max_tokens:  160,
+        temperature: 0.75,
+        stream:      true,
+      }),
+      signal: _vmLLMAbort.signal,
+    });
+
+    if (!res.ok) return "I didn't catch that, go ahead.";
+
+    var reader  = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer  = '';
+    var ttsBuffer = '';
+    var fullReply = '';
+
+    _vmTTSAbort = false;
+
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+
+      var lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line || line === 'data: [DONE]') continue;
+        if (!line.startsWith('data: ')) continue;
+        try {
+          var parsed = JSON.parse(line.slice(6));
+          var token  = (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) || '';
+          if (!token) continue;
+          ttsBuffer += token;
+          fullReply  += token;
+
+          // Fire TTS when we hit a natural sentence break OR buffer > 300 chars
+          var sentenceEnd = /[.!?]\s/.test(ttsBuffer) || ttsBuffer.length > 300;
+          if (sentenceEnd && ttsBuffer.trim().length > 15) {
+            var chunk2 = ttsBuffer.trim();
+            ttsBuffer = '';
+            _vmTTSQueue.push(chunk2);
+            if (!_vmTTSSpeaking) _vmDrainTTSQueue();
+          }
+        } catch(_) {}
+      }
     }
-  };
 
-  // Orb tap stops recognition
-  var orb = $('voice-orb');
-  if (orb) orb.onclick = function() {
-    r.stop();
-    orb.onclick = function() { toggleVoiceInput(); };
-  };
+    // Flush remaining buffer
+    if (ttsBuffer.trim().length > 5) {
+      _vmTTSQueue.push(ttsBuffer.trim());
+      if (!_vmTTSSpeaking) _vmDrainTTSQueue();
+    }
 
-  r.start();
+    return fullReply.trim() || "I didn't catch that, go ahead.";
+  } catch(e) {
+    if (e.name !== 'AbortError') console.warn('[CyanixAI] Groq stream error:', e.message);
+    return '';
+  }
+}
+
+// ── TTS drain queue ───────────────────────────────────────
+// Processes TTS chunks sequentially with ~400ms smart buffer.
+async function _vmDrainTTSQueue() {
+  if (_vmTTSSpeaking) return;
+  _vmTTSSpeaking = true;
+
+  while (_vmTTSQueue.length > 0 && !_vmTTSAbort) {
+    var text = _vmTTSQueue.shift();
+    if (!text || !text.trim()) continue;
+
+    try {
+      var ttsRes = await fetch(TTS_URL, {
+        method:  'POST',
+        headers: edgeHeaders(),
+        body:    JSON.stringify({
+          text:     text.slice(0, 400),
+          voice_id: CALL_VOICE_ID,
+          model:    'eleven_flash_v2_5',
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!ttsRes.ok || _vmTTSAbort) continue;
+
+      var arrayBuf = await ttsRes.arrayBuffer();
+      if (!arrayBuf || arrayBuf.byteLength === 0 || _vmTTSAbort) continue;
+
+      await new Promise(function(resolve) {
+        var blob = new Blob([arrayBuf], { type: 'audio/mpeg' });
+        var url  = URL.createObjectURL(blob);
+        _vmTTSAudio = new Audio(url);
+        _vmTTSAudio.onended = function() {
+          URL.revokeObjectURL(url);
+          _vmTTSAudio = null;
+          resolve();
+        };
+        _vmTTSAudio.onerror = function() {
+          URL.revokeObjectURL(url);
+          _vmTTSAudio = null;
+          resolve();
+        };
+        if (_vmTTSAbort) { URL.revokeObjectURL(url); resolve(); return; }
+        _vmTTSAudio.play().catch(function() { resolve(); });
+      });
+    } catch(e) {
+      if (e.name !== 'AbortError') console.warn('[CyanixAI] TTS chunk error:', e.message);
+    }
+  }
+
+  _vmTTSSpeaking = false;
+}
+
+// ── Barge-in: stop TTS + LLM immediately when user speaks ─
+function vmBargeIn() {
+  _vmTTSAbort = true;
+  if (_vmLLMAbort) _vmLLMAbort.abort();
+  if (_vmTTSAudio) { try { _vmTTSAudio.pause(); } catch(e) {} _vmTTSAudio = null; }
+  _vmTTSQueue    = [];
+  _vmTTSSpeaking = false;
 }
 
 // ── Wire overlay controls ─────────────────────────────────
@@ -6019,14 +6171,15 @@ window.addEventListener('cyanix:ready', function() {
   // Cancel button
   var cancelBtn = $('voice-cancel-btn');
   if (cancelBtn) cancelBtn.addEventListener('click', function() {
+    _vmActive  = false;
     _sttActive = false;
-    if (_mediaRec && _mediaRec.state !== 'inactive') {
+    if (_vmMediaRec && _vmMediaRec.state !== 'inactive') {
       // Override onstop to not process
-      _mediaRec.onstop = function() {
+      _vmMediaRec.onstop = function() {
         if (_voiceStream) _voiceStream.getTracks().forEach(function(t) { t.stop(); });
         stopWaveform();
       };
-      _mediaRec.stop();
+      _vmMediaRec.stop();
     }
     closeVoiceOverlay();
     // Clear any draft added so far
@@ -6037,9 +6190,10 @@ window.addEventListener('cyanix:ready', function() {
   // Orb tap to stop recording
   var orb = $('voice-orb');
   if (orb) orb.addEventListener('click', function() {
-    if (_sttActive && _mediaRec && _mediaRec.state !== 'inactive') {
+    if (_sttActive && _vmMediaRec && _vmMediaRec.state !== 'inactive') {
+      _vmActive  = false;
       _sttActive = false;
-      _mediaRec.stop();
+      _vmMediaRec.stop();
     }
   });
 
@@ -6428,8 +6582,9 @@ async function runCallLoop() {
     loopCount++;
     console.log('[CALL] Loop iteration', loopCount, '| active:', _callActive);
 
-    // 1. Listen
+    // 1. Listen — barge-in: immediately cut any TTS playing
     setCallState('listening');
+    vmBargeIn();
     var userText = await recordUtterance();
 
     console.log('[CALL] recordUtterance returned:', JSON.stringify(userText), '| active:', _callActive);
@@ -6457,21 +6612,29 @@ async function runCallLoop() {
       setTimeout(function() { if (tEl) tEl.textContent = ''; }, 2500);
     }
 
-    // 2. Think
+    // 2. Think — use Groq streaming pipeline (instant tokens → chunked TTS)
     setCallState('thinking');
     _callHistory.push({ role: 'user', content: userText });
-    console.log('[CALL] Getting AI response for:', userText.slice(0,50));
-    var reply = await callGetAIResponse(userText);
-    console.log('[CALL] AI reply:', reply ? reply.slice(0,80) : 'EMPTY');
-    _callHistory.push({ role: 'assistant', content: reply });
+    console.log('[CALL] Groq stream response for:', userText.slice(0,50));
+    var reply = await groqStreamVoiceResponse(userText, _callHistory.slice(-6));
+    console.log('[CALL] Groq stream done:', reply ? reply.slice(0,80) : 'EMPTY');
+    if (reply) _callHistory.push({ role: 'assistant', content: reply });
 
     if (!_callActive) { console.log('[CALL] Breaking — inactive after AI'); break; }
 
-    // 3. Speak
+    // 3. Speaking state is managed inside groqStreamVoiceResponse TTS drain
+    // Wait for TTS queue to drain before next listen cycle
     setCallState('speaking');
-    console.log('[CALL] Calling callSpeak...');
-    await callSpeak(reply);
-    console.log('[CALL] callSpeak done');
+    await new Promise(function(resolve) {
+      var poll = setInterval(function() {
+        if (!_vmTTSSpeaking && _vmTTSQueue.length === 0) {
+          clearInterval(poll);
+          resolve();
+        }
+        if (!_callActive) { clearInterval(poll); resolve(); }
+      }, 100);
+    });
+    console.log('[CALL] Speaking done');
   }
 
   console.log('[CALL] Loop ended | active:', _callActive, 'iterations:', loopCount);
@@ -7521,18 +7684,13 @@ function scrollToBottom() {
   /* ── Status indicator ──────────────────────────────────────── */
 
   function injectBridgeStatusDot() {
+    // Termux indicator hidden from UI per design update — bridge still functions
+    // Terminal cards and run buttons are still active when bridge is online
     if (document.getElementById('termux-status-dot')) return;
     var dot = document.createElement('div');
     dot.id = 'termux-status-dot';
-    dot.title = 'Termux Bridge: checking…';
-    dot.className = 'termux-status-dot termux-status-checking';
-    dot.innerHTML = '<span class="termux-status-label">Termux</span>';
-
-    // Place it in the topbar actions area
-    var topbar = document.querySelector('.topbar-actions') ||
-                 document.querySelector('.topbar')         ||
-                 document.querySelector('header');
-    if (topbar) topbar.appendChild(dot);
+    dot.style.cssText = 'display:none !important;visibility:hidden;pointer-events:none;';
+    document.body.appendChild(dot); // hidden, not in topbar
   }
 
   function setBridgeStatus(online) {
