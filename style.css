@@ -1657,3 +1657,411 @@ kbd{display:inline-flex;align-items:center;padding:3px 8px;background:var(--surf
   .tx-btn         { padding: 2px 7px; font-size: .68rem; }
   .tx-output      { max-height: 260px; padding: 8px 10px; }
 }
+
+/* ============================================================
+   CYANIX AI — Enhanced UI v14
+   Copilot-style composer · Qwen-style settings · AI toolbar
+   Wiki RAG · CoT · Templates · Auto-refine
+============================================================ */
+
+/* ── AI & Intelligence Toolbar ──────────────────────────── */
+.cx-ai-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 8px;
+  flex-wrap: wrap;
+}
+.cx-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 8px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  user-select: none;
+  white-space: nowrap;
+}
+.cx-toolbar-btn:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+  border-color: var(--border-2);
+  transform: translateY(-1px);
+  box-shadow: var(--sh-sm);
+}
+.cx-toolbar-btn--active {
+  background: var(--blue-50);
+  color: var(--blue);
+  border-color: var(--blue-200);
+  box-shadow: 0 0 0 3px var(--blue-glow);
+}
+.cx-toolbar-btn--active:hover {
+  background: var(--blue-100);
+}
+.cx-toolbar-btn svg { flex-shrink: 0; }
+
+/* ── Copilot-style Composer V2 ───────────────────────────── */
+.cx-composer-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--r-xl);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--sh), 0 0 0 0 var(--blue-glow);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  overflow: hidden;
+}
+.cx-composer-v2:focus-within {
+  border-color: var(--blue);
+  box-shadow: var(--sh), 0 0 0 3px var(--blue-glow);
+}
+
+/* Attachment strip */
+.cx-attach-strip {
+  padding: 10px 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Composer body — textarea */
+.cx-composer-body {
+  padding: 14px 16px 4px;
+}
+.cx-input-v2 {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  font-size: .97rem;
+  line-height: 1.55;
+  color: var(--text-1);
+  min-height: 28px;
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.cx-input-v2::placeholder { color: var(--text-4); }
+
+/* Bottom footer row */
+.cx-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 10px;
+  gap: 8px;
+}
+.cx-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.cx-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Footer action buttons */
+.cx-foot-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--r);
+  color: var(--text-3);
+  font-size: .75rem;
+  font-weight: 500;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  cursor: pointer;
+}
+.cx-foot-btn:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+.cx-foot-btn.active,
+.cx-foot-btn[data-active="true"] {
+  color: var(--blue);
+  background: var(--blue-50);
+}
+.cx-foot-label {
+  display: none;
+}
+@media (min-width: 480px) {
+  .cx-foot-label { display: inline; }
+}
+
+/* Send button V2 */
+.cx-send-v2 {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--border);
+  color: var(--text-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur-fast) var(--ease);
+}
+.cx-send-v2.ready {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(37,99,235,.35);
+}
+.cx-send-v2.ready:hover {
+  background: var(--blue-dark);
+  transform: scale(1.06);
+  box-shadow: 0 4px 18px rgba(37,99,235,.45);
+}
+.cx-send-v2.stop {
+  background: #ef4444;
+  color: #fff;
+}
+.cx-send-v2.sent {
+  transform: scale(0.88);
+}
+
+/* ── Template Modal ──────────────────────────────────────── */
+.cx-template-modal {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 520px);
+  max-height: 70vh;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-xl);
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cx-modal-up .22s var(--ease-spring) both;
+}
+@keyframes cx-modal-up {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(.97); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1); }
+}
+.cx-tmpl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cx-tmpl-title {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text-1);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cx-tmpl-close {
+  width: 28px; height: 28px;
+  border-radius: var(--r);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-3);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.cx-tmpl-close:hover { background: var(--surface-2); color: var(--text-1); }
+.cx-tmpl-body {
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cx-tmpl-cat-label {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.cx-tmpl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cx-tmpl-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: var(--r);
+  font-size: .85rem;
+  color: var(--text-1);
+  font-weight: 500;
+  text-align: left;
+  transition: background var(--dur-fast) var(--ease);
+  cursor: pointer;
+}
+.cx-tmpl-item:hover {
+  background: var(--surface-2);
+  color: var(--blue);
+}
+.cx-tmpl-item svg { flex-shrink: 0; opacity: .5; }
+
+/* ── Auto-refine UI ─────────────────────────────────────── */
+.cx-refine-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: var(--r);
+  color: var(--text-4);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.cx-refine-btn:hover {
+  color: #f59e0b;
+  background: rgba(245,158,11,.1);
+}
+.cx-refine-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  font-size: .85rem;
+  color: var(--text-2);
+}
+.cx-refine-pulse {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--blue);
+  animation: cx-pulse 1s ease-in-out infinite;
+}
+@keyframes cx-pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .4; transform: scale(.7); }
+}
+.cx-refined-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  font-size: .7rem;
+  font-weight: 600;
+  background: rgba(245,158,11,.12);
+  color: #d97706;
+  border: 1px solid rgba(245,158,11,.25);
+}
+@keyframes cx-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.cx-spin { animation: cx-spin .8s linear infinite; }
+
+/* ── Wiki source badge ───────────────────────────────────── */
+.wiki-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.wiki-source-badge:hover {
+  background: var(--surface-3);
+  color: var(--blue);
+  text-decoration: none;
+}
+
+/* ── Qwen-style Settings ─────────────────────────────────── */
+.qwen-section-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 0 4px;
+  margin-bottom: 8px;
+}
+.qwen-card {
+  border-radius: var(--r-lg) !important;
+  overflow: hidden;
+}
+.qwen-row {
+  position: relative;
+}
+.qwen-row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+.qwen-badge {
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+.qwen-badge--on {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid rgba(34,197,94,.25);
+}
+.qwen-nav-badge {
+  font-size: .62rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  letter-spacing: .04em;
+  flex-shrink: 0;
+}
+.qwen-ai-nav-row {
+  background: linear-gradient(90deg, rgba(99,102,241,.04), transparent);
+}
+[data-theme="dark"] .qwen-ai-nav-row {
+  background: linear-gradient(90deg, rgba(99,102,241,.08), transparent);
+}
+
+/* ── Composer area layout fix for new toolbar ────────────── */
+.composer-area {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* Remove old composer-tools / composer-actions since we redesigned */
+.composer-tools { display: none !important; }
+.composer-actions { display: none !important; }
+
+/* Legacy mic-btn used elsewhere (call screen) — keep visible */
+#call-screen .mic-btn { display: flex !important; }
+

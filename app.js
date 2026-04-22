@@ -3979,6 +3979,571 @@ async function fetchRAGContext(query) {
   } catch (e) { return null; }
 }
 
+/* ==========================================================
+   WIKI RAG — Wikipedia-based Retrieval Augmented Generation
+   Fetches relevant Wikipedia summaries for context enrichment.
+   Integrates with Groq Compound for layered context.
+========================================================== */
+var WIKI_API = 'https://en.wikipedia.org/api/rest_v1/page/summary/';
+var WIKI_SEARCH_API = 'https://en.wikipedia.org/w/api.php?action=query&list=search&srlimit=3&format=json&origin=*&srsearch=';
+
+// State for wiki RAG
+var _wikiRagEnabled  = false;
+var _cotEnabled      = false; // chain-of-thought toggle
+var _groqCtxEnabled  = true;  // Groq Compound context enrichment
+
+// ── Fetch Wikipedia summary for a topic ──────────────────────
+async function fetchWikiSummary(topic) {
+  try {
+    var encoded = encodeURIComponent(topic.replace(/\s+/g,' ').trim());
+    // First search for the best matching article
+    var searchRes = await fetch(WIKI_SEARCH_API + encoded, { signal: AbortSignal.timeout(5000) });
+    if (!searchRes.ok) return null;
+    var searchData = await searchRes.json();
+    var results = searchData.query && searchData.query.search;
+    if (!results || !results.length) return null;
+    var bestTitle = results[0].title;
+
+    // Fetch summary for the best match
+    var summaryRes = await fetch(WIKI_API + encodeURIComponent(bestTitle), {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!summaryRes.ok) return null;
+    var data = await summaryRes.json();
+    if (data.type === 'disambiguation' || !data.extract) return null;
+
+    return {
+      title:   data.title,
+      extract: data.extract.slice(0, 1200),
+      url:     data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page,
+    };
+  } catch (e) {
+    console.warn('[CyanixAI] Wiki RAG fetch failed:', e.message);
+    return null;
+  }
+}
+
+// ── Extract key topic from user query for wiki search ─────────
+async function extractWikiTopic(query) {
+  try {
+    var res = await fetch(CHAT_URL, {
+      method: 'POST', headers: edgeHeaders(),
+      body: JSON.stringify({
+        model: 'groq/llama-3.1-8b-instant',
+        stream: false, max_tokens: 30,
+        messages: [
+          { role: 'system', content: 'Extract the main factual topic from the query as 1-4 words suitable for a Wikipedia search. Return ONLY those words, nothing else.' },
+          { role: 'user', content: query.slice(0, 300) }
+        ]
+      }),
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!res.ok) return query.split(' ').slice(0, 4).join(' ');
+    var data = await res.json();
+    return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '').trim().slice(0, 80) || query.slice(0, 40);
+  } catch (e) { return query.split(' ').slice(0, 4).join(' '); }
+}
+
+// ── Main Wiki RAG orchestrator ──────────────────────────────
+async function fetchWikiRAGContext(query) {
+  if (!_wikiRagEnabled) return null;
+  try {
+    var topic = await extractWikiTopic(query);
+    if (!topic) return null;
+    var wiki = await fetchWikiSummary(topic);
+    if (!wiki) return null;
+    console.log('[CyanixAI] Wiki RAG: fetched', wiki.title);
+
+    // Optionally enrich with Groq Compound context
+    var groqCtx = '';
+    if (_groqCtxEnabled) {
+      groqCtx = await fetchGroqCompoundContext(query, wiki.extract);
+    }
+
+    return {
+      title:    wiki.title,
+      extract:  wiki.extract,
+      url:      wiki.url,
+      groqEnrichment: groqCtx,
+    };
+  } catch (e) {
+    console.warn('[CyanixAI] Wiki RAG orchestration failed:', e.message);
+    return null;
+  }
+}
+
+// ── Groq Compound enrichment — adds breadth to Wiki context ──
+// Does NOT replace Axion — it adds an enrichment layer to RAG context
+async function fetchGroqCompoundContext(query, wikiExtract) {
+  if (!_groqCtxEnabled) return '';
+  try {
+    var enrichPrompt =
+      'Given this Wikipedia context and user question, add 2-3 concise clarifying points ' +
+      'or additional context that would help answer the question more completely. ' +
+      'Be brief and factual. Return only the additional points.\n\n' +
+      'Wikipedia context: ' + (wikiExtract || '').slice(0, 600) + '\n\n' +
+      'User question: ' + query.slice(0, 300);
+
+    var res = await fetch(CHAT_URL, {
+      method: 'POST', headers: edgeHeaders(),
+      body: JSON.stringify({
+        model: 'groq/compound-beta',
+        stream: false, max_tokens: 300,
+        messages: [
+          { role: 'system', content: 'You are a concise knowledge enricher. Add brief, factual additional context. 2-3 sentences max.' },
+          { role: 'user', content: enrichPrompt }
+        ]
+      }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) return '';
+    var data = await res.json();
+    // Extract only text blocks (handle Groq compound's tool_use blocks gracefully)
+    var content = data.choices && data.choices[0] && data.choices[0].message;
+    if (!content) return '';
+    if (typeof content.content === 'string') return content.content.trim().slice(0, 400);
+    if (Array.isArray(content.content)) {
+      return content.content
+        .filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text || ''; })
+        .join(' ')
+        .trim()
+        .slice(0, 400);
+    }
+    return '';
+  } catch (e) {
+    console.warn('[CyanixAI] Groq Compound enrichment failed:', e.message);
+    return '';
+  }
+}
+
+// ── Build Wiki RAG context string for system prompt ─────────
+function buildWikiRAGContext(wikiData) {
+  if (!wikiData) return '';
+  var parts = [
+    '\n\n[WIKIPEDIA CONTEXT — use as verified factual reference]',
+    'Topic: ' + wikiData.title,
+    wikiData.extract,
+  ];
+  if (wikiData.groqEnrichment) {
+    parts.push('[ADDITIONAL CONTEXT]');
+    parts.push(wikiData.groqEnrichment);
+  }
+  parts.push('Source: ' + (wikiData.url || 'Wikipedia'));
+  parts.push('[END WIKIPEDIA CONTEXT]');
+  return parts.join('\n');
+}
+
+// ── Append Wiki sources to bubble ───────────────────────────
+function appendWikiSource(bubbleEl, wikiData) {
+  if (!bubbleEl || !wikiData || !wikiData.url) return;
+  var existing = bubbleEl.querySelector('.wiki-source-badge');
+  if (existing) return;
+  var badge = document.createElement('a');
+  badge.className = 'wiki-source-badge';
+  badge.href = wikiData.url;
+  badge.target = '_blank';
+  badge.rel = 'noopener noreferrer';
+  badge.innerHTML =
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+    '<span>Wikipedia: ' + esc(wikiData.title) + '</span>';
+  bubbleEl.appendChild(badge);
+}
+
+/* ==========================================================
+   CHAIN-OF-THOUGHT TOGGLE
+   When enabled, wraps user messages with reasoning instructions
+   and renders <think> blocks visibly for math/logic tasks.
+========================================================== */
+function getCotInstruction() {
+  if (!_cotEnabled) return '';
+  return '\n\nCHAIN OF THOUGHT: For this response, show your step-by-step reasoning inside <think>...</think> tags before giving your final answer. ' +
+    'Walk through your logic clearly. Show all relevant steps, calculations, or deductions.';
+}
+
+function isCotQuery(text) {
+  return /\b(calculate|compute|solve|prove|derive|reason|logic|math|how many|how much|formula|equation|step.?by.?step|think through|break down|explain why|why does|how does)\b/i.test(text);
+}
+
+/* ==========================================================
+   PROMPT TEMPLATE LIBRARY
+   Pre-built templates for common tasks. Accessible from the
+   composer toolbar via the template button.
+========================================================== */
+var PROMPT_TEMPLATES = [
+  {
+    category: 'Coding',
+    icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+    templates: [
+      { title: 'Code Review', prompt: 'Review this code for bugs, performance issues, and best practices:\n\n```\n[paste code here]\n```' },
+      { title: 'Debug Helper', prompt: 'I\'m getting this error:\n\n```\n[paste error here]\n```\n\nHere\'s my code:\n\n```\n[paste code here]\n```\n\nWhat\'s wrong and how do I fix it?' },
+      { title: 'Refactor Code', prompt: 'Refactor this code to be cleaner, more readable, and follow best practices:\n\n```\n[paste code here]\n```' },
+      { title: 'Write Tests', prompt: 'Write comprehensive unit tests for this function:\n\n```\n[paste code here]\n```\n\nInclude edge cases and test for expected failures.' },
+      { title: 'Explain Code', prompt: 'Explain what this code does, line by line if needed:\n\n```\n[paste code here]\n```' },
+    ]
+  },
+  {
+    category: 'Writing',
+    icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+    templates: [
+      { title: 'Blog Post', prompt: 'Write a detailed, engaging blog post about [topic]. Include:\n- A compelling headline\n- Introduction that hooks the reader\n- 3-5 main sections with subheadings\n- Actionable takeaways\n- Conclusion\n\nTone: [casual/professional/technical]' },
+      { title: 'Email Draft', prompt: 'Write a professional email for the following situation:\n\nContext: [describe situation]\nGoal: [what do you want to achieve]\nTone: [formal/friendly/urgent]' },
+      { title: 'LinkedIn Post', prompt: 'Write a LinkedIn post about [topic/achievement]. Make it:\n- Engaging and personal\n- Include a story or insight\n- End with a thought-provoking question\n- 150-250 words max' },
+      { title: 'Summarize Text', prompt: 'Summarize the following text in 3 bullet points and a one-paragraph TL;DR:\n\n[paste text here]' },
+    ]
+  },
+  {
+    category: 'Analysis',
+    icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    templates: [
+      { title: 'SWOT Analysis', prompt: 'Perform a SWOT analysis for [company/product/idea]:\n\nProvide a structured breakdown of Strengths, Weaknesses, Opportunities, and Threats.' },
+      { title: 'Compare Options', prompt: 'Compare and contrast [option A] vs [option B] across these dimensions:\n- Cost/effort\n- Performance/quality\n- Ease of use\n- Scalability\n- Best use case\n\nProvide a recommendation.' },
+      { title: 'Data Insights', prompt: 'Analyze this data and provide:\n1. Key trends and patterns\n2. Notable outliers\n3. Actionable insights\n4. Suggested next steps\n\n[paste data here]' },
+      { title: 'Research Summary', prompt: 'Research [topic] and provide a comprehensive summary covering:\n- Current state\n- Key players/factors\n- Recent developments\n- Future outlook\n- Key takeaways' },
+    ]
+  },
+  {
+    category: 'Productivity',
+    icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    templates: [
+      { title: 'Action Plan', prompt: 'Create a detailed action plan to achieve [goal] within [timeframe]. Include:\n- Phase breakdown\n- Specific tasks per phase\n- Dependencies and blockers\n- Success metrics\n- Contingency steps' },
+      { title: 'Meeting Agenda', prompt: 'Create a meeting agenda for a [duration] meeting about [topic].\n\nAttendees: [list roles]\nObjective: [main goal]\n\nInclude time allocations and desired outcomes per agenda item.' },
+      { title: 'Problem Solver', prompt: 'Help me solve this problem using first principles:\n\nProblem: [describe problem]\nContext: [relevant background]\nConstraints: [limitations or requirements]\n\nBreak it down step by step.' },
+    ]
+  }
+];
+
+// ── Render prompt template picker ──────────────────────────
+function renderTemplateModal() {
+  var existing = document.getElementById('cx-template-modal');
+  if (existing) { existing.remove(); return; }
+
+  var modal = document.createElement('div');
+  modal.id = 'cx-template-modal';
+  modal.className = 'cx-template-modal';
+  modal.innerHTML =
+    '<div class="cx-tmpl-header">' +
+      '<div class="cx-tmpl-title">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>' +
+        'Prompt Templates' +
+      '</div>' +
+      '<button class="cx-tmpl-close" onclick="document.getElementById(\'cx-template-modal\').remove()">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>' +
+    '</div>' +
+    '<div class="cx-tmpl-body">' +
+      PROMPT_TEMPLATES.map(function(cat) {
+        return '<div class="cx-tmpl-category">' +
+          '<div class="cx-tmpl-cat-label">' + cat.icon + cat.category + '</div>' +
+          '<div class="cx-tmpl-list">' +
+            cat.templates.map(function(t) {
+              return '<button class="cx-tmpl-item" data-prompt="' + esc(t.prompt) + '">' +
+                '<span>' + esc(t.title) + '</span>' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+              '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+
+  document.body.appendChild(modal);
+
+  // Click handler for templates
+  modal.querySelectorAll('.cx-tmpl-item').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var prompt = btn.dataset.prompt;
+      var inp = document.getElementById('composer-input');
+      if (inp) {
+        inp.value = prompt;
+        inp.style.height = 'auto';
+        inp.style.height = Math.min(inp.scrollHeight, 220) + 'px';
+        inp.focus();
+        // Move cursor to first [ placeholder
+        var firstBracket = prompt.indexOf('[');
+        if (firstBracket !== -1) {
+          var lastBracket = prompt.indexOf(']', firstBracket);
+          inp.setSelectionRange(firstBracket, lastBracket !== -1 ? lastBracket + 1 : firstBracket);
+        }
+        // Trigger input event for character counter
+        inp.dispatchEvent(new Event('input'));
+      }
+      modal.remove();
+      toast('Template loaded — fill in the [brackets]');
+    });
+  });
+
+  // Close on outside click
+  setTimeout(function() {
+    document.addEventListener('click', function closeOnClick(e) {
+      if (!modal.contains(e.target) && e.target.id !== 'cx-template-btn') {
+        modal.remove();
+        document.removeEventListener('click', closeOnClick);
+      }
+    });
+  }, 100);
+}
+
+/* ==========================================================
+   AUTO-REFINE — AI improves its own previous response
+   Triggered via the refine button on AI messages.
+   Uses a dedicated refine prompt to rephrase/improve.
+========================================================== */
+window.autoRefineMessage = async function(btn) {
+  if (!_session) { toast('Sign in to use auto-refine.'); return; }
+  if (_responding) { toast('Wait for the current response to finish.'); return; }
+
+  var msgRow    = btn && btn.closest('.msg-row');
+  var bubbleEl  = msgRow && msgRow.querySelector('.msg-bubble');
+  var rawText   = bubbleEl && bubbleEl.dataset.raw;
+  if (!rawText) rawText = bubbleEl && bubbleEl.innerText;
+  if (!rawText) { toast('Could not find message to refine.'); return; }
+
+  // Find the user message that preceded this AI response
+  var prevUserRow = msgRow && msgRow.previousElementSibling;
+  while (prevUserRow && !prevUserRow.classList.contains('user')) {
+    prevUserRow = prevUserRow.previousElementSibling;
+  }
+  var userQuery = prevUserRow && prevUserRow.querySelector('.msg-bubble') &&
+    (prevUserRow.querySelector('.msg-bubble').dataset.raw || prevUserRow.querySelector('.msg-bubble').innerText);
+
+  btn.disabled = true;
+  var originalInner = btn.innerHTML;
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="cx-spin"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
+
+  // Show refining indicator in bubble
+  var originalBubbleHTML = bubbleEl.innerHTML;
+  bubbleEl.innerHTML = '<div class="cx-refine-indicator"><div class="cx-refine-pulse"></div><span>Refining response…</span></div>';
+
+  try {
+    var refinePrompt =
+      'The following AI response needs improvement. Make it:\n' +
+      '- More concise and clearer\n' +
+      '- Better structured\n' +
+      '- More precise and direct\n' +
+      '- Remove any redundancy or filler\n\n' +
+      (userQuery ? 'Original question: ' + userQuery.slice(0, 400) + '\n\n' : '') +
+      'Response to improve:\n' + rawText.slice(0, 3000) + '\n\n' +
+      'Return ONLY the improved response — no preamble, no meta-commentary about changes.';
+
+    var res = await fetch(AXION_URL, {
+      method: 'POST', headers: edgeHeaders(),
+      body: JSON.stringify({
+        model:  'axion',
+        system: 'You are a response quality improver. Rewrite the given response to be cleaner, more precise, and more useful. Keep all factual information intact.',
+        messages: [{ role: 'user', content: refinePrompt }],
+        stream: false, max_tokens: 2048,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) throw new Error('Refine request failed: ' + res.status);
+    var data = await res.json();
+    var refinedText =
+      (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ||
+      (data.content && data.content[0] && data.content[0].text) || '';
+    refinedText = refinedText.trim();
+
+    if (!refinedText) throw new Error('Empty refined response');
+
+    // Render the improved response
+    bubbleEl.innerHTML = mdToHTML(refinedText);
+    bubbleEl.dataset.raw = refinedText;
+
+    // Update history with refined text
+    var histIdx = _history.findLastIndex(function(m) { return m.role === 'assistant'; });
+    if (histIdx !== -1) _history[histIdx].content = refinedText;
+
+    // Add a refined badge
+    var badge = document.createElement('div');
+    badge.className = 'cx-refined-badge';
+    badge.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span>Auto-refined</span>';
+    bubbleEl.appendChild(badge);
+
+    toast('Response refined!');
+  } catch (e) {
+    // Restore original on error
+    bubbleEl.innerHTML = originalBubbleHTML;
+    toast('Could not refine: ' + e.message);
+    console.error('[CyanixAI] autoRefineMessage:', e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalInner;
+  }
+};
+
+/* ==========================================================
+   ENHANCED COMPOSER TOOLBAR
+   Attaches the new AI & Intelligence feature buttons to
+   the composer area — Wiki RAG, CoT toggle, templates,
+   auto-refine (injected on AI messages).
+========================================================== */
+function initEnhancedComposer() {
+  // Inject enhanced toolbar buttons into the existing composer
+  var toolbar = document.getElementById('cx-ai-toolbar');
+  if (!toolbar) return;
+
+  // Wiki RAG toggle
+  var wikiBtn = document.createElement('button');
+  wikiBtn.id = 'cx-wiki-btn';
+  wikiBtn.className = 'cx-toolbar-btn' + (_wikiRagEnabled ? ' cx-toolbar-btn--active' : '');
+  wikiBtn.title = 'Wiki RAG — Pull Wikipedia context for factual answers';
+  wikiBtn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+    '<span>Wiki RAG</span>';
+  wikiBtn.addEventListener('click', function() {
+    _wikiRagEnabled = !_wikiRagEnabled;
+    wikiBtn.classList.toggle('cx-toolbar-btn--active', _wikiRagEnabled);
+    toast(_wikiRagEnabled ? 'Wiki RAG on — Wikipedia context enabled' : 'Wiki RAG off');
+  });
+  toolbar.appendChild(wikiBtn);
+
+  // Chain-of-thought toggle
+  var cotBtn = document.createElement('button');
+  cotBtn.id = 'cx-cot-btn';
+  cotBtn.className = 'cx-toolbar-btn' + (_cotEnabled ? ' cx-toolbar-btn--active' : '');
+  cotBtn.title = 'Chain-of-thought — Show step-by-step reasoning';
+  cotBtn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' +
+    '<span>CoT</span>';
+  cotBtn.addEventListener('click', function() {
+    _cotEnabled = !_cotEnabled;
+    cotBtn.classList.toggle('cx-toolbar-btn--active', _cotEnabled);
+    toast(_cotEnabled ? 'Chain-of-thought on — reasoning steps visible' : 'Chain-of-thought off');
+  });
+  toolbar.appendChild(cotBtn);
+
+  // Prompt templates
+  var tmplBtn = document.createElement('button');
+  tmplBtn.id = 'cx-template-btn';
+  tmplBtn.className = 'cx-toolbar-btn';
+  tmplBtn.title = 'Prompt templates library';
+  tmplBtn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>' +
+    '<span>Templates</span>';
+  tmplBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    renderTemplateModal();
+  });
+  toolbar.appendChild(tmplBtn);
+
+  // Groq context indicator
+  var groqBtn = document.createElement('button');
+  groqBtn.id = 'cx-groq-ctx-btn';
+  groqBtn.className = 'cx-toolbar-btn' + (_groqCtxEnabled ? ' cx-toolbar-btn--active' : '');
+  groqBtn.title = 'Groq Compound context enrichment';
+  groqBtn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' +
+    '<span>Groq Ctx</span>';
+  groqBtn.addEventListener('click', function() {
+    _groqCtxEnabled = !_groqCtxEnabled;
+    groqBtn.classList.toggle('cx-toolbar-btn--active', _groqCtxEnabled);
+    toast(_groqCtxEnabled ? 'Groq context enrichment on' : 'Groq context enrichment off');
+  });
+  toolbar.appendChild(groqBtn);
+}
+
+// ── Patch sendMessage to inject wiki RAG + CoT context ─────
+// We patch the buildSystemPrompt call inside sendMessage via a hook
+var _wikiDataForCurrentMessage = null;
+
+var _originalBuildSystemPrompt = buildSystemPrompt;
+buildSystemPrompt = function(queryContext) {
+  var base = _originalBuildSystemPrompt(queryContext);
+  // Add CoT instruction if enabled (or auto-detect math/logic queries)
+  if (_cotEnabled || isCotQuery(queryContext || '')) {
+    base += getCotInstruction();
+  }
+  return base;
+};
+
+// Hook into the send flow to inject wiki context
+var _originalFetchRAGContext = fetchRAGContext;
+
+// We need to intercept sendMessage to add wiki context.
+// The cleanest hook is to extend the system prompt builder with wiki data.
+// This is called after wikiData is fetched.
+function buildSystemPromptWithWiki(queryContext, wikiData) {
+  var base = buildSystemPrompt(queryContext);
+  if (wikiData) {
+    base += buildWikiRAGContext(wikiData);
+  }
+  return base;
+}
+
+// ── Inject auto-refine button into AI messages ─────────────
+var _originalRenderMessage = renderMessage;
+renderMessage = function(role, content, animate, msgId, imageData) {
+  var result = _originalRenderMessage(role, content, animate, msgId, imageData);
+  if (role !== 'ai' || !result.msgEl) return result;
+
+  // Add auto-refine button to the actions bar after a slight delay
+  setTimeout(function() {
+    var actions = result.msgEl && result.msgEl.querySelector('.msg-actions');
+    if (!actions) return;
+    if (actions.querySelector('.cx-refine-btn')) return;
+    var refineBtn = document.createElement('button');
+    refineBtn.className = 'msg-action-btn cx-refine-btn';
+    refineBtn.title = 'Auto-refine this response';
+    refineBtn.innerHTML =
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+    refineBtn.addEventListener('click', function() { window.autoRefineMessage(refineBtn); });
+    actions.appendChild(refineBtn);
+  }, 200);
+
+  return result;
+};
+
+// Initialize enhanced composer on DOM ready
+window.addEventListener('cyanix:ready', function() {
+  initEnhancedComposer();
+});
+
+// ── Patch sendMessage to fetch and apply wiki context ──────
+// We intercept just before the API call by wrapping fetchRAGContext
+var _sendMessageOriginal = sendMessage;
+sendMessage = async function(text) {
+  // Pre-fetch wiki context in parallel if enabled
+  if (_wikiRagEnabled && text && text.length > 8) {
+    fetchWikiRAGContext(text).then(function(wikiData) {
+      _wikiDataForCurrentMessage = wikiData;
+    }).catch(function() { _wikiDataForCurrentMessage = null; });
+  } else {
+    _wikiDataForCurrentMessage = null;
+  }
+
+  // Patch buildSystemPrompt temporarily to include wiki data
+  if (_wikiRagEnabled) {
+    var _tempBuildSP = buildSystemPrompt;
+    buildSystemPrompt = function(queryContext) {
+      var base = _tempBuildSP(queryContext);
+      if (_wikiDataForCurrentMessage) {
+        base += buildWikiRAGContext(_wikiDataForCurrentMessage);
+      }
+      return base;
+    };
+
+    var res = await _sendMessageOriginal.call(this, text);
+
+    // Restore
+    buildSystemPrompt = _tempBuildSP;
+
+    // Append wiki source badge to latest AI bubble
+    if (_wikiDataForCurrentMessage) {
+      setTimeout(function() {
+        var bubbles = document.querySelectorAll('.msg-row:not(.user) .msg-bubble');
+        var last = bubbles[bubbles.length - 1];
+        if (last) appendWikiSource(last, _wikiDataForCurrentMessage);
+      }, 500);
+    }
+
+    return res;
+  }
+
+  return _sendMessageOriginal.call(this, text);
+};
+
 //  URL / Link Detection + Browse 
 var URL_REGEX = /https?:\/\/[^\s<>"'\)\]]+/g;
 
@@ -5390,7 +5955,7 @@ window.closeSettings = function() {
 window.openSettingsPage = function(page) {
   var pages = [
     'main','appearance','personas','memory','personalization',
-    'tos','privacy','about','referral','supporter','improve'
+    'tos','privacy','about','referral','supporter','improve','ai-intel'
   ];
   pages.forEach(function(p) {
     var el = document.getElementById('stg-page-' + p);
@@ -5410,6 +5975,40 @@ window.openSettingsPage = function(page) {
     var el = document.getElementById('settings-page-' + p);
     if (el) el.style.display = p === page ? 'flex' : 'none';
   });
+
+  // Sync AI Intelligence settings toggles when opening that page
+  if (page === 'ai-intel') {
+    var wikiToggle   = document.getElementById('wiki-rag-settings-toggle');
+    var groqToggle   = document.getElementById('groq-ctx-settings-toggle');
+    var cotToggle    = document.getElementById('cot-settings-toggle');
+    if (wikiToggle) {
+      wikiToggle.checked = _wikiRagEnabled;
+      wikiToggle.onchange = function() {
+        _wikiRagEnabled = wikiToggle.checked;
+        var btn = document.getElementById('cx-wiki-btn');
+        if (btn) btn.classList.toggle('cx-toolbar-btn--active', _wikiRagEnabled);
+        toast(_wikiRagEnabled ? 'Wiki RAG enabled' : 'Wiki RAG disabled');
+      };
+    }
+    if (groqToggle) {
+      groqToggle.checked = _groqCtxEnabled;
+      groqToggle.onchange = function() {
+        _groqCtxEnabled = groqToggle.checked;
+        var btn = document.getElementById('cx-groq-ctx-btn');
+        if (btn) btn.classList.toggle('cx-toolbar-btn--active', _groqCtxEnabled);
+        toast(_groqCtxEnabled ? 'Groq context enabled' : 'Groq context disabled');
+      };
+    }
+    if (cotToggle) {
+      cotToggle.checked = _cotEnabled;
+      cotToggle.onchange = function() {
+        _cotEnabled = cotToggle.checked;
+        var btn = document.getElementById('cx-cot-btn');
+        if (btn) btn.classList.toggle('cx-toolbar-btn--active', _cotEnabled);
+        toast(_cotEnabled ? 'Chain-of-thought enabled' : 'Chain-of-thought disabled');
+      };
+    }
+  }
 };
 
 // -- Personas -------------------------------------------------------
