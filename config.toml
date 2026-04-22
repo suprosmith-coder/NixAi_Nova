@@ -1,0 +1,14 @@
+[functions.cyanix-chat]
+verify_jwt = false
+
+[functions.tts]
+verify_jwt = false
+
+[functions.collect-training-data]
+verify_jwt = false
+
+[functions.whisper]
+verify_jwt = false
+
+[functions.rag-search]
+verify_jwt = false
