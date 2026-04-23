@@ -9354,10 +9354,6 @@ console.log('[CyanixAI] app_additions.js v1.0 loaded');
   }
 
   function toggleComplix() {
-    if (typeof _settings !== 'undefined' && _settings.model !== 'axion') {
-      if (typeof toast === 'function') toast('Complix is Axion-only. Switch to Axion first.');
-      return;
-    }
     _complixActive = !_complixActive;
     saveComplixState();
     updateComplixUI();
@@ -9719,8 +9715,7 @@ console.log('[CyanixAI] app_additions.js v1.0 loaded');
 
   window.sendMessage = async function(text, opts) {
     // Only intercept if Complix is on AND model is axion
-    var isAxion = (typeof _settings !== 'undefined' && _settings.model === 'axion');
-    if (!_complixActive || !isAxion) {
+    if (!_complixActive) {
       return _origSendMessage ? _origSendMessage.apply(this, arguments) : undefined;
     }
 
@@ -9827,20 +9822,7 @@ console.log('[CyanixAI] app_additions.js v1.0 loaded');
     }
   });
 
-  /* ── Model guard: auto-disable if user switches off Axion ─ */
-  var _modelSelectOrig = document.getElementById('model-btn');
-  document.addEventListener('click', function(e) {
-    var opt = e.target.closest('.md-option');
-    if (!opt) return;
-    setTimeout(function() {
-      if (typeof _settings !== 'undefined' && _settings.model !== 'axion' && _complixActive) {
-        _complixActive = false;
-        saveComplixState();
-        updateComplixUI();
-        if (typeof toast === 'function') toast('Complix paused — requires Axion model');
-      }
-    }, 100);
-  });
+
 
   /* ── Init ───────────────────────────────────────────────── */
   function initComplix() {
