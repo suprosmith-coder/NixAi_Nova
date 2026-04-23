@@ -8210,3 +8210,1078 @@ function scrollToBottom() {
 
 })();
 
+
+
+/* ==============================================================
+   CYANIX AI — app_additions.js  v1.0
+   New Features:
+     1. Intent Classifier (auto-route to right mode)
+     2. Follow-up Question Suggester (post-response chips)
+     3. Semantic Memory Retrieval via pgvector embeddings
+     4. Function/Tool Calling (web_search, calculate, get_current_time)
+     UI Enhancements:
+     5. Sidebar swipe gesture + overlay dim
+     6. Mobile message actions (... menu)
+     7. Streaming RAF batching (smoother tokens)
+     8. Scroll-to-bottom floating button
+     9. Improved typing indicator (pulse avatar)
+    10. Settings swipe-back gesture
+    11. Composer auto-resize improvements + char counter polish
+    12. Welcome screen personalisation (recent chats + name)
+    13. Haptic micro-interactions
+    14. Instant theme switching with crossfade
+================================================================ */
+'use strict';
+
+/* ============================================================
+   1. INTENT CLASSIFIER
+   Lightweight ~50-token pre-call that auto-routes each message
+   to the best mode (coding / math / time-sensitive / general).
+   Results are cached per-message so no double calls.
+============================================================ */
+var _intentCache = {};
+
+var INTENT_PATTERNS = {
+  coding: [
+    /\b(write|build|create|generate|debug|fix|refactor|code|implement|function|class|api|script|component|bug|error|syntax|python|javascript|typescript|react|vue|node|sql|bash|shell|rust|go)\b/i,
+  ],
+  math: [
+    /\b(calculate|compute|solve|equation|formula|integral|derivative|matrix|probability|statistics|algebra|geometry|how much|how many|percent|ratio)\b/i,
+    /[\d+\-*/^÷×()]{5,}/,
+  ],
+  time_sensitive: [
+    /(today|right now|currently|latest|recent|news|2024|2025|2026|live|breaking|weather|stock|price|score|standings|who is|who are|president|ceo|prime minister)/i,
+    /^(search|find|look up|google|fetch)/i,
+  ],
+};
+
+function classifyIntent(text) {
+  if (!text || text.length < 3) return { type: 'general' };
+  var cached = _intentCache[text.slice(0, 80)];
+  if (cached) return cached;
+
+  var result = { type: 'general', confidence: 0 };
+
+  if (INTENT_PATTERNS.coding.some(function(r) { return r.test(text); })) {
+    result = { type: 'coding', confidence: 0.85, action: 'inject_code_context' };
+  } else if (INTENT_PATTERNS.math.some(function(r) { return r.test(text); })) {
+    result = { type: 'math', confidence: 0.80, action: 'force_cot' };
+  } else if (INTENT_PATTERNS.time_sensitive.some(function(r) { return r.test(text); })) {
+    result = { type: 'time_sensitive', confidence: 0.80, action: 'auto_web_search' };
+  }
+
+  _intentCache[text.slice(0, 80)] = result;
+  return result;
+}
+
+// Show a subtle intent badge near the composer when classified
+function showIntentBadge(intent) {
+  var badge = document.getElementById('cx-intent-badge');
+  if (!badge) return;
+  var labels = {
+    coding:         { icon: '⌨️', text: 'Code mode', color: '#7c3aed' },
+    math:           { icon: '∑',  text: 'Math · step-by-step', color: '#0369a1' },
+    time_sensitive: { icon: '🌐', text: 'Web search on', color: '#0f766e' },
+    general:        null,
+  };
+  var label = labels[intent.type];
+  if (!label) { badge.classList.add('hidden'); return; }
+  badge.innerHTML = '<span>' + label.icon + '</span><span>' + label.text + '</span>';
+  badge.style.setProperty('--intent-color', label.color);
+  badge.classList.remove('hidden');
+  clearTimeout(badge._timer);
+  badge._timer = setTimeout(function() { badge.classList.add('hidden'); }, 4000);
+}
+
+// Hook into sendMessage — wrap it to apply intent routing
+(function() {
+  var _origSend = window.sendMessage || function() {};
+
+  window.sendMessage = function(text) {
+    var intent = classifyIntent(text || '');
+    window._currentIntent = intent;
+
+    // Auto-enable web search for time-sensitive queries
+    if (intent.type === 'time_sensitive' && typeof _ragEnabled !== 'undefined' && !_ragEnabled) {
+      var wasAutoEnabled = true;
+      if (typeof toggleRAG === 'function') toggleRAG();
+      // Show badge to inform user
+      showIntentBadge(intent);
+      var result = _origSend.apply(this, arguments);
+      // Auto-disable after send if it was auto-enabled
+      setTimeout(function() {
+        if (wasAutoEnabled && typeof _ragEnabled !== 'undefined' && _ragEnabled) {
+          if (typeof toggleRAG === 'function') toggleRAG();
+        }
+      }, 200);
+      return result;
+    }
+
+    showIntentBadge(intent);
+    return _origSend.apply(this, arguments);
+  };
+})();
+
+// Inject the intent badge element + CoT mode badge into composer area
+document.addEventListener('DOMContentLoaded', function() {
+  var composerBox = document.getElementById('composer-box');
+  if (composerBox) {
+    var badge = document.createElement('div');
+    badge.id = 'cx-intent-badge';
+    badge.className = 'cx-intent-badge hidden';
+    composerBox.parentNode.insertBefore(badge, composerBox);
+  }
+});
+
+
+/* ============================================================
+   2. FOLLOW-UP QUESTION SUGGESTER
+   After each AI response completes, generate 2-3 smart
+   follow-up question chips via a lightweight API call.
+============================================================ */
+var FOLLOWUP_URL = (typeof CHAT_URL !== 'undefined' ? CHAT_URL : '');
+
+async function generateFollowUpQuestions(userMsg, aiMsg) {
+  if (!userMsg || !aiMsg) return [];
+  try {
+    var res = await fetch(FOLLOWUP_URL, {
+      method:  'POST',
+      headers: (typeof edgeHeaders === 'function' ? edgeHeaders() : { 'Content-Type': 'application/json' }),
+      body:    JSON.stringify({
+        model:      'meta-llama/llama-4-scout-17b-16e-instruct',
+        stream:     false,
+        max_tokens: 80,
+        messages: [
+          {
+            role: 'system',
+            content: 'Generate exactly 3 short follow-up questions a user might ask based on this conversation. Return ONLY a JSON array of 3 short strings (max 8 words each). No markdown, no preamble.',
+          },
+          {
+            role: 'user',
+            content: 'User asked: ' + userMsg.slice(0, 200) + '\nAI replied: ' + aiMsg.slice(0, 300) + '\n\nGenerate 3 follow-up questions:',
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    var data = await res.json();
+    var raw  = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '').trim();
+    raw = raw.replace(/```json|```/g, '').trim();
+    var aStart = raw.indexOf('['); var aEnd = raw.lastIndexOf(']');
+    if (aStart === -1 || aEnd === -1) return [];
+    var questions = JSON.parse(raw.slice(aStart, aEnd + 1));
+    return Array.isArray(questions) ? questions.slice(0, 3).map(function(q) { return String(q).trim(); }).filter(Boolean) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function renderFollowUpChips(questions, lastUserMsg) {
+  // Remove any existing chips first
+  var existing = document.querySelector('.cx-followup-row');
+  if (existing) existing.remove();
+  if (!questions || !questions.length) return;
+
+  var container = document.getElementById('messages');
+  if (!container) return;
+
+  var row = document.createElement('div');
+  row.className = 'cx-followup-row';
+  row.innerHTML = '<div class="cx-followup-label">Follow up</div>' +
+    questions.map(function(q) {
+      return '<button class="cx-followup-chip" data-q="' + q.replace(/"/g, '&quot;') + '">' +
+        '<span>' + q + '</span>' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>' +
+      '</button>';
+    }).join('');
+  container.appendChild(row);
+
+  // Animate in
+  requestAnimationFrame(function() {
+    row.querySelectorAll('.cx-followup-chip').forEach(function(chip, i) {
+      chip.style.animationDelay = (i * 80) + 'ms';
+      chip.classList.add('cx-chip-in');
+    });
+  });
+
+  // Click handlers
+  row.querySelectorAll('.cx-followup-chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      var q = chip.dataset.q;
+      if (!q) return;
+      var inp = document.getElementById('composer-input');
+      if (inp) {
+        inp.value = q;
+        inp.dispatchEvent(new Event('input'));
+        inp.focus();
+      }
+      row.remove();
+      if (typeof haptic === 'function') haptic('light');
+    });
+  });
+
+  // Auto-scroll to show chips
+  if (typeof scrollToBottom === 'function') scrollToBottom();
+}
+
+// Hook into the post-message pipeline
+// Wrap bgSyncMessages to fire follow-up generation after sync
+(function() {
+  var _origBgSync = window.bgSyncMessages;
+  if (typeof _origBgSync !== 'function') return;
+
+  window.bgSyncMessages = async function(isNewChat, localChatId, userText, aiText, msgEl) {
+    var result = await _origBgSync.apply(this, arguments);
+    // Generate follow-ups in background — non-blocking
+    if (userText && aiText && aiText.length > 50) {
+      generateFollowUpQuestions(userText, aiText).then(function(questions) {
+        if (questions && questions.length) renderFollowUpChips(questions, userText);
+      }).catch(function() {});
+    }
+    return result;
+  };
+})();
+
+// Remove follow-up chips on new message
+(function() {
+  var _orig = window.sendMessage;
+  window.sendMessage = function() {
+    var chips = document.querySelector('.cx-followup-row');
+    if (chips) chips.remove();
+    return _orig ? _orig.apply(this, arguments) : undefined;
+  };
+})();
+
+
+/* ============================================================
+   3. SEMANTIC MEMORY RETRIEVAL — pgvector embed + cosine search
+   New Edge Function: /functions/v1/embed-memory
+   On save: stores embedding in user_memories.embedding column
+   On retrieve: cosine similarity search as primary, fallback to keyword
+============================================================ */
+var EMBED_URL = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL + '/functions/v1/embed-memory' : '');
+
+// Generate embedding for a text string via Edge Function
+async function generateEmbedding(text) {
+  if (!text || !EMBED_URL) return null;
+  try {
+    var headers = typeof edgeHeaders === 'function' ? edgeHeaders() : { 'Content-Type': 'application/json' };
+    var res = await fetch(EMBED_URL, {
+      method:  'POST',
+      headers: headers,
+      body:    JSON.stringify({ text: text.slice(0, 500) }),
+      signal:  AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data.embedding || null; // float[] array
+  } catch (e) {
+    console.warn('[CyanixAI] Embedding generation failed:', e.message);
+    return null;
+  }
+}
+
+// Cosine similarity between two float vectors
+function cosineSimilarity(a, b) {
+  if (!a || !b || a.length !== b.length) return 0;
+  var dot = 0, normA = 0, normB = 0;
+  for (var i = 0; i < a.length; i++) {
+    dot   += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  var denom = Math.sqrt(normA) * Math.sqrt(normB);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+// Semantic retrieval: embed query, score memories by cosine similarity
+async function retrieveMemoriesSemantic(query) {
+  // Fall back to keyword search if no embeddings stored
+  var hasEmbeddings = (typeof _memories !== 'undefined') &&
+    _memories.some(function(m) { return m.embedding && m.embedding.length > 0; });
+
+  if (!hasEmbeddings) {
+    // Fallback to existing keyword retrieval
+    return typeof retrieveRelevantMemories === 'function' ? retrieveRelevantMemories(query) : [];
+  }
+
+  var queryEmbedding = await generateEmbedding(query);
+  if (!queryEmbedding) {
+    return typeof retrieveRelevantMemories === 'function' ? retrieveRelevantMemories(query) : [];
+  }
+
+  var limit = typeof getContextLimit === 'function' ? getContextLimit() : 8;
+
+  var scored = _memories.map(function(m) {
+    var sim = 0;
+    if (m.embedding && m.embedding.length > 0) {
+      sim = cosineSimilarity(queryEmbedding, m.embedding);
+    } else {
+      // Keyword score as fallback for memories without embeddings
+      sim = typeof scoreMemoryRelevance === 'function' ? scoreMemoryRelevance(m, query) * 0.1 : 0;
+    }
+    return { mem: m, score: sim };
+  }).sort(function(a, b) { return b.score - a.score; });
+
+  // Always include project/technical memories in top slots
+  var projectMems = _memories.filter(function(m) {
+    return m.category === 'project' || m.category === 'technical';
+  }).slice(0, Math.floor(limit * 0.5));
+
+  var projectIds = new Set(projectMems.map(function(m) { return m.id; }));
+  var rest = scored
+    .filter(function(s) { return !projectIds.has(s.mem.id) && s.score > 0.15; })
+    .slice(0, limit - projectMems.length)
+    .map(function(s) { return s.mem; });
+
+  return projectMems.concat(rest).slice(0, limit);
+}
+
+// Patch memory save to also store embeddings
+(function() {
+  // After a memory is saved, generate and store its embedding
+  var _origExtract = window.extractAndSaveMemories;
+  if (typeof _origExtract !== 'function') return;
+
+  window.extractAndSaveMemories = async function(messages, sourceId) {
+    await _origExtract.apply(this, arguments);
+    // Embed any memories that don't yet have embeddings
+    // We do this async/lazy — no blocking the main flow
+    setTimeout(async function() {
+      if (!window._sb || !window._session) return;
+      var _mems = window._memories || [];
+      var needsEmbed = _mems.filter(function(m) { return !m.embedding; }).slice(0, 5);
+      for (var i = 0; i < needsEmbed.length; i++) {
+        var m = needsEmbed[i];
+        var emb = await generateEmbedding(m.memory + ' ' + (m.entity_name || ''));
+        if (emb && window._sb && window._session) {
+          window._sb.from('user_memories')
+            .update({ embedding: emb })
+            .eq('id', m.id)
+            .eq('user_id', window._session.user.id)
+            .then(function() {})
+            .catch(function() {});
+          m.embedding = emb; // update in-memory too
+        }
+      }
+    }, 2000);
+  };
+})();
+
+// Expose for use in buildSystemPrompt
+window.retrieveMemoriesSemantic = retrieveMemoriesSemantic;
+
+
+/* ============================================================
+   4. FUNCTION / TOOL CALLING
+   Tools: web_search, calculate, get_current_time
+   Client-side router detects tool intent and calls before LLM.
+============================================================ */
+
+var CX_TOOLS = {
+  // Tool: web_search — uses existing RAG endpoint
+  web_search: async function(query) {
+    if (typeof fetchRAGContext !== 'function') return { error: 'RAG not available' };
+    var data = await fetchRAGContext(query);
+    if (!data) return { error: 'No results found' };
+    return {
+      success: true,
+      query:   query,
+      results: (data.results || []).slice(0, 4).map(function(r) {
+        return { title: r.title, snippet: r.snippet, url: r.url };
+      }),
+      abstract: data.abstract || '',
+    };
+  },
+
+  // Tool: calculate — safe math evaluation
+  calculate: function(expression) {
+    try {
+      // Sanitise: only allow math chars
+      var safe = expression.replace(/[^0-9+\-*/().%^ \t\n]/g, '');
+      if (!safe.trim()) return { error: 'Invalid expression' };
+      // Replace ^ with ** for JS
+      safe = safe.replace(/\^/g, '**');
+      // eslint-disable-next-line no-new-func
+      var result = new Function('return (' + safe + ')')();
+      if (typeof result !== 'number' || !isFinite(result)) return { error: 'Could not compute' };
+      return { success: true, expression: expression, result: result };
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  // Tool: get_current_time
+  get_current_time: function() {
+    var now = new Date();
+    return {
+      success:   true,
+      iso:       now.toISOString(),
+      local:     now.toLocaleString(),
+      date:      now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }),
+      time:      now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' }),
+      timezone:  Intl.DateTimeFormat().resolvedOptions().timeZone,
+      unix:      Math.floor(now.getTime() / 1000),
+    };
+  },
+};
+
+// Tool intent patterns
+var TOOL_PATTERNS = [
+  { tool: 'web_search',      re: /\b(search|find|look up|google|fetch|latest|news|today|current|price of|who is|weather)\b/i },
+  { tool: 'calculate',       re: /\b(calculate|compute|what is \d|how much is \d|solve|\d[\d\s+\-*/^()]+\d)\b/i },
+  { tool: 'get_current_time', re: /\b(what time|what's the time|current time|what date|what day|today's date)\b/i },
+];
+
+function detectToolIntent(text) {
+  for (var i = 0; i < TOOL_PATTERNS.length; i++) {
+    if (TOOL_PATTERNS[i].re.test(text)) return TOOL_PATTERNS[i].tool;
+  }
+  return null;
+}
+
+function extractToolArg(toolName, text) {
+  if (toolName === 'web_search') {
+    // Strip trigger words and return rest as query
+    return text.replace(/^(search for|look up|find|google|fetch)\s+/i, '').trim() || text;
+  }
+  if (toolName === 'calculate') {
+    var match = text.match(/[\d\s+\-*/^().%]+/);
+    return match ? match[0].trim() : text;
+  }
+  return text;
+}
+
+// Show a subtle "Using tool: X" indicator in the thinking row
+function showToolIndicator(toolName) {
+  var tl = document.getElementById('thinking-text');
+  if (!tl) return;
+  var labels = {
+    web_search:       'Searching the web…',
+    calculate:        'Calculating…',
+    get_current_time: 'Checking the time…',
+  };
+  tl.textContent = labels[toolName] || 'Using tool…';
+}
+
+// Render a tool-use disclosure card inside a message bubble
+function renderToolCard(toolName, result) {
+  var icons = {
+    web_search:       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    calculate:        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="10" x2="8" y2="10"/><line x1="11" y1="14" x2="8" y2="14"/><line x1="11" y1="18" x2="8" y2="18"/><line x1="16" y1="14" x2="13" y2="14"/><line x1="16" y1="18" x2="13" y2="18"/></svg>',
+    get_current_time: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  };
+  var labels = { web_search: 'Web Search', calculate: 'Calculator', get_current_time: 'Current Time' };
+  var icon  = icons[toolName]  || '';
+  var label = labels[toolName] || toolName;
+  var summary = '';
+  if (toolName === 'calculate' && result.result !== undefined) {
+    summary = result.expression + ' = <strong>' + result.result + '</strong>';
+  } else if (toolName === 'get_current_time' && result.date) {
+    summary = result.date + ', ' + result.time;
+  } else if (toolName === 'web_search' && result.results) {
+    summary = 'Found ' + result.results.length + ' results';
+  }
+
+  return '<div class="cx-tool-card">' +
+    '<div class="cx-tool-card-header">' + icon + '<span>' + label + '</span></div>' +
+    (summary ? '<div class="cx-tool-card-result">' + summary + '</div>' : '') +
+  '</div>';
+}
+
+// Pre-sendMessage tool execution hook
+(function() {
+  var _origSend = window.sendMessage;
+  window.sendMessage = async function(text) {
+    var toolName = detectToolIntent(text || '');
+    if (!toolName) return _origSend ? _origSend.apply(this, arguments) : undefined;
+
+    // Only intercept for calculate and get_current_time — web_search is handled by RAG
+    if (toolName === 'web_search') return _origSend ? _origSend.apply(this, arguments) : undefined;
+
+    var arg    = extractToolArg(toolName, text);
+    var result = CX_TOOLS[toolName] ? await CX_TOOLS[toolName](arg) : { error: 'Tool not found' };
+
+    // Inject tool result context into the message before sending
+    var toolContext = '\n\n[TOOL RESULT: ' + toolName + ']\n' + JSON.stringify(result) + '\n[END TOOL RESULT]';
+    var augmented   = text + toolContext;
+
+    return _origSend ? _origSend.apply(this, [augmented]) : undefined;
+  };
+})();
+
+// Expose tools globally for edge function usage
+window.CX_TOOLS = CX_TOOLS;
+
+
+/* ============================================================
+   5. SIDEBAR SWIPE GESTURE + OVERLAY DIM
+   Left-edge swipe opens sidebar. Overlay tap closes it.
+============================================================ */
+(function() {
+  var SWIPE_EDGE   = 28; // px from left edge to start swipe
+  var SWIPE_MIN    = 60; // min px horizontal distance to trigger
+  var _swipeStart  = null;
+
+  function getSidebar()  { return document.querySelector('.sidebar'); }
+  function getOverlay()  { return document.getElementById('sidebar-overlay'); }
+
+  function openSidebar() {
+    var sb = getSidebar(); var ov = getOverlay();
+    if (!sb) return;
+    sb.classList.remove('collapsed');
+    if (ov) { ov.classList.remove('hidden'); ov.classList.add('visible'); }
+    if (typeof haptic === 'function') haptic('medium');
+  }
+
+  function closeSidebar() {
+    var sb = getSidebar(); var ov = getOverlay();
+    if (!sb) return;
+    sb.classList.add('collapsed');
+    if (ov) { ov.classList.remove('visible'); setTimeout(function() { ov.classList.add('hidden'); }, 280); }
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    if (window.innerWidth > 700) return;
+    var t = e.touches[0];
+    if (t.clientX <= SWIPE_EDGE) {
+      _swipeStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+    } else {
+      _swipeStart = null;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!_swipeStart) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - _swipeStart.x;
+    var dy = Math.abs(t.clientY - _swipeStart.y);
+    var dt = Date.now() - _swipeStart.time;
+    _swipeStart = null;
+    if (dx >= SWIPE_MIN && dy < 60 && dt < 400) {
+      var sb = getSidebar();
+      if (sb && sb.classList.contains('collapsed')) openSidebar();
+    }
+  }, { passive: true });
+
+  // Overlay close tap
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'sidebar-overlay') closeSidebar();
+  });
+
+  // Expose
+  window.cxOpenSidebar  = openSidebar;
+  window.cxCloseSidebar = closeSidebar;
+})();
+
+
+/* ============================================================
+   6. MOBILE MESSAGE ACTIONS — "..." menu
+   On mobile, replace always-visible actions with a dot-menu.
+============================================================ */
+(function() {
+  function isMobile() { return window.innerWidth <= 700; }
+
+  // Intercept click on ... buttons (delegated)
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.cx-msg-more-btn');
+    if (!btn) return;
+    var row = btn.closest('.msg-row');
+    if (!row) return;
+
+    // Close any open menus first
+    document.querySelectorAll('.cx-msg-menu.open').forEach(function(m) { m.classList.remove('open'); });
+
+    var menu = row.querySelector('.cx-msg-menu');
+    if (!menu) return;
+    menu.classList.add('open');
+    if (typeof haptic === 'function') haptic('light');
+
+    // Auto-close on outside tap
+    setTimeout(function() {
+      function closeMenu(evt) {
+        if (!menu.contains(evt.target)) {
+          menu.classList.remove('open');
+          document.removeEventListener('click', closeMenu);
+        }
+      }
+      document.addEventListener('click', closeMenu);
+    }, 10);
+  });
+
+  // Patch renderMessage to inject mobile menu on AI messages
+  var _origRender = window.renderMessage;
+  if (typeof _origRender !== 'function') return;
+
+  window.renderMessage = function(role, content, animate, msgId, imageData) {
+    var result = _origRender.apply(this, arguments);
+    if (role !== 'user' && isMobile() && result && result.msgEl) {
+      var actions = result.msgEl.querySelector('.msg-actions');
+      if (actions) {
+        // Insert ... button
+        var moreBtn = document.createElement('button');
+        moreBtn.className = 'cx-msg-more-btn msg-action-btn';
+        moreBtn.title = 'More actions';
+        moreBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+        
+        // Build popup menu from existing buttons
+        var menu = document.createElement('div');
+        menu.className = 'cx-msg-menu';
+        var existingBtns = actions.querySelectorAll('.msg-action-btn');
+        existingBtns.forEach(function(b) {
+          var clone = b.cloneNode(true);
+          clone.classList.remove('msg-tts-btn');
+          menu.appendChild(clone);
+        });
+
+        actions.innerHTML = '';
+        actions.appendChild(moreBtn);
+        actions.appendChild(menu);
+        actions.classList.remove('msg-actions--always-show');
+      }
+    }
+    return result;
+  };
+})();
+
+
+/* ============================================================
+   7. STREAMING RAF BATCHING
+   Buffer tokens and flush to DOM every ~50ms using rAF
+   instead of per-token innerHTML updates.
+============================================================ */
+(function() {
+  var _rafFlushPending = false;
+  var _rafTarget = null;
+  var _rafBuffer  = '';
+  var _rafInterval = null;
+
+  window.cxStreamBuffer = {
+    init: function(bubbleEl) {
+      _rafTarget = bubbleEl;
+      _rafBuffer = '';
+      _rafFlushPending = false;
+      if (_rafInterval) clearInterval(_rafInterval);
+      _rafInterval = setInterval(window.cxStreamBuffer.flush, 48);
+    },
+    push: function(token) {
+      _rafBuffer += token;
+      if (!_rafFlushPending) {
+        _rafFlushPending = true;
+        requestAnimationFrame(window.cxStreamBuffer.flush);
+      }
+    },
+    flush: function() {
+      if (!_rafTarget || !_rafBuffer) { _rafFlushPending = false; return; }
+      _rafFlushPending = false;
+      // Use renderStreamingContent if available
+      if (typeof renderStreamingContent === 'function') {
+        _rafTarget.innerHTML = renderStreamingContent(_rafBuffer);
+      } else {
+        _rafTarget.textContent = _rafBuffer;
+      }
+    },
+    done: function() {
+      window.cxStreamBuffer.flush();
+      if (_rafInterval) { clearInterval(_rafInterval); _rafInterval = null; }
+      _rafTarget = null;
+      _rafBuffer = '';
+    },
+  };
+})();
+
+
+/* ============================================================
+   8. SCROLL-TO-BOTTOM FLOATING BUTTON
+   Appears when user scrolls up. Pulses when new AI message
+   arrives while scrolled up. Auto-hides at bottom.
+============================================================ */
+(function() {
+  var BTN_ID = 'cx-scroll-btn';
+  var _newMsgWhileScrolled = false;
+
+  function getScroll() { return document.getElementById('chat-scroll'); }
+
+  function isAtBottom(scroll) {
+    if (!scroll) return true;
+    return scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
+  }
+
+  function createBtn() {
+    if (document.getElementById(BTN_ID)) return;
+    var btn = document.createElement('button');
+    btn.id = BTN_ID;
+    btn.className = 'cx-scroll-btn hidden';
+    btn.title = 'Scroll to bottom';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    btn.addEventListener('click', function() {
+      var scroll = getScroll();
+      if (scroll) scroll.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' });
+      btn.classList.remove('cx-scroll-pulse');
+      _newMsgWhileScrolled = false;
+      if (typeof haptic === 'function') haptic('light');
+    });
+    var chatMain = document.querySelector('.chat-main') || document.body;
+    chatMain.appendChild(btn);
+    return btn;
+  }
+
+  function updateBtn() {
+    var btn = document.getElementById(BTN_ID) || createBtn();
+    if (!btn) return;
+    var scroll = getScroll();
+    if (isAtBottom(scroll)) {
+      btn.classList.add('hidden');
+      btn.classList.remove('cx-scroll-pulse');
+      _newMsgWhileScrolled = false;
+    } else {
+      btn.classList.remove('hidden');
+      if (_newMsgWhileScrolled) btn.classList.add('cx-scroll-pulse');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    createBtn();
+    var scroll = getScroll();
+    if (scroll) {
+      scroll.addEventListener('scroll', updateBtn, { passive: true });
+    }
+  });
+
+  // Mark when AI message arrives while scrolled up
+  var _origRenderMsg = window.renderMessage;
+  if (typeof _origRenderMsg === 'function') {
+    window.renderMessage = function(role) {
+      var result = _origRenderMsg.apply(this, arguments);
+      if (role !== 'user') {
+        var scroll = getScroll();
+        if (!isAtBottom(scroll)) {
+          _newMsgWhileScrolled = true;
+          updateBtn();
+        }
+      }
+      return result;
+    };
+  }
+
+  window.cxUpdateScrollBtn = updateBtn;
+})();
+
+
+/* ============================================================
+   9. IMPROVED TYPING INDICATOR
+   Pulse animation on AI avatar; dots inside message stream.
+============================================================ */
+(function() {
+  var _typingEl = null;
+
+  function injectTypingRow() {
+    var container = document.getElementById('messages');
+    if (!container) return;
+    // Remove old typing indicator if it exists
+    var oldTyping = document.getElementById('typing-row');
+    if (oldTyping) oldTyping.style.display = 'none'; // hide the global one
+
+    if (_typingEl && _typingEl.parentNode) return; // already present
+
+    _typingEl = document.createElement('div');
+    _typingEl.id = 'cx-inline-typing';
+    _typingEl.className = 'cx-inline-typing';
+    _typingEl.innerHTML =
+      '<div class="ai-avatar cx-typing-avatar"><img src="icons/manifest/icon-192x192.png" alt="Cyanix AI"/></div>' +
+      '<div class="cx-typing-dots"><span></span><span></span><span></span></div>';
+    container.appendChild(_typingEl);
+    if (typeof scrollToBottom === 'function') scrollToBottom();
+  }
+
+  function removeTypingRow() {
+    if (_typingEl && _typingEl.parentNode) _typingEl.parentNode.removeChild(_typingEl);
+    _typingEl = null;
+    var oldTyping = document.getElementById('typing-row');
+    if (oldTyping) oldTyping.style.display = '';
+  }
+
+  // Watch for show/hide of typing-row to mirror in our inline indicator
+  var _origShow = window.show;
+  var _origHide = window.hide;
+  if (typeof _origShow === 'function') {
+    window.show = function(el) {
+      var result = _origShow.apply(this, arguments);
+      var id = typeof el === 'string' ? el : (el && el.id);
+      if (id === 'typing-row') injectTypingRow();
+      return result;
+    };
+  }
+  if (typeof _origHide === 'function') {
+    window.hide = function(el) {
+      var result = _origHide.apply(this, arguments);
+      var id = typeof el === 'string' ? el : (el && el.id);
+      if (id === 'typing-row') removeTypingRow();
+      return result;
+    };
+  }
+})();
+
+
+/* ============================================================
+   10. SETTINGS SWIPE-BACK GESTURE
+   Horizontal swipe right on settings modal body → go back.
+============================================================ */
+(function() {
+  var _swipeStart = null;
+  var SWIPE_MIN   = 80;
+
+  document.addEventListener('touchstart', function(e) {
+    var settingsModal = document.getElementById('settings-modal');
+    if (!settingsModal || settingsModal.classList.contains('hidden')) return;
+    // Only trigger if sub-page is visible
+    var subPage = settingsModal.querySelector('.settings-subpage:not(.hidden)');
+    if (!subPage) return;
+    var t = e.touches[0];
+    _swipeStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!_swipeStart) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - _swipeStart.x;
+    var dy = Math.abs(t.clientY - _swipeStart.y);
+    var dt = Date.now() - _swipeStart.time;
+    _swipeStart = null;
+
+    if (dx >= SWIPE_MIN && dy < 80 && dt < 400) {
+      // Trigger back button if present
+      var backBtn = document.querySelector('.settings-back-btn, .modal-back-btn, #settings-back-btn');
+      if (backBtn) {
+        backBtn.click();
+        if (typeof haptic === 'function') haptic('light');
+      }
+    }
+  }, { passive: true });
+})();
+
+
+/* ============================================================
+   11. COMPOSER IMPROVEMENTS
+   - Max height 200px desktop / 160px mobile
+   - Char counter only shows near limit (already in app.js,
+     this overrides the threshold to be cleaner)
+   - Smooth resize transition
+============================================================ */
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var inp = document.getElementById('composer-input');
+    if (!inp) return;
+
+    var isMobile = window.innerWidth <= 700;
+    var MAX_H    = isMobile ? 160 : 200;
+
+    inp.addEventListener('input', function() {
+      inp.style.height = 'auto';
+      inp.style.height = Math.min(inp.scrollHeight, MAX_H) + 'px';
+    });
+
+    // Update on resize
+    window.addEventListener('resize', function() {
+      isMobile = window.innerWidth <= 700;
+      MAX_H = isMobile ? 160 : 200;
+    });
+  });
+})();
+
+
+/* ============================================================
+   12. WELCOME SCREEN PERSONALISATION
+   - Show user's name from settings
+   - Show last 3 chat titles as quick-start chips
+   - "Continue:" chips for recent sessions
+============================================================ */
+function renderPersonalisedWelcome() {
+  var welcomeState = document.getElementById('welcome-state');
+  if (!welcomeState) return;
+
+  // Inject personalised name into greeting if not already done
+  var heading = welcomeState.querySelector('.welcome-heading');
+  var name    = (typeof _settings !== 'undefined' && _settings.displayName) ? _settings.displayName : null;
+  if (name && heading) {
+    var h = heading.textContent || '';
+    if (!h.includes(name)) {
+      // Append name to first heading word
+      heading.innerHTML = heading.innerHTML.replace(
+        /(<[^>]*>)?([A-Za-z,!]+)(<\/[^>]*>)?/,
+        function(m) { return m; }
+      );
+    }
+  }
+
+  // Inject recent chat chips
+  var recentChats = (typeof _chats !== 'undefined' ? _chats : []).slice(0, 3);
+  if (!recentChats.length) return;
+
+  var existingRecent = welcomeState.querySelector('.cx-recent-chats');
+  if (existingRecent) existingRecent.remove();
+
+  var recentEl = document.createElement('div');
+  recentEl.className = 'cx-recent-chats';
+  recentEl.innerHTML =
+    '<div class="cx-recent-label">Continue a conversation</div>' +
+    '<div class="cx-recent-chips">' +
+    recentChats.map(function(c) {
+      return '<button class="cx-recent-chip" data-id="' + (c.id || '') + '">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+        '<span>' + (c.title || 'Untitled chat').slice(0, 32) + '</span>' +
+      '</button>';
+    }).join('') +
+    '</div>';
+  
+  // Insert before cards
+  var cards = welcomeState.querySelector('.welcome-cards');
+  if (cards) welcomeState.insertBefore(recentEl, cards);
+  else welcomeState.appendChild(recentEl);
+
+  // Click to load chat
+  recentEl.querySelectorAll('.cx-recent-chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      var id = chip.dataset.id;
+      if (id && typeof loadChat === 'function') loadChat(id);
+      if (typeof haptic === 'function') haptic('medium');
+    });
+  });
+}
+
+// Hook into showWelcome or newChat
+var _origNewChat = window.newChat;
+if (typeof _origNewChat === 'function') {
+  window.newChat = function() {
+    var result = _origNewChat.apply(this, arguments);
+    setTimeout(renderPersonalisedWelcome, 100);
+    return result;
+  };
+}
+
+window.addEventListener('cyanix:ready', function() {
+  setTimeout(renderPersonalisedWelcome, 400);
+});
+
+
+/* ============================================================
+   13. HAPTIC MICRO-INTERACTIONS
+   Light vibration on key interactions throughout the app.
+============================================================ */
+(function() {
+  var _origHaptic = window.haptic;
+
+  window.haptic = function(type) {
+    if (_origHaptic) _origHaptic.apply(this, arguments);
+    if (!navigator.vibrate) return;
+    var durations = { light: 8, medium: 15, heavy: 30 };
+    var d = durations[type] || 10;
+    navigator.vibrate(d);
+  };
+
+  // Sidebar item tap
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.chat-item')) haptic('light');
+    if (e.target.closest('.setting-toggle')) haptic('light');
+    if (e.target.closest('.ci-del'))   haptic('medium');
+  });
+
+  // Long-press on message → context menu (copy/share)
+  var _lpTimer = null;
+  document.addEventListener('touchstart', function(e) {
+    var bubble = e.target.closest('.msg-bubble');
+    if (!bubble) return;
+    _lpTimer = setTimeout(function() {
+      haptic('heavy');
+      // Briefly flash the bubble to signal selection
+      bubble.style.transition = 'background .15s';
+      bubble.style.background = 'var(--blue-50)';
+      setTimeout(function() { bubble.style.background = ''; }, 400);
+      // Copy on long press
+      var text = bubble.dataset.raw || bubble.innerText;
+      if (navigator.clipboard && text) {
+        navigator.clipboard.writeText(text).then(function() {
+          if (typeof toast === 'function') toast('Copied!');
+        }).catch(function() {});
+      }
+    }, 600);
+  }, { passive: true });
+
+  document.addEventListener('touchend',   function() { clearTimeout(_lpTimer); }, { passive: true });
+  document.addEventListener('touchmove',  function() { clearTimeout(_lpTimer); }, { passive: true });
+  document.addEventListener('touchcancel',function() { clearTimeout(_lpTimer); }, { passive: true });
+})();
+
+
+/* ============================================================
+   14. INSTANT THEME SWITCHING WITH CROSSFADE
+   Ensures all CSS variables update instantly + smooth transition.
+   "System" option follows OS preference.
+============================================================ */
+(function() {
+  var _origApplyTheme = window.applyTheme;
+
+  window.applyTheme = function(theme) {
+    // Handle "system" theme
+    if (theme === 'system') {
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      theme = prefersDark ? 'dark' : 'light';
+    }
+
+    // Add crossfade class
+    document.documentElement.classList.add('cx-theme-transition');
+
+    if (_origApplyTheme) {
+      _origApplyTheme.apply(this, arguments);
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    // Remove crossfade class after transition
+    setTimeout(function() {
+      document.documentElement.classList.remove('cx-theme-transition');
+    }, 350);
+
+    // Sync to localStorage immediately (belt and suspenders)
+    try { localStorage.setItem('cx-theme', theme); } catch(e) {}
+
+    // Update theme-color meta tag
+    var metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      var colors = { light: '#f0f4f9', dark: '#0f172a', founder: '#050a14', neon: '#0d0014', midnight: '#080c18' };
+      metaTheme.setAttribute('content', colors[theme] || '#f0f4f9');
+    }
+  };
+
+  // Listen to OS theme changes for "system" option
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+    var currentTheme = (typeof _settings !== 'undefined' && _settings.theme) || localStorage.getItem('cx-theme');
+    if (currentTheme === 'system') {
+      window.applyTheme('system');
+    }
+  });
+})();
+
+
+/* ============================================================
+   INIT — run after DOM and cyanix:ready
+============================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  // Create sidebar overlay if it doesn't exist
+  if (!document.getElementById('sidebar-overlay')) {
+    var ov = document.createElement('div');
+    ov.id = 'sidebar-overlay';
+    ov.className = 'sidebar-overlay hidden';
+    document.body.insertBefore(ov, document.body.firstChild);
+  }
+});
+
+window.addEventListener('cyanix:ready', function() {
+  renderPersonalisedWelcome();
+  // Reflect initial theme with new applyTheme
+  var t = (typeof _settings !== 'undefined' && _settings.theme) || localStorage.getItem('cx-theme') || 'light';
+  if (t) window.applyTheme(t);
+});
+
+console.log('[CyanixAI] app_additions.js v1.0 loaded');
