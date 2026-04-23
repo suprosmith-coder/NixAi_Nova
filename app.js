@@ -9285,3 +9285,576 @@ window.addEventListener('cyanix:ready', function() {
 });
 
 console.log('[CyanixAI] app_additions.js v1.0 loaded');
+
+
+/* ================================================================
+   COMPLIX  —  Axion 5 Extended Thinking  v1.0
+   ================================================================
+   Like Claude's Extended Thinking but built for Axion.
+   When active, every Axion request runs a visible 5-stage pipeline:
+
+     Stage 1 · ROUTE    — fast intent classifier (what kind of problem is this?)
+     Stage 2 · THINK    — deep reasoning pass (skeleton answer + logic chain)
+     Stage 3 · DRAFT    — full response generation using the thinking skeleton
+     Stage 4 · VERIFY   — self-critique & fact check of the draft
+     Stage 5 · POLISH   — final rewrite incorporating verify feedback
+
+   Each stage renders live in an animated panel above the response.
+   The final polished answer replaces the bubble when done.
+
+   Complix is Axion-only and opt-in via the composer toolbar.
+================================================================ */
+(function() {
+  'use strict';
+
+  /* ── State ──────────────────────────────────────────────── */
+  var _complixActive = false;
+
+  try {
+    _complixActive = localStorage.getItem('cx-complix') === '1';
+  } catch(e) {}
+
+  function saveComplixState() {
+    try { localStorage.setItem('cx-complix', _complixActive ? '1' : '0'); } catch(e) {}
+  }
+
+  /* ── Stage definitions ──────────────────────────────────── */
+  var STAGES = [
+    { id: 'route',  label: 'Routing',     icon: 'M9 18V5l12-2v13',                    detail: 'Classifying intent & complexity…'         },
+    { id: 'think',  label: 'Thinking',    icon: 'M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01', detail: 'Building reasoning skeleton…'  },
+    { id: 'draft',  label: 'Drafting',    icon: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7', detail: 'Generating full response…' },
+    { id: 'verify', label: 'Verifying',   icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3', detail: 'Self-critiquing the draft…' },
+    { id: 'polish', label: 'Polishing',   icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z', detail: 'Final rewrite & cleanup…' },
+  ];
+
+  /* ── Build SVG path helper ──────────────────────────────── */
+  function stageIcon(d, size) {
+    size = size || 14;
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
+  }
+
+  /* ── Inject Complix button into composer toolbar ──────── */
+  function injectComplixButton() {
+    var toolbar = document.getElementById('cx-ai-toolbar');
+    if (!toolbar || document.getElementById('cx-complix-btn')) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'cx-complix-btn';
+    btn.type = 'button';
+    btn.className = 'cx-toolbar-btn cx-complix-btn' + (_complixActive ? ' cx-toolbar-btn--active cx-complix-btn--on' : '');
+    btn.title = 'Complix — Axion Extended Thinking (5-stage reasoning pipeline)';
+    btn.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/><path d="M5.64 7.05l.88.88M17.48 7.05l-.88.88M5.64 16.95l.88-.88M17.48 16.95l-.88-.88M2 12h2M20 12h2"/></svg>' +
+      '<span>Complix</span>' +
+      '<span class="cx-complix-badge" id="cx-complix-badge">' + (STAGES.length) + ' stages</span>';
+
+    btn.addEventListener('click', toggleComplix);
+    // Insert before other toolbar items so it's first
+    toolbar.insertBefore(btn, toolbar.firstChild);
+  }
+
+  function toggleComplix() {
+    if (typeof _settings !== 'undefined' && _settings.model !== 'axion') {
+      if (typeof toast === 'function') toast('Complix is Axion-only. Switch to Axion first.');
+      return;
+    }
+    _complixActive = !_complixActive;
+    saveComplixState();
+    updateComplixUI();
+    if (typeof toast === 'function') {
+      toast(_complixActive
+        ? '✦ Complix ON — 5-stage deep reasoning active'
+        : 'Complix off');
+    }
+    if (typeof haptic === 'function') haptic('medium');
+  }
+
+  function updateComplixUI() {
+    var btn = document.getElementById('cx-complix-btn');
+    if (!btn) return;
+    btn.classList.toggle('cx-toolbar-btn--active', _complixActive);
+    btn.classList.toggle('cx-complix-btn--on', _complixActive);
+  }
+
+  /* ── Create Complix stage panel in a message bubble ─────── */
+  function createComplixPanel(bubbleEl) {
+    if (!bubbleEl) return null;
+
+    // Remove any stale panel
+    var stale = bubbleEl.querySelector('.cx-complix-panel');
+    if (stale) stale.remove();
+
+    var panel = document.createElement('div');
+    panel.className = 'cx-complix-panel';
+    panel.innerHTML =
+      '<div class="cx-complix-header">' +
+        '<div class="cx-complix-logo">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/><path d="M5.64 7.05l.88.88M17.48 7.05l-.88.88M5.64 16.95l.88-.88M17.48 16.95l-.88-.88M2 12h2M20 12h2"/></svg>' +
+        '</div>' +
+        '<span class="cx-complix-title">Complix · Extended Thinking</span>' +
+        '<span class="cx-complix-status" id="cx-cpl-status">Initializing…</span>' +
+      '</div>' +
+      '<div class="cx-complix-stages" id="cx-cpl-stages">' +
+        STAGES.map(function(s, i) {
+          return '<div class="cx-cpl-stage" id="cx-cpl-stage-' + s.id + '" data-idx="' + i + '">' +
+            '<div class="cx-cpl-stage-icon cx-cpl-icon-idle">' + stageIcon(s.icon, 12) + '</div>' +
+            '<div class="cx-cpl-stage-body">' +
+              '<span class="cx-cpl-stage-label">' + s.label + '</span>' +
+              '<span class="cx-cpl-stage-detail" id="cx-cpl-detail-' + s.id + '">' + s.detail + '</span>' +
+            '</div>' +
+            '<div class="cx-cpl-stage-check" id="cx-cpl-check-' + s.id + '"></div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="cx-complix-think-peek" id="cx-cpl-think-peek" style="display:none;">' +
+        '<div class="cx-cpl-think-label">Reasoning trace</div>' +
+        '<div class="cx-cpl-think-text" id="cx-cpl-think-text"></div>' +
+      '</div>';
+
+    bubbleEl.innerHTML = '';
+    bubbleEl.appendChild(panel);
+    return panel;
+  }
+
+  /* ── Update a single stage's state ─────────────────────── */
+  function setStageState(stageId, state, detail) {
+    // state: 'idle' | 'active' | 'done' | 'error'
+    var stageEl = document.getElementById('cx-cpl-stage-' + stageId);
+    if (!stageEl) return;
+
+    stageEl.className = 'cx-cpl-stage cx-cpl-stage--' + state;
+
+    var iconEl = stageEl.querySelector('.cx-cpl-stage-icon');
+    if (iconEl) {
+      iconEl.className = 'cx-cpl-stage-icon cx-cpl-icon-' + state;
+      if (state === 'active') {
+        iconEl.innerHTML = '<div class="cx-cpl-spin-ring"></div>';
+      } else if (state === 'done') {
+        iconEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else if (state === 'error') {
+        iconEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      } else {
+        // Restore original icon
+        var s = STAGES.find(function(x) { return x.id === stageId; });
+        if (s) iconEl.innerHTML = stageIcon(s.icon, 12);
+      }
+    }
+
+    if (detail) {
+      var detailEl = document.getElementById('cx-cpl-detail-' + stageId);
+      if (detailEl) detailEl.textContent = detail;
+    }
+  }
+
+  function setStatus(text) {
+    var el = document.getElementById('cx-cpl-status');
+    if (el) el.textContent = text;
+  }
+
+  /* ── Show thinking peek ─────────────────────────────────── */
+  function showThinkPeek(text) {
+    var peek = document.getElementById('cx-cpl-think-peek');
+    var textEl = document.getElementById('cx-cpl-think-text');
+    if (!peek || !textEl) return;
+    textEl.textContent = text.slice(0, 600) + (text.length > 600 ? '…' : '');
+    peek.style.display = 'block';
+  }
+
+  /* ── The Complix pipeline itself ────────────────────────── */
+  async function runComplixPipeline(text, systemContent, history, bubbleEl, msgEl) {
+    var panel = createComplixPanel(bubbleEl);
+
+    var thinkText  = '';
+    var draftText  = '';
+    var verifyText = '';
+    var finalText  = '';
+
+    var headers = (typeof edgeHeaders === 'function') ? edgeHeaders() : { 'Content-Type': 'application/json' };
+    var chatUrl  = (typeof CHAT_URL !== 'undefined') ? CHAT_URL : '';
+    var axionUrl = (typeof AXION_URL !== 'undefined') ? AXION_URL : '';
+    var abort    = (typeof _abortCtrl !== 'undefined' && _abortCtrl) ? _abortCtrl.signal : undefined;
+
+    // Helper to POST to AXION_URL with stream:false
+    async function axionCall(sysPatch, userContent, maxTok) {
+      var sysText = systemContent + (sysPatch ? '\n\n' + sysPatch : '');
+      var msgs = history.filter(function(m) { return m.role !== 'system'; });
+      // replace last user message with our content
+      var callMsgs = msgs.slice(0, -1).concat([{ role: 'user', content: userContent }]);
+      var res = await fetch(axionUrl, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          model: 'axion',
+          system: sysText,
+          messages: callMsgs,
+          stream: false,
+          max_tokens: maxTok || 800,
+        }),
+        signal: abort,
+      });
+      if (!res.ok) throw new Error('Axion call failed: ' + res.status);
+      var data = await res.json();
+      // Handle both Axion and OpenAI response shapes
+      return (
+        (data.content && data.content[0] && data.content[0].text) ||
+        (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ||
+        (data.response) ||
+        ''
+      ).trim();
+    }
+
+    try {
+      /* ─── Stage 1: ROUTE ──────────────────────────────── */
+      setStageState('route', 'active', 'Classifying intent…');
+      setStatus('Stage 1 of 5');
+
+      var routePrompt =
+        'Analyse this request and return JSON only.\n' +
+        'Request: ' + text.slice(0, 600) + '\n\n' +
+        'Return ONLY valid JSON:\n' +
+        '{"type":"coding|factual|analytical|creative|conversational","complexity":"low|medium|high|very_high",' +
+        '"angle":"one sentence: the best way to approach this","traps":["list","of","common","mistakes","for","this","type"],' +
+        '"needs_examples":true|false,"depth":"brief|standard|deep"}';
+
+      var routePlan = null;
+      try {
+        var rText = await axionCall(
+          'You are a precise query classifier. Return ONLY valid JSON, no other text.',
+          routePrompt, 200
+        );
+        var rStart = rText.indexOf('{'), rEnd = rText.lastIndexOf('}');
+        if (rStart !== -1) routePlan = JSON.parse(rText.slice(rStart, rEnd + 1));
+      } catch(e) {
+        console.warn('[Complix] Route stage parse error:', e.message);
+      }
+
+      var routeDetail = routePlan
+        ? routePlan.type + ' · ' + routePlan.complexity + ' complexity'
+        : 'Routing complete';
+      setStageState('route', 'done', routeDetail);
+
+      /* ─── Stage 2: THINK ──────────────────────────────── */
+      setStageState('think', 'active', 'Reasoning through the problem…');
+      setStatus('Stage 2 of 5');
+
+      var thinkSysPatch =
+        'You are thinking step by step BEFORE answering. Do NOT write the final answer yet.\n' +
+        'Instead, write a reasoning skeleton:\n' +
+        '- What is the user really asking?\n' +
+        '- What do I know that is directly relevant?\n' +
+        '- What approach or structure should the answer take?\n' +
+        '- What are the edge cases or tricky parts I must not miss?\n' +
+        'Keep it raw and analytical. No fluff. Max 300 words.' +
+        (routePlan && routePlan.traps && routePlan.traps.length
+          ? ' Watch for: ' + routePlan.traps.join(', ') + '.'
+          : '');
+
+      thinkText = await axionCall(thinkSysPatch, text, 400);
+      showThinkPeek(thinkText);
+      setStageState('think', 'done', 'Reasoning complete — ' + Math.round(thinkText.split(/\s+/).length) + ' words');
+
+      /* ─── Stage 3: DRAFT ──────────────────────────────── */
+      setStageState('draft', 'active', 'Writing full response…');
+      setStatus('Stage 3 of 5');
+
+      var depthInstruction = '';
+      if (routePlan) {
+        if (routePlan.depth === 'brief') depthInstruction = 'Be concise — this is a simple question.';
+        else if (routePlan.depth === 'deep') depthInstruction = 'Be thorough — this needs depth and detail.';
+        if (routePlan.needs_examples) depthInstruction += ' Include concrete examples.';
+      }
+
+      var draftSysPatch =
+        'You have already reasoned through this problem. Now write the complete answer.\n' +
+        'Your reasoning notes (use these to guide the response, do not repeat them verbatim):\n' +
+        '---\n' + thinkText + '\n---\n' +
+        (routePlan && routePlan.angle ? 'Best approach: ' + routePlan.angle + '\n' : '') +
+        depthInstruction + '\n' +
+        'Write a complete, polished response now. No meta-commentary. Just the answer.';
+
+      var draftMaxTok = (routePlan && (routePlan.complexity === 'very_high' || routePlan.complexity === 'high')) ? 2000 : 1200;
+      draftText = await axionCall(draftSysPatch, text, draftMaxTok);
+      setStageState('draft', 'done', 'Draft ready — ' + Math.round(draftText.split(/\s+/).length) + ' words');
+
+      /* ─── Stage 4: VERIFY ─────────────────────────────── */
+      setStageState('verify', 'active', 'Self-critiquing…');
+      setStatus('Stage 4 of 5');
+
+      var verifySysPatch =
+        'You are now a strict quality reviewer. Check this draft response for:\n' +
+        '1. Accuracy — any incorrect facts, wrong API names, hallucinated methods?\n' +
+        '2. Completeness — does it fully answer what was asked? Anything missing?\n' +
+        '3. Clarity — any confusing parts? Anything that needs better explanation?\n' +
+        '4. Code quality (if applicable) — any bugs, missing imports, bad patterns?\n\n' +
+        'Return JSON ONLY:\n' +
+        '{"passes":true|false,"issues":["specific problems found"],' +
+        '"fix_instructions":"one sentence instruction OR null if passes"}';
+
+      var verifyPlan = null;
+      try {
+        var vText = await axionCall(
+          verifySysPatch,
+          'Original question: ' + text.slice(0, 400) + '\n\nDraft to verify:\n' + draftText.slice(0, 2000),
+          300
+        );
+        var vStart = vText.indexOf('{'), vEnd = vText.lastIndexOf('}');
+        if (vStart !== -1) verifyPlan = JSON.parse(vText.slice(vStart, vEnd + 1));
+      } catch(e) {
+        console.warn('[Complix] Verify parse error:', e.message);
+      }
+
+      var verifyDetail = verifyPlan
+        ? (verifyPlan.passes ? '✓ No issues found' : verifyPlan.issues && verifyPlan.issues.length + ' issue(s) flagged')
+        : 'Verification complete';
+      setStageState('verify', 'done', verifyDetail);
+
+      /* ─── Stage 5: POLISH ─────────────────────────────── */
+      setStageState('polish', 'active', 'Final rewrite…');
+      setStatus('Stage 5 of 5');
+
+      var needsPolish = !verifyPlan || !verifyPlan.passes;
+
+      if (needsPolish && verifyPlan && verifyPlan.fix_instructions) {
+        var polishSysPatch =
+          'Rewrite the following response to fix these issues:\n' +
+          verifyPlan.fix_instructions + '\n\n' +
+          'Issues to fix:\n' + (verifyPlan.issues || []).map(function(i, n) { return (n+1) + '. ' + i; }).join('\n') + '\n\n' +
+          'The original question was: ' + text.slice(0, 400) + '\n\n' +
+          'Return the improved response only — no meta-commentary, no "here is the improved version".';
+
+        finalText = await axionCall(polishSysPatch, draftText.slice(0, 2000), draftMaxTok);
+        setStageState('polish', 'done', 'Rewritten with fixes applied');
+      } else {
+        // Draft already passes — just do a final tone/format polish
+        var lightPolishSys =
+          'Do a final light polish on this response:\n' +
+          '- Remove any filler phrases or redundant sentences\n' +
+          '- Tighten the language\n' +
+          '- Make sure the response ends cleanly (no "let me know if you need anything")\n' +
+          'Return only the polished response text.';
+
+        finalText = await axionCall(lightPolishSys, draftText.slice(0, 2000), draftMaxTok);
+        setStageState('polish', 'done', 'Final cleanup applied');
+      }
+
+      if (!finalText || finalText.length < 30) {
+        finalText = draftText; // fallback
+        setStageState('polish', 'done', 'Using verified draft');
+      }
+
+      setStatus('Complete');
+
+      /* ─── Render final response ───────────────────────── */
+      await new Promise(function(r) { setTimeout(r, 420); }); // brief pause so user sees all stages done
+
+      // Collapse the panel into a compact summary strip, show the answer below
+      if (bubbleEl) {
+        var summaryStrip = document.createElement('div');
+        summaryStrip.className = 'cx-complix-summary';
+        summaryStrip.innerHTML =
+          '<button type="button" class="cx-complix-summary-toggle" onclick="this.closest(\'.cx-complix-summary\').classList.toggle(\'expanded\')" title="Show/hide Complix reasoning">' +
+            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/><path d="M5.64 7.05l.88.88M17.48 7.05l-.88.88M5.64 16.95l.88-.88M17.48 16.95l-.88-.88M2 12h2M20 12h2"/></svg>' +
+            '<span>Complix · 5 stages complete</span>' +
+            '<svg width="10" height="10" class="cx-summary-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</button>' +
+          '<div class="cx-complix-summary-detail">' +
+            '<div class="cx-complix-stages-mini">' +
+              STAGES.map(function(s) {
+                return '<span class="cx-cpl-mini-stage">' + s.label + ' ✓</span>';
+              }).join('') +
+            '</div>' +
+            (thinkText
+              ? '<details class="cx-cpl-think-details"><summary>Reasoning trace</summary><div class="cx-cpl-think-body">' +
+                thinkText.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
+                '</div></details>'
+              : '') +
+          '</div>';
+
+        var answerDiv = document.createElement('div');
+        answerDiv.className = 'cx-complix-answer';
+        if (typeof mdToHTML === 'function') {
+          answerDiv.innerHTML = mdToHTML(finalText);
+        } else {
+          answerDiv.textContent = finalText;
+        }
+
+        bubbleEl.innerHTML = '';
+        bubbleEl.appendChild(summaryStrip);
+        bubbleEl.appendChild(answerDiv);
+        bubbleEl.dataset.raw = finalText;
+      }
+
+      return finalText;
+
+    } catch(e) {
+      console.error('[Complix] Pipeline error:', e);
+      // Set any active stage to error
+      STAGES.forEach(function(s) {
+        var el = document.getElementById('cx-cpl-stage-' + s.id);
+        if (el && el.classList.contains('cx-cpl-stage--active')) {
+          setStageState(s.id, 'error', e.message || 'Failed');
+        }
+      });
+      setStatus('Pipeline failed — falling back to standard Axion');
+      await new Promise(function(r) { setTimeout(r, 600); });
+
+      // Fallback: render error in bubble and let caller use standard path
+      if (bubbleEl) {
+        bubbleEl.innerHTML = '<span style="color:var(--red);font-size:.85rem;">Complix failed: ' + (e.message || 'Unknown error') + '. Falling back to standard mode.</span>';
+      }
+      throw e; // rethrow so caller can fall back
+    }
+  }
+
+  /* ── Patch sendMessage to intercept Axion calls ─────────── */
+  // We wrap the fetch inside sendMessage by monkey-patching the
+  // logic just before the Axion fetch happens.
+  // The cleanest hook point is: after typing-row is shown,
+  // before res = await fetch(activeURL, ...).
+  // We do this by patching the handleSend → sendMessage chain
+  // to call our pipeline instead for Axion+Complix combos.
+
+  // Store original sendMessage
+  var _origSendMessage = window.sendMessage;
+
+  window.sendMessage = async function(text, opts) {
+    // Only intercept if Complix is on AND model is axion
+    var isAxion = (typeof _settings !== 'undefined' && _settings.model === 'axion');
+    if (!_complixActive || !isAxion) {
+      return _origSendMessage ? _origSendMessage.apply(this, arguments) : undefined;
+    }
+
+    // ── Run standard pre-flight (same as sendMessage) ──────
+    // We need to replicate the pre-work that sendMessage does:
+    // showing thinking row, rendering user message, building context.
+    // The cleanest approach: call original sendMessage but override
+    // the fetch to AXION_URL by intercepting it.
+
+    var _origFetch = window.fetch;
+    var complixFired = false;
+
+    // Intercept the next fetch to AXION_URL
+    window.fetch = function(url, fetchOpts) {
+      var axUrl = (typeof AXION_URL !== 'undefined') ? AXION_URL : '__AXION__';
+      var isAxionCall = (typeof url === 'string') && url.indexOf(axUrl) !== -1 &&
+        fetchOpts && fetchOpts.body;
+
+      if (isAxionCall && !complixFired) {
+        complixFired = true;
+        // Restore fetch immediately
+        window.fetch = _origFetch;
+
+        // Parse what sendMessage was about to send
+        var body = {};
+        try { body = JSON.parse(fetchOpts.body); } catch(e) {}
+
+        // Find the AI bubble that sendMessage already created (it creates it before fetch)
+        // We give it a tiny delay to let renderMessage run first
+        return new Promise(function(resolve, reject) {
+          setTimeout(async function() {
+            try {
+              // Find the most recent AI bubble (no data-raw yet = freshly created)
+              var allBubbles = document.querySelectorAll('.msg-row:not(.user) .msg-bubble');
+              var bubbleEl = null;
+              for (var i = allBubbles.length - 1; i >= 0; i--) {
+                if (!allBubbles[i].dataset.raw || allBubbles[i].dataset.raw === '') {
+                  bubbleEl = allBubbles[i];
+                  break;
+                }
+              }
+              if (!bubbleEl) bubbleEl = allBubbles[allBubbles.length - 1];
+
+              var msgEl = bubbleEl && bubbleEl.closest('.msg-row');
+              var systemContent = body.system || '';
+              var history = body.messages || [];
+
+              // Run Complix pipeline
+              var finalText = await runComplixPipeline(text, systemContent, history, bubbleEl, msgEl);
+
+              // Update history
+              if (typeof _history !== 'undefined') {
+                _history.push({ role: 'assistant', content: finalText });
+              }
+
+              // Background sync
+              var isNewChat = typeof _currentId === 'undefined' || !_currentId;
+              if (typeof bgSyncMessages === 'function' && typeof _currentId !== 'undefined') {
+                bgSyncMessages(isNewChat, _currentId, text, finalText, msgEl);
+              }
+
+              // Run code pipeline on final answer
+              if (bubbleEl && /```\w/.test(finalText) && typeof runCodePipeline === 'function') {
+                runCodePipeline(bubbleEl, finalText, text).catch(function(){});
+              }
+
+              if (typeof scrollToBottom === 'function') scrollToBottom();
+
+              // Hide typing row
+              if (typeof hide === 'function') hide('typing-row');
+
+              // Return a fake resolved response so sendMessage's res.ok check passes
+              var fakeBody = JSON.stringify({ choices: [{ message: { content: finalText } }] });
+              resolve(new Response(fakeBody, { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+            } catch(err) {
+              window.fetch = _origFetch;
+              console.warn('[Complix] Pipeline failed, falling back to standard Axion:', err);
+              // Fall back: call original fetch
+              _origFetch.call(window, url, fetchOpts).then(resolve).catch(reject);
+            }
+          }, 80);
+        });
+      }
+
+      // Not the Axion call — pass through normally
+      return _origFetch.apply(window, arguments);
+    };
+
+    // Call original sendMessage — it will hit our intercepted fetch
+    try {
+      await (_origSendMessage ? _origSendMessage.apply(this, arguments) : Promise.resolve());
+    } finally {
+      // Always restore fetch
+      if (window.fetch !== _origFetch) window.fetch = _origFetch;
+    }
+  };
+
+  /* ── Keyboard shortcut: Ctrl+Shift+X toggles Complix ──── */
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
+      e.preventDefault();
+      toggleComplix();
+    }
+  });
+
+  /* ── Model guard: auto-disable if user switches off Axion ─ */
+  var _modelSelectOrig = document.getElementById('model-btn');
+  document.addEventListener('click', function(e) {
+    var opt = e.target.closest('.md-option');
+    if (!opt) return;
+    setTimeout(function() {
+      if (typeof _settings !== 'undefined' && _settings.model !== 'axion' && _complixActive) {
+        _complixActive = false;
+        saveComplixState();
+        updateComplixUI();
+        if (typeof toast === 'function') toast('Complix paused — requires Axion model');
+      }
+    }, 100);
+  });
+
+  /* ── Init ───────────────────────────────────────────────── */
+  function initComplix() {
+    injectComplixButton();
+    updateComplixUI();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(initComplix, 400); });
+  } else {
+    setTimeout(initComplix, 400);
+  }
+  window.addEventListener('cyanix:ready', function() { setTimeout(initComplix, 600); });
+
+  console.log('[CyanixAI] Complix v1.0 loaded — Axion Extended Thinking');
+
+})();

@@ -2561,3 +2561,349 @@ kbd{display:inline-flex;align-items:center;padding:3px 8px;background:var(--surf
 .cx-scroll-btn {
   will-change: transform, opacity;
 }
+
+/* ================================================================
+   COMPLIX  —  Extended Thinking UI  v1.0
+   Axion 5 deep reasoning pipeline visualizer
+================================================================ */
+
+/* ── Complix toolbar button ───────────────────────────────── */
+.cx-complix-btn {
+  position: relative;
+  gap: 6px;
+}
+.cx-complix-btn--on {
+  background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(139,92,246,.14)) !important;
+  border-color: rgba(99,102,241,.35) !important;
+  color: #6366f1 !important;
+}
+.cx-complix-btn--on .cx-complix-badge {
+  background: rgba(99,102,241,.18);
+  color: #6366f1;
+  border-color: rgba(99,102,241,.3);
+}
+.cx-complix-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  color: var(--text-4);
+  border: 1px solid var(--border);
+  letter-spacing: .03em;
+  line-height: 1.6;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+/* Active glow pulse on Complix button when on */
+.cx-complix-btn--on::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: radial-gradient(ellipse, rgba(99,102,241,.18), transparent 70%);
+  z-index: -1;
+  animation: cx-cpl-btn-glow 2.4s ease-in-out infinite;
+}
+@keyframes cx-cpl-btn-glow {
+  0%, 100% { opacity: .5; transform: scale(1); }
+  50%       { opacity: 1;  transform: scale(1.06); }
+}
+
+/* ── Complix thinking panel ───────────────────────────────── */
+.cx-complix-panel {
+  border: 1.5px solid rgba(99,102,241,.25);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(99,102,241,.08), var(--sh-sm);
+  animation: cx-cpl-panel-in .3s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)) both;
+}
+@keyframes cx-cpl-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Header */
+.cx-complix-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 9px;
+  background: linear-gradient(to right, rgba(99,102,241,.07), rgba(139,92,246,.05));
+  border-bottom: 1px solid rgba(99,102,241,.14);
+}
+.cx-complix-logo {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99,102,241,.35);
+}
+.cx-complix-title {
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: #6366f1;
+  text-transform: uppercase;
+  flex: 1;
+}
+.cx-complix-status {
+  font-size: .7rem;
+  color: var(--text-4);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Stages list */
+.cx-complix-stages {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Individual stage row */
+.cx-cpl-stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background .15s ease;
+}
+.cx-cpl-stage--active {
+  background: rgba(99,102,241,.06);
+}
+.cx-cpl-stage--done {
+  opacity: 1;
+}
+.cx-cpl-stage--idle {
+  opacity: .45;
+}
+.cx-cpl-stage--error .cx-cpl-stage-label {
+  color: var(--red);
+}
+
+/* Stage icon container */
+.cx-cpl-stage-icon {
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .2s, color .2s;
+}
+.cx-cpl-icon-idle {
+  background: var(--surface-3);
+  color: var(--text-4);
+}
+.cx-cpl-icon-active {
+  background: rgba(99,102,241,.15);
+  color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99,102,241,.2);
+}
+.cx-cpl-icon-done {
+  background: rgba(34,197,94,.12);
+  color: #16a34a;
+}
+.cx-cpl-icon-error {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+/* Spinning ring for active state */
+.cx-cpl-spin-ring {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(99,102,241,.25);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: cx-cpl-spin .7s linear infinite;
+}
+@keyframes cx-cpl-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Stage label + detail */
+.cx-cpl-stage-body {
+  flex: 1;
+  min-width: 0;
+}
+.cx-cpl-stage-label {
+  display: block;
+  font-size: .79rem;
+  font-weight: 600;
+  color: var(--text-2);
+  line-height: 1.3;
+}
+.cx-cpl-stage--idle .cx-cpl-stage-label { color: var(--text-4); }
+.cx-cpl-stage--active .cx-cpl-stage-label { color: #6366f1; }
+.cx-cpl-stage-detail {
+  display: block;
+  font-size: .69rem;
+  color: var(--text-4);
+  line-height: 1.3;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cx-cpl-stage--active .cx-cpl-stage-detail { color: rgba(99,102,241,.7); }
+.cx-cpl-stage--done .cx-cpl-stage-detail   { color: rgba(34,197,94,.8); }
+
+/* Thinking peek */
+.cx-complix-think-peek {
+  border-top: 1px solid rgba(99,102,241,.12);
+  padding: 10px 14px 12px;
+  background: rgba(99,102,241,.03);
+}
+.cx-cpl-think-label {
+  font-size: .67rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: rgba(99,102,241,.6);
+  margin-bottom: 6px;
+}
+.cx-cpl-think-text {
+  font-size: .78rem;
+  color: var(--text-3);
+  line-height: 1.6;
+  font-style: italic;
+  max-height: 80px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
+
+/* ── Complix Summary strip (collapsed after pipeline finishes) */
+.cx-complix-summary {
+  margin-bottom: 10px;
+}
+.cx-complix-summary-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(99,102,241,.2);
+  background: linear-gradient(to right, rgba(99,102,241,.06), rgba(139,92,246,.04));
+  color: rgba(99,102,241,.8);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background .15s, border-color .15s;
+}
+.cx-complix-summary-toggle:hover {
+  background: rgba(99,102,241,.1);
+  border-color: rgba(99,102,241,.35);
+}
+.cx-summary-chevron {
+  margin-left: auto;
+  transition: transform .2s ease;
+  flex-shrink: 0;
+}
+.cx-complix-summary.expanded .cx-summary-chevron {
+  transform: rotate(180deg);
+}
+.cx-complix-summary-detail {
+  display: none;
+  padding: 10px;
+  border: 1px solid rgba(99,102,241,.15);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  background: rgba(99,102,241,.03);
+}
+.cx-complix-summary.expanded .cx-complix-summary-detail {
+  display: block;
+}
+.cx-complix-stages-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.cx-cpl-mini-stage {
+  font-size: .67rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(34,197,94,.1);
+  color: #16a34a;
+  border: 1px solid rgba(34,197,94,.2);
+  letter-spacing: .02em;
+}
+
+/* Reasoning trace dropdown */
+.cx-cpl-think-details {
+  margin-top: 4px;
+}
+.cx-cpl-think-details > summary {
+  font-size: .7rem;
+  font-weight: 600;
+  color: rgba(99,102,241,.7);
+  cursor: pointer;
+  user-select: none;
+  padding: 3px 0;
+  letter-spacing: .02em;
+}
+.cx-cpl-think-details > summary:hover { color: #6366f1; }
+.cx-cpl-think-body {
+  font-size: .77rem;
+  color: var(--text-3);
+  line-height: 1.65;
+  font-style: italic;
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(99,102,241,.1);
+  margin-top: 5px;
+}
+
+/* ── Final answer area ─────────────────────────────────────── */
+.cx-complix-answer {
+  animation: cx-cpl-answer-in .35s var(--ease-spring, ease) both;
+}
+@keyframes cx-cpl-answer-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Dark/themed overrides ─────────────────────────────────── */
+[data-theme="dark"] .cx-complix-panel,
+[data-theme="founder"] .cx-complix-panel,
+[data-theme="midnight"] .cx-complix-panel {
+  border-color: rgba(99,102,241,.3);
+  background: var(--surface);
+}
+[data-theme="neon"] .cx-complix-panel {
+  border-color: rgba(200,64,255,.3);
+}
+[data-theme="neon"] .cx-complix-header,
+[data-theme="neon"] .cx-complix-summary-toggle {
+  background: linear-gradient(to right, rgba(200,64,255,.08), rgba(200,64,255,.04));
+}
+[data-theme="neon"] .cx-complix-logo { background: linear-gradient(135deg, #c840ff, #9000c0); }
+[data-theme="neon"] .cx-complix-title,
+[data-theme="neon"] .cx-complix-btn--on { color: #c840ff !important; }
+[data-theme="neon"] .cx-cpl-icon-active { background: rgba(200,64,255,.15); color: #c840ff; }
+[data-theme="neon"] .cx-cpl-spin-ring { border-top-color: #c840ff; border-color: rgba(200,64,255,.2); }
+[data-theme="neon"] .cx-complix-btn--on {
+  background: linear-gradient(135deg, rgba(200,64,255,.12), rgba(160,0,200,.14)) !important;
+  border-color: rgba(200,64,255,.35) !important;
+}
+
+/* ── Add Complix shortcut to help modal ───────────────────── */
+/* This is handled via JS injection, styles here just in case */
+.cx-complix-help-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: .85rem;
+  color: var(--text-2);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
