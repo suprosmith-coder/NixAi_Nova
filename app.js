@@ -365,13 +365,15 @@ function buildSystemPrompt(queryContext) {
     // CODE QUALITY — strict rules, always enforced
     'CODE RULES (follow every one, every time):' +
     ' (1) COMPLETE CODE ONLY. Never truncate with "# ... rest of code", "// TODO", "pass" as placeholder, or "..." ellipsis. Write every line.' +
-    ' (2) PYTHON: always include all imports at the top. Use correct indentation (4 spaces). ' +
-      'Handle exceptions with try/except where IO, network, or parsing is involved. ' +
-      'Never reference variables before assignment. Always close files with context managers (with open(...)).' +
-      'Test your logic mentally -- if a function takes a list, make sure you handle empty list.' +
-    ' (3) JAVASCRIPT: declare variables before use. Use const/let not var for new code. ' +
-      'Handle async properly -- always await promises, never mix sync/async incorrectly. ' +
-      'Check for null/undefined before accessing properties.' +
+    ' (2) PYTHON INDENTATION IS CRITICAL: Always use exactly 4 spaces per indentation level — never tabs, never 2 spaces, never mixed.' +
+      ' Every block after a colon (:) MUST be indented. Function bodies, if/else blocks, for/while loops, class bodies, try/except blocks — all must be indented 4 spaces.' +
+      ' Nested blocks: 8 spaces for level 2, 12 for level 3, etc. NEVER write Python code with 0-space or irregular indentation.' +
+      ' Always include all imports at the top. Handle exceptions with try/except where IO, network, or parsing is involved.' +
+      ' Never reference variables before assignment. Always close files with context managers (with open(...)).' +
+      ' Test your logic mentally — if a function takes a list, make sure you handle the empty list case.' +
+    ' (3) JAVASCRIPT: declare variables before use. Use const/let not var for new code.' +
+      ' Handle async properly — always await promises, never mix sync/async incorrectly.' +
+      ' Check for null/undefined before accessing properties.' +
     ' (4) NEVER produce code with known runtime errors. If you are unsure about an API or library method, say so instead of guessing.' +
     ' (5) For multi-file projects, always clarify which file each block belongs to.' +
     ' (6) When fixing a bug: show the corrected code in full, not just the changed line.' +
@@ -2065,11 +2067,17 @@ function bindChatUI() {
     // Accept everything except audio — user can still pick any file via "All files"
     // Explicit list covers the most common types for better mobile picker UX
     inp.accept = [
-      // Images only
+      // Images
       'image/*',
-      // Plain text files
+      // Documents
+      'application/pdf,.pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation,.pptx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx',
+      'application/vnd.ms-excel,.xls',
+      'text/csv,.csv',
+      // Plain text & code
       'text/plain,.txt',
-      // Markdown files
       'text/markdown,.md,.markdown',
     ].join(',');
     inp.onchange = function() {
@@ -3179,12 +3187,23 @@ async function handleAttachment(file) {
   var CODE_EXTS = /^(txt|md|markdown|js|jsx|mjs|cjs|ts|tsx|json|json5|html|htm|xml|xhtml|css|scss|sass|less|styl|py|pyc|rb|go|rs|java|kt|kts|swift|c|cc|cpp|cxx|cs|h|hpp|php|lua|r|m|pl|sh|bash|zsh|fish|ps1|bat|cmd|yaml|yml|toml|ini|cfg|conf|env|dotenv|sql|graphql|gql|vue|svelte|dart|ex|exs|erl|hs|clj|cljs|scala|tf|hcl|dockerfile|makefile|cmake|gradle|lock|gitignore|editorconfig|prettierrc|eslintrc|babelrc|nvmrc)$/i;
   var isText = CODE_EXTS.test(ext) || type.startsWith('text/') || type === 'application/json';
 
-  if (!isImage && !isText) {
-    toast('\u274C Cyanix can read images and text/code files only (e.g. .js, .py, .html, .json, .txt, .md\u2026)');
+  // Document formats — extract text before sending to model
+  var isDocument = /^(pdf|docx|doc|pptx|ppt|xlsx|xls|csv|epub|zip)$/.test(ext) ||
+    type === 'application/pdf' ||
+    type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+    type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    type === 'application/vnd.ms-excel' ||
+    type === 'text/csv' ||
+    type === 'application/epub+zip' ||
+    type === 'application/zip';
+
+  if (!isImage && !isText && !isDocument) {
+    toast('\u274C Cyanix can read images, documents (PDF, DOCX, XLSX, PPTX), and text/code files.');
     return;
   }
 
-  // Guess a friendly label for the chip
+  // Friendly label map for code files
   var CODE_LABELS = {
     js:'JavaScript', jsx:'React JSX', ts:'TypeScript', tsx:'React TSX',
     py:'Python', rb:'Ruby', go:'Go', rs:'Rust', java:'Java', kt:'Kotlin',
@@ -3194,7 +3213,14 @@ async function handleAttachment(file) {
     xml:'XML', graphql:'GraphQL', vue:'Vue', svelte:'Svelte', dart:'Dart',
     dockerfile:'Dockerfile', toml:'TOML', env:'Env', gitignore:'Gitignore',
   };
-  var friendlyLabel = CODE_LABELS[ext] || (isImage ? 'Image' : 'Code');
+
+  var DOC_LABELS_ATTACH = {
+    pdf:'PDF', docx:'Word Document', doc:'Word Document',
+    pptx:'PowerPoint', ppt:'PowerPoint',
+    xlsx:'Spreadsheet', xls:'Spreadsheet', csv:'CSV',
+    epub:'eBook', zip:'Archive',
+  };
+  var friendlyLabel = CODE_LABELS[ext] || DOC_LABELS_ATTACH[ext] || (isImage ? 'Image' : isDocument ? 'Document' : 'Code');
 
   _attachment = { type: 'loading', name: name, data: '', mediaType: type };
   showAttachPreview();
@@ -3204,9 +3230,37 @@ async function handleAttachment(file) {
     if (isImage) {
       var b64 = await readFileAs(file, 'dataURL');
       _attachment = { type: 'image', name: name, data: b64.split(',')[1], mediaType: type };
+    } else if (isDocument) {
+      // Extract text from document formats using the existing extractors
+      var arrayBuf = await readFileAs(file, 'arrayBuffer');
+      var extractedText = '';
+      if (ext === 'pdf' || type === 'application/pdf') {
+        extractedText = await extractPdf(arrayBuf);
+      } else if (ext === 'docx' || ext === 'doc') {
+        extractedText = await extractDocx(arrayBuf);
+      } else if (ext === 'pptx' || ext === 'ppt') {
+        extractedText = await extractPptx(arrayBuf);
+      } else if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+        if (ext === 'csv' || type === 'text/csv') {
+          extractedText = await readFileAs(file, 'text');
+          extractedText = extractCsv(extractedText);
+        } else {
+          extractedText = await extractXlsx(arrayBuf, type);
+        }
+      } else if (ext === 'epub') {
+        extractedText = await extractEpub(arrayBuf);
+      } else if (ext === 'zip') {
+        extractedText = await extractZip(arrayBuf);
+      } else {
+        // Fallback: try reading as text
+        extractedText = await readFileAs(file, 'text');
+      }
+      _attachment = { type: 'document', name: name, data: extractedText, mediaType: type,
+        label: friendlyLabel };
     } else {
-      var text = await readFileAs(file, 'text');
-      _attachment = { type: 'code', name: name, data: text.slice(0, 20000), mediaType: type,
+      // Plain text / code files
+      var fileText = await readFileAs(file, 'text');
+      _attachment = { type: 'text', name: name, data: fileText.slice(0, 20000), mediaType: type,
         label: friendlyLabel };
     }
 
@@ -3347,7 +3401,7 @@ async function bgSyncMessages(isNewChat, localChatId, userText, aiText, msgEl) {
       } else {
         _syncPending = true;
         try {
-          const realId = await syncChatToDB(chatId, userText.slice(0, 60).trim());
+          const realId = await syncChatToDB(chatId, 'New chat');
           if (realId) {
             chatId = realId;
           } else {
@@ -4395,64 +4449,8 @@ function initEnhancedComposer() {
   var toolbar = document.getElementById('cx-ai-toolbar');
   if (!toolbar) return;
 
-  // Wiki RAG toggle
-  var wikiBtn = document.createElement('button');
-  wikiBtn.id = 'cx-wiki-btn';
-  wikiBtn.className = 'cx-toolbar-btn' + (_wikiRagEnabled ? ' cx-toolbar-btn--active' : '');
-  wikiBtn.title = 'Wiki RAG — Pull Wikipedia context for factual answers';
-  wikiBtn.innerHTML =
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
-    '<span>Wiki RAG</span>';
-  wikiBtn.addEventListener('click', function() {
-    _wikiRagEnabled = !_wikiRagEnabled;
-    wikiBtn.classList.toggle('cx-toolbar-btn--active', _wikiRagEnabled);
-    toast(_wikiRagEnabled ? 'Wiki RAG on — Wikipedia context enabled' : 'Wiki RAG off');
-  });
-  toolbar.appendChild(wikiBtn);
-
-  // Chain-of-thought toggle
-  var cotBtn = document.createElement('button');
-  cotBtn.id = 'cx-cot-btn';
-  cotBtn.className = 'cx-toolbar-btn' + (_cotEnabled ? ' cx-toolbar-btn--active' : '');
-  cotBtn.title = 'Chain-of-thought — Show step-by-step reasoning';
-  cotBtn.innerHTML =
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' +
-    '<span>CoT</span>';
-  cotBtn.addEventListener('click', function() {
-    _cotEnabled = !_cotEnabled;
-    cotBtn.classList.toggle('cx-toolbar-btn--active', _cotEnabled);
-    toast(_cotEnabled ? 'Chain-of-thought on — reasoning steps visible' : 'Chain-of-thought off');
-  });
-  toolbar.appendChild(cotBtn);
-
-  // Prompt templates
-  var tmplBtn = document.createElement('button');
-  tmplBtn.id = 'cx-template-btn';
-  tmplBtn.className = 'cx-toolbar-btn';
-  tmplBtn.title = 'Prompt templates library';
-  tmplBtn.innerHTML =
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>' +
-    '<span>Templates</span>';
-  tmplBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    renderTemplateModal();
-  });
-  toolbar.appendChild(tmplBtn);
-
-  // Groq context indicator
-  var groqBtn = document.createElement('button');
-  groqBtn.id = 'cx-groq-ctx-btn';
-  groqBtn.className = 'cx-toolbar-btn' + (_groqCtxEnabled ? ' cx-toolbar-btn--active' : '');
-  groqBtn.title = 'Groq Compound context enrichment';
-  groqBtn.innerHTML =
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' +
-    '<span>Groq Ctx</span>';
-  groqBtn.addEventListener('click', function() {
-    _groqCtxEnabled = !_groqCtxEnabled;
-    groqBtn.classList.toggle('cx-toolbar-btn--active', _groqCtxEnabled);
-    toast(_groqCtxEnabled ? 'Groq context enrichment on' : 'Groq context enrichment off');
-  });
-  toolbar.appendChild(groqBtn);
+  // Wiki RAG, CoT, Templates, and Groq Ctx are settings-only features.
+  // Enable them in Settings > AI & Intelligence — not exposed in the composer toolbar.
 }
 
 // ── Patch sendMessage to inject wiki RAG + CoT context ─────
@@ -5022,10 +5020,9 @@ async function sendMessage(text) {
     const isNewChat = !_currentId;
     if (isNewChat) {
       _currentId = localUUID();
-      var dTitle = text.slice(0, 60).trim();
-      _chats.unshift({ id: _currentId, title: dTitle, updated_at: new Date().toISOString() });
+      _chats.unshift({ id: _currentId, title: 'New chat', updated_at: new Date().toISOString() });
       renderChatList();
-      if ($('chat-title')) $('chat-title').textContent = dTitle;
+      if ($('chat-title')) $('chat-title').textContent = 'New chat';
     }
     hide('welcome-state');
     _history.push({ role: 'user', content: text });
@@ -5040,11 +5037,14 @@ async function sendMessage(text) {
 
     try {
       var result = await window._docGenerateInline(docType, text);
-      // Replace building card with download card
+      // Replace building card with Claude-style message + download card
       var url = URL.createObjectURL(result.blob);
-      buildBubble.innerHTML = renderDocDownloadCard(result.filename, docType, url);
-      _history.push({ role: 'assistant', content: 'I\'ve created your ' + result.filename + '. Click the download button to save it.' });
-      bgSyncMessages(isNewChat, _currentId, text, 'Document generated: ' + result.filename, buildRendered.msgEl);
+      var docLabels = { pptx:'presentation', pdf:'PDF', docx:'Word document', xlsx:'spreadsheet' };
+      var docLabel = docLabels[docType] || docType;
+      var aiResponse = 'Here\'s your ' + docLabel + '. I\'ve structured it based on your request — you can download it below and open it directly in the relevant app.';
+      buildBubble.innerHTML = '<p style="margin:0 0 12px">' + aiResponse + '</p>' + renderDocDownloadCard(result.filename, docType, url);
+      _history.push({ role: 'assistant', content: aiResponse });
+      bgSyncMessages(isNewChat, _currentId, text, aiResponse, buildRendered.msgEl);
     } catch (e) {
       buildBubble.innerHTML = '<div class="doc-inline-error">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
@@ -5060,16 +5060,13 @@ async function sendMessage(text) {
     scrollToBottom();
     return; // skip normal LLM call
   }
-  _responding = true;
-  setSendBtn('stop');
-
   const isNewChat = !_currentId;
   if (isNewChat) {
     _currentId = localUUID();
-    const title = text.slice(0, 60).trim();
-    _chats.unshift({ id: _currentId, title: title, updated_at: new Date().toISOString() });
+    // Don't set the title to raw user text — wait for AI-generated title in bgSyncMessages
+    _chats.unshift({ id: _currentId, title: 'New chat', updated_at: new Date().toISOString() });
     renderChatList();
-    if ($('chat-title')) $('chat-title').textContent = title;
+    if ($('chat-title')) $('chat-title').textContent = 'New chat';
   }
 
   hide('welcome-state');
@@ -6586,7 +6583,20 @@ async function toggleVoiceInput() {
     // Stop recording
     _sttActive = false;
     if (_mediaRec && _mediaRec.state !== 'inactive') _mediaRec.stop();
+    // Remove mic animation
+    var micBtn = $('mic-btn');
+    if (micBtn) {
+      micBtn.classList.remove('cx-mic-active');
+      micBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+    }
     return;
+  }
+
+  // Animate mic button immediately on activation
+  var micBtn = $('mic-btn');
+  if (micBtn) {
+    micBtn.classList.add('cx-mic-active');
+    micBtn.innerHTML = '<span class="cx-mic-spectrum"><span></span><span></span><span></span><span></span><span></span></span>';
   }
 
   openVoiceOverlay();
@@ -6611,6 +6621,12 @@ async function toggleVoiceInput() {
       _mediaRec.onstop = async function() {
         stream.getTracks().forEach(function(t) { t.stop(); });
         stopWaveform();
+        // Restore mic button
+        var micBtnEl = $('mic-btn');
+        if (micBtnEl) {
+          micBtnEl.classList.remove('cx-mic-active');
+          micBtnEl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+        }
         setVoiceStatus('transcribing');
 
         try {
@@ -6732,6 +6748,12 @@ window.addEventListener('cyanix:ready', function() {
   var cancelBtn = $('voice-cancel-btn');
   if (cancelBtn) cancelBtn.addEventListener('click', function() {
     _sttActive = false;
+    // Restore mic button
+    var micBtnEl = $('mic-btn');
+    if (micBtnEl) {
+      micBtnEl.classList.remove('cx-mic-active');
+      micBtnEl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+    }
     if (_mediaRec && _mediaRec.state !== 'inactive') {
       // Override onstop to not process
       _mediaRec.onstop = function() {
@@ -9566,6 +9588,7 @@ console.log('[CyanixAI] app_additions.js v1.0 loaded');
         '---\n' + thinkText + '\n---\n' +
         (routePlan && routePlan.angle ? 'Best approach: ' + routePlan.angle + '\n' : '') +
         depthInstruction + '\n' +
+        'CRITICAL for any Python code: use exactly 4 spaces per indentation level. Never tabs. Every block after a colon must be indented.\n' +
         'Write a complete, polished response now. No meta-commentary. Just the answer.';
 
       var draftMaxTok = (routePlan && (routePlan.complexity === 'very_high' || routePlan.complexity === 'high')) ? 2000 : 1200;
