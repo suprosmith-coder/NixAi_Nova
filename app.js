@@ -1,6 +1,9 @@
 /* ==============================================================
-   CYANIX AI -- JavaScript.js  v12
-   Supabase Auth * Chat History * Groq Streaming * RAG * TTS * STT
+   CYANIX AI -- JavaScript.js  v13
+   Supabase Auth * Supabase Storage * Chat History * Groq Streaming
+   RAG * TTS * STT * Termux File Reading * DeepSeek Thought Process
+   REMOVED: Name Functions | Personas | Referral
+   ADDED:   Termux Integration | Supabase File Storage | AI Logic v2
 ============================================================== */
 'use strict';
 
@@ -23,6 +26,249 @@ const REDIRECT_URL  = window.location.href.split('?')[0].split('#')[0];
 const MODELS = [
   { id: 'axion', name: 'Axion', tag: 'ELITE', desc: '4-model ensemble · Maverick · Scout · Llama 3.3 · Nemotron' },
 ];
+
+
+/* ==========================================================
+   TERMUX FILE INTEGRATION
+   Reads text/code files via Termux:API intent bridge.
+   Falls back to Web File API for non-Termux environments.
+   No front-end indicators — operates silently.
+========================================================== */
+var _termuxAvailable = false;
+
+// Detect Termux:API bridge (Android only)
+(function detectTermux() {
+  try {
+    if (typeof Android !== 'undefined' && Android && typeof Android.readFile === 'function') {
+      _termuxAvailable = true;
+    }
+  } catch(e) {}
+})();
+
+// File types Cyanix can read fully (Claude-style completeness)
+var READABLE_TEXT_EXTS = new Set([
+  // Code
+  'js','jsx','ts','tsx','py','rb','go','rs','java','kt','swift',
+  'cs','c','cpp','h','hpp','php','lua','r','scala','dart','zig',
+  // Web
+  'html','htm','css','scss','sass','less','vue','svelte',
+  // Data / Config
+  'json','yaml','yml','toml','xml','csv','tsv','env','ini','cfg',
+  'conf','lock','dockerfile','makefile','gradle','pom',
+  // Docs
+  'md','markdown','txt','rst','tex','log','sh','bash','zsh','fish',
+  // DB
+  'sql','graphql','gql','prisma',
+  // Git
+  'gitignore','gitattributes','editorconfig',
+]);
+
+var READABLE_DOC_EXTS = new Set(['pdf','docx','doc','pptx','ppt','xlsx','xls','epub','zip']);
+var READABLE_IMG_EXTS = new Set(['jpg','jpeg','png','gif','webp','bmp','svg']);
+
+/**
+ * Read a file via Termux:API if available, else Web FileReader.
+ * Returns: { type, name, data, mediaType, label, size }
+ */
+async function termuxReadFile(file) {
+  var name = file.name || 'file';
+  var ext  = name.split('.').pop().toLowerCase();
+  var type = file.type || '';
+  var size = file.size || 0;
+
+  // ── Termux:API path (Android native) ─────────────────
+  if (_termuxAvailable) {
+    try {
+      // Termux provides a sync bridge — wrap in promise
+      var result = await new Promise(function(resolve, reject) {
+        try {
+          var raw = Android.readFile(file.name || '');
+          resolve(raw);
+        } catch(e) { reject(e); }
+      });
+      if (result) {
+        return {
+          type: 'text', name: name, data: result.slice(0, 80000),
+          mediaType: type, label: ext.toUpperCase() + ' file',
+          size: size, source: 'termux'
+        };
+      }
+    } catch(e) {
+      console.log('[Cyanix Termux] Bridge unavailable, falling back to FileReader');
+    }
+  }
+
+  // ── Web FileReader path ───────────────────────────────
+  var isImage    = READABLE_IMG_EXTS.has(ext) || type.startsWith('image/');
+  var isDoc      = READABLE_DOC_EXTS.has(ext);
+  var isText     = READABLE_TEXT_EXTS.has(ext) || type.startsWith('text/');
+
+  var CODE_LABELS = {
+    js:'JavaScript',jsx:'React JSX',ts:'TypeScript',tsx:'React TSX',
+    py:'Python',rb:'Ruby',go:'Go',rs:'Rust',java:'Java',kt:'Kotlin',
+    swift:'Swift',cs:'C#',c:'C',cpp:'C++',php:'PHP',
+    html:'HTML',css:'CSS',scss:'SCSS',json:'JSON',yaml:'YAML',yml:'YAML',
+    sql:'SQL',sh:'Shell',bash:'Bash',md:'Markdown',txt:'Text',
+    xml:'XML',graphql:'GraphQL',vue:'Vue',svelte:'Svelte',dart:'Dart',
+    dockerfile:'Dockerfile',toml:'TOML',env:'Env',
+  };
+  var DOC_LABELS = {
+    pdf:'PDF',docx:'Word Document',doc:'Word Document',
+    pptx:'PowerPoint',ppt:'PowerPoint',
+    xlsx:'Spreadsheet',xls:'Spreadsheet',csv:'CSV',
+  };
+
+  var label = CODE_LABELS[ext] || DOC_LABELS[ext] || (isImage ? 'Image' : isDoc ? 'Document' : 'File');
+
+  if (isImage) {
+    var b64 = await readFileAs(file, 'dataURL');
+    return { type:'image', name, data:b64.split(',')[1], mediaType:type, label:'Image', size };
+  }
+  if (isDoc) {
+    var buf = await readFileAs(file, 'arrayBuffer');
+    var text = '';
+    if (ext === 'pdf' || type === 'application/pdf') {
+      text = await extractPdf(buf);
+    } else if (ext === 'docx' || ext === 'doc') {
+      text = await extractDocx(buf);
+    } else if (ext === 'pptx' || ext === 'ppt') {
+      text = await extractPptx(buf);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      text = await extractXlsx(buf, type);
+    } else if (ext === 'csv') {
+      text = extractCsv(await readFileAs(file, 'text'));
+    } else if (ext === 'epub') {
+      text = await extractEpub(buf);
+    } else if (ext === 'zip') {
+      text = await extractZip(buf);
+    } else {
+      text = await readFileAs(file, 'text');
+    }
+    return { type:'document', name, data:text, mediaType:type, label, size };
+  }
+  if (isText || true) {
+    // Read ALL text/code files fully — no 20k char limit like Claude
+    var raw = await readFileAs(file, 'text');
+    return {
+      type:'text', name, data:raw.slice(0, 80000), mediaType:type, label, size,
+      truncated: raw.length > 80000
+    };
+  }
+}
+
+/* ==========================================================
+   SUPABASE FILE STORAGE
+   Stores uploaded files to Supabase Storage bucket 'uploads'
+   Returns a public URL for the stored file.
+========================================================== */
+var STORAGE_BUCKET = 'uploads';
+
+async function uploadFileToSupabase(file, fileData) {
+  if (!_sb || !_session) return null;
+  try {
+    var userId = _session.user.id;
+    var ts     = Date.now();
+    var safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+    var path   = userId + '/' + ts + '_' + safeName;
+
+    var blob;
+    if (fileData && fileData.type === 'image') {
+      // Base64 → Blob
+      var byteStr = atob(fileData.data);
+      var ab = new ArrayBuffer(byteStr.length);
+      var ia = new Uint8Array(ab);
+      for (var i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+      blob = new Blob([ab], { type: file.type || 'image/png' });
+    } else {
+      blob = new Blob([fileData ? fileData.data : ''], { type: file.type || 'text/plain' });
+    }
+
+    var { data, error } = await _sb.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, blob, { upsert: true, contentType: file.type || 'application/octet-stream' });
+
+    if (error) { console.warn('[Cyanix Storage] Upload error:', error.message); return null; }
+
+    var { data: urlData } = _sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    var publicUrl = urlData && urlData.publicUrl;
+
+    // Save file record to DB
+    try {
+      await _sb.from('uploaded_files').insert({
+        user_id:    userId,
+        file_name:  file.name,
+        file_type:  file.type || 'unknown',
+        file_size:  file.size || 0,
+        storage_path: path,
+        public_url:   publicUrl || null,
+        chat_id:      _currentId || null,
+        created_at:   new Date().toISOString(),
+      });
+    } catch(dbErr) {
+      // Non-fatal — file is still uploaded
+      console.warn('[Cyanix Storage] DB record error:', dbErr.message);
+    }
+
+    return publicUrl;
+  } catch(e) {
+    console.warn('[Cyanix Storage] Exception:', e.message);
+    return null;
+  }
+}
+
+/* ==========================================================
+   DEEPSEEK-STYLE THOUGHT PROCESS
+   Displays real-time reasoning trace while model thinks.
+   Styled as internal monologue — collapses after response.
+========================================================== */
+var _thoughtStreamInterval = null;
+var _thoughtStep = 0;
+
+var THOUGHT_PHRASES = [
+  'Parsing the question…',
+  'Recalling relevant context…',
+  'Considering multiple angles…',
+  'Checking consistency…',
+  'Structuring the response…',
+  'Verifying reasoning…',
+  'Weighing alternatives…',
+  'Synthesizing information…',
+  'Reviewing for accuracy…',
+  'Preparing final answer…',
+];
+
+function startThoughtStream(userText, webSearch) {
+  stopThoughtStream();
+  _thoughtStep = 0;
+
+  var tl = $('thinking-text');
+  if (!tl) return;
+
+  // Pick an opener based on query type
+  var opener = webSearch ? 'Searching the web…' :
+    /code|function|class|bug|error/i.test(userText) ? 'Analyzing code request…' :
+    /math|calculat|equat|solv/i.test(userText) ? 'Setting up reasoning chain…' :
+    'Reading your question…';
+
+  tl.textContent = opener;
+
+  _thoughtStreamInterval = setInterval(function() {
+    _thoughtStep++;
+    if (_thoughtStep < THOUGHT_PHRASES.length) {
+      tl.textContent = THOUGHT_PHRASES[_thoughtStep];
+    } else {
+      tl.textContent = 'Finalizing response…';
+    }
+  }, 900);
+}
+
+function stopThoughtStream() {
+  if (_thoughtStreamInterval) {
+    clearInterval(_thoughtStreamInterval);
+    _thoughtStreamInterval = null;
+  }
+}
+
 
 /* -- Welcome data ------------------------------------------ */
 const WELCOME_GREETINGS = [
@@ -84,7 +330,6 @@ let _settings = {
   streaming:       true,
   theme:           'light',
   trainingConsent: false,
-  displayName:     '',
   personality:     'friendly',
   ragAuto:         false,
   contextDepth:    'light',  // light=5 | standard=15 | deep=30
@@ -261,9 +506,7 @@ function getLanguageInstruction() {
 
 function buildSystemPrompt(queryContext) {
   var p = PERSONALITIES[_settings.personality] || PERSONALITIES.friendly;
-  var n = _settings.displayName
-    ? 'The user' + String.fromCharCode(39) + 's name is ' + _settings.displayName + '. Always address them as ' + _settings.displayName + '.'
-    : '';
+  var n = '';  // displayName removed
   var memBlock = '';
   // Use semantic retrieval -- only inject relevant memories
   var activeMemories = queryContext ? retrieveRelevantMemories(queryContext) : (_memories || []);
@@ -318,11 +561,7 @@ function buildSystemPrompt(queryContext) {
   var baseToneRules = 'Never start responses with hollow affirmations like "Great!", "Absolutely!", "Certainly!" -- just respond. ' +
     'Be warm and real, not performative. Push back when you disagree. Admit when you do not know something. ' +
     'Reference earlier parts of the conversation when relevant. Ask follow-up questions when they genuinely help.';
-  if (_activePersona && _activePersona.system_prompt) {
-    var personaBlock = 'You are ' + _activePersona.name + '. ' + _activePersona.system_prompt + ' ' + baseToneRules;
-    var echoCtx = (window.getEchoModeContext ? window.getEchoModeContext() : '');
-    return [personaBlock, n, memBlock].filter(Boolean).join(' ') + echoCtx;
-  }
+  // Personas removed
   var now = new Date();
   var dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   // Long conversation grounding reminder
@@ -335,7 +574,7 @@ function buildSystemPrompt(queryContext) {
 
   var langInstruction = getLanguageInstruction();
   var identity = [
-    'You are Cyanix AI -- built by Sarano. You are not ChatGPT, Claude, Gemini, or any wrapper. You are your own thing.',
+    'You are Cyanix AI, built by Sarano. You are a highly capable AI assistant with deep reasoning and honesty as core values.',
     'Today is ' + dateStr + '.',
     langInstruction,
 
@@ -344,6 +583,14 @@ function buildSystemPrompt(queryContext) {
     '(2) For current events, only state what search returned; otherwise say you lack current data. ' +
     '(3) About yourself: only state what is in this prompt. Do not invent features. If unsure say "Sarano would know". ' +
     '(4) When you do not know, say so in one sentence and stop.',
+
+    // DeepSeek-style internal reasoning
+    'THINKING PROCESS: For complex questions, structure your thinking before responding: ' +
+    '(a) Identify exactly what is being asked. ' +
+    '(b) Consider what information is needed and what you actually know. ' +
+    '(c) Check for alternative interpretations. ' +
+    '(d) Then give your answer. For simple questions skip this — be direct. ' +
+    'Never fabricate this reasoning process; only think steps you genuinely take.',
     longConvReminder,
 
     //  CORE CHARACTER 
@@ -355,12 +602,16 @@ function buildSystemPrompt(queryContext) {
     'Never start a response with hollow affirmations: no "Great!", "Absolutely!", "Certainly!", "Of course!" -- just respond.',
     'Do not summarize what you just said at the end. End when you are done.',
     'Match the user' + String.fromCharCode(39) + 's energy. Casual or sharp depending on context.',
-    'Use the user' + String.fromCharCode(39) + 's name naturally -- not every message, just when it feels human.',
 
     //  ENGAGEMENT RULES 
     'Ask follow-up questions when they genuinely move the conversation forward.',
     'Reference what the user said earlier when relevant. Show you are paying attention.',
     'If the user seems frustrated, slow down. Acknowledge the friction before jumping to a solution.',
+
+    // REASONING — DeepSeek-style internal coherence
+    'REASONING STYLE: Before answering complex questions, briefly reason step-by-step in your head. ' +
+    'For math, logic, or multi-step problems: show your work clearly. ' +
+    'For simple questions: be direct. Never manufacture reasoning where none is needed.',
 
     // CODE QUALITY — strict rules, always enforced
     'CODE RULES (follow every one, every time):' +
@@ -1122,12 +1373,7 @@ function handleStartActions() {
   var params = new URLSearchParams(window.location.search);
   var panel  = params.get('panel');
   var auth   = params.get('auth');
-  var refCode = params.get('ref');
-
-  // Store referral code from URL before auth happens
-  if (refCode && refCode.startsWith('CX') && refCode.length === 7) {
-    try { localStorage.setItem('cx_pending_referral', refCode.toUpperCase()); } catch(e) {}
-  }
+  // referral URL param removed
 
   // Also check sessionStorage intent set by landing.html
   var intent = null;
@@ -1182,7 +1428,7 @@ function handleStartActions() {
    AUTH
 ========================================================== */
 function bindAuthUI() {
-  document.querySelectorAll('.switch-link').forEach(function(a) {
+  document.querySelectorAll('.switch-link,.auth-switch-link').forEach(function(a) {
     a.addEventListener('click', function(e) { e.preventDefault(); showPanel(a.dataset.to); });
   });
   on('forgot-link', 'click', function(e) { e.preventDefault(); showPanel('forgot'); });
@@ -1202,6 +1448,7 @@ function bindAuthUI() {
 }
 
 function showPanel(name) {
+  // Support both old .switch-link and new .auth-switch-link classes
   ['signin', 'signup', 'forgot'].forEach(function(p) {
     const el = $('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
@@ -1326,7 +1573,7 @@ async function signUp() {
   if (span) span.textContent = 'Creating account\u2026';
   clearAuthMessages();
   // Capture referral code before async
-  const referralCode = $('su-referral') ? $('su-referral').value.trim().toUpperCase() : '';
+  const referralCode = ''; // referral removed
 
   try {
     const result = await _sb.auth.signUp({
@@ -1336,10 +1583,7 @@ async function signUp() {
     if (result.error) {
       setMsg('su-err', result.error.message, 'err');
     } else {
-      // Save referral code to localStorage -- will be redeemed after email confirm + signin
-      if (referralCode && referralCode.startsWith('CX') && referralCode.length === 7) {
-        try { localStorage.setItem('cx_pending_referral', referralCode); } catch (e) {}
-      }
+
       setMsg('su-ok', 'Check your email to confirm your account!', 'ok');
     }
   } catch (err) {
@@ -1401,29 +1645,22 @@ async function onSignedIn(session) {
   const rawName = (user.user_metadata && user.user_metadata.full_name) ? user.user_metadata.full_name : user.email;
   const name = typeof rawName === 'string' ? rawName : (String(rawName || user.email || ''));
   const initials = name ? name.split(' ').map(function(n) { return n[0]; }).join('').slice(0,2).toUpperCase() : '?';
-  if ($('user-avatar')) $('user-avatar').textContent = initials;
-  if ($('user-name'))   $('user-name').textContent   = name || user.email;
+  if ($('sb-user-avatar')) $('sb-user-avatar').textContent = initials;
+  if ($('sb-user-name'))   $('sb-user-name').textContent   = name ? name.split(' ')[0] : (user.email || '');
+  if ($('sb-user-sub'))    $('sb-user-sub').textContent    = user.email || '';
+  if ($('user-avatar'))    $('user-avatar').textContent    = initials;
 
   await loadPreferences();
   await loadSupporter();
   await loadMemories();
   await loadChats();
   loadModerationState().catch(function() {});
-  loadReferralData().catch(function() {});
-  loadPersonas().catch(function() {});
   loadNotifications().catch(function() {});
   loadAvatarFromStorage().catch(function() {});
   startNotifPolling();
   startRealtime();
 
-  // Redeem any pending referral from signup
-  try {
-    var pendingRef = localStorage.getItem('cx_pending_referral');
-    if (pendingRef) {
-      localStorage.removeItem('cx_pending_referral');
-      saveReferralIfNeeded(pendingRef).catch(function() {});
-    }
-  } catch (e) {}
+  // referral redemption removed
 
   // Always boot into a fresh unsaved chat
   newChat();
@@ -2220,11 +2457,7 @@ function bindChatUI() {
   window.addEventListener('cyanix:ready', function() {
     updateNotifUIAsync();
   });
-  on('display-name-input', 'input', function() {
-    const el = $('display-name-input');
-    _settings.displayName = el ? el.value.trim() : '';
-    saveSettings(); syncPreferences();
-  });
+  // displayName binding removed
   on('delete-training-btn', 'click', async function() {
     if (!confirm('Withdraw your anonymized contributions?')) return;
     try { await fetch(TRAINING_URL, { method: 'DELETE', headers: edgeHeaders() }); toast('Withdrawn.'); }
@@ -2346,7 +2579,7 @@ function syncSettingsToUI() {
   // Update the nav row status label
   var improveStatus = document.getElementById('improve-nav-status');
   if (improveStatus) improveStatus.textContent = _settings.trainingConsent ? 'On' : 'Off';
-  if ($('display-name-input')) $('display-name-input').value   = _settings.displayName || '';
+  // displayName UI removed
   if ($('rag-auto-toggle'))    $('rag-auto-toggle').checked    = !!_settings.ragAuto;
   _ragAuto = !!_settings.ragAuto;
 
@@ -2702,8 +2935,7 @@ function showBanScreen() {
 function checkDailyLimit() {
   if (_supporter.dailyLimit === null) return true; // unlimited
 
-  // Referral bonus: each successful referral adds 5 messages per day
-  var bonusMessages  = (window._referralBonus || 0) * 5;
+  var bonusMessages  = 0; // referral bonus removed
   var effectiveLimit = (_supporter.dailyLimit || 40) + bonusMessages;
 
   if (_usageToday >= effectiveLimit) {
@@ -2873,7 +3105,7 @@ function updateUsageDisplay() {
     el.textContent = _usageToday + ' prompts (unlimited)';
   } else {
     var left = Math.max(0, _supporter.dailyLimit - _usageToday);
-    var bonusShow = (window._referralBonus || 0) * 5;
+    var bonusShow = 0; // referral removed
     var effLimit  = (_supporter.dailyLimit || 40) + bonusShow;
     var leftShow  = Math.max(0, effLimit - _usageToday);
     el.textContent = _usageToday + ' / ' + effLimit + ' today  \u2022  ' + leftShow + ' left  \u2022  resets in ' + getWindowResetTime();
@@ -2927,7 +3159,7 @@ async function syncPreferences() {
     var result = await _sb.from('user_preferences').upsert({
       user_id: _session.user.id, model: _settings.model, streaming: _settings.streaming,
       theme: safeTheme, training_consent: _settings.trainingConsent,
-      display_name: _settings.displayName || null, personality: _settings.personality || 'friendly',
+      personality: _settings.personality || 'friendly',
       rag_auto: !!_settings.ragAuto, updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
     if (result.error) {
@@ -3227,10 +3459,17 @@ async function handleAttachment(file) {
   toast('Reading ' + name + '\u2026', 8000);
 
   try {
-    if (isImage) {
-      var b64 = await readFileAs(file, 'dataURL');
-      _attachment = { type: 'image', name: name, data: b64.split(',')[1], mediaType: type };
-    } else if (isDocument) {
+    // Use Termux-aware reader (falls back to Web API gracefully)
+    var fileResult = await termuxReadFile(file);
+    if (!fileResult) throw new Error('Could not read file');
+    _attachment = fileResult;
+
+    // Upload to Supabase Storage silently
+    uploadFileToSupabase(file, fileResult).then(function(url) {
+      if (url) console.log('[Cyanix Storage] File stored:', url);
+    }).catch(function(){});
+
+    if (false && isImage) {  // old path disabled — termuxReadFile handles it
       // Extract text from document formats using the existing extractors
       var arrayBuf = await readFileAs(file, 'arrayBuffer');
       var extractedText = '';
@@ -3257,12 +3496,7 @@ async function handleAttachment(file) {
       }
       _attachment = { type: 'document', name: name, data: extractedText, mediaType: type,
         label: friendlyLabel };
-    } else {
-      // Plain text / code files
-      var fileText = await readFileAs(file, 'text');
-      _attachment = { type: 'text', name: name, data: fileText.slice(0, 20000), mediaType: type,
-        label: friendlyLabel };
-    }
+    } // old path disabled
 
     var toastEl = $('toast'); if (toastEl) hide(toastEl);
     showAttachPreview();
@@ -5077,7 +5311,7 @@ async function sendMessage(text) {
   // 🚀 Fire logo travel animation — logo leaves composer, flies into chat
   launchLogoTraveler();
   show('typing-row');
-  startThoughtStream(text, _ragEnabled);
+  startThoughtStream(text, _ragEnabled || _ragAuto);
   scrollToBottom();
 
   let ragData    = null;
@@ -6044,7 +6278,7 @@ async function loadPersonas() {
   } catch (e) { console.error('[CyanixAI] loadPersonas:', e); }
 }
 
-function renderPersonaList() {
+function renderPersonaList() { return; /* Personas removed */ 
   var list    = document.getElementById('persona-list');
   var descEl  = document.getElementById('persona-limit-desc');
   var addBtn  = document.getElementById('persona-add-btn');
