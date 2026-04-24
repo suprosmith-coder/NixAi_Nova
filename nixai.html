@@ -5,53 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Cyanix AI · NixAi</title>
   <meta name="description" content="Cyanix AI by NixAi – The next‑gen AI assistant with deep reasoning, web search, and memory." />
-  <meta name="keywords"    content="AI, assistant, chat, GPT, Cyanix, NixAi, productivity" />
-  <meta name="author"      content="NixAi" />
-  <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#1e3a8a" media="(prefers-color-scheme: dark)" />
-  <link rel="manifest"     href="./manifest.json" />
-  <link rel="icon"         type="image/png" sizes="48x48"   href="./icons/manifest/icon-48x48.png" />
-  <link rel="icon"         type="image/png" sizes="96x96"   href="./icons/manifest/icon-96x96.png" />
-  <link rel="icon"         type="image/png" sizes="192x192" href="./icons/manifest/icon-192x192.png" />
-  <link rel="icon"         type="image/png" sizes="512x512" href="./icons/manifest/icon-512x512.png" />
-  <link rel="apple-touch-icon" sizes="120x120" href="./icons/ios/apple-touch-icon-120x120.png" />
-  <link rel="apple-touch-icon" sizes="152x152" href="./icons/ios/apple-touch-icon-152x152.png" />
-  <link rel="apple-touch-icon" sizes="167x167" href="./icons/ios/apple-touch-icon-167x167.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="./icons/ios/apple-touch-icon-180x180.png" />
-  <meta property="og:type"              content="website" />
-  <meta property="og:site_name"         content="NixAi · Cyanix AI" />
-  <meta property="og:title"             content="Cyanix AI – by NixAi" />
-  <meta property="og:description"       content="Chat, code, create and research with Cyanix AI. Powered by advanced language models with web search, voice input, and memory." />
-  <meta property="og:url"               content="https://suprosmith-coder.github.io/NixAi_Nova/" />
-  <meta property="og:image"             content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
-  <meta name="twitter:card"             content="summary_large_image" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@700;800;900&family=Orbitron:wght@400;600;700;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="icon" type="image/png" href="icons/manifest/icon-192x192.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;600;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
-    /* ========== FUTURISTIC EDITORIAL STYLES ========== */
-    :root {
-      --bg: #010101;
-      --surface: #0a0a0f;
-      --surface-2: #111118;
-      --surface-3: #1a1a24;
-      --border: #2a2a3a;
-      --border-2: #3a3a50;
-      --text-1: #ffffff;
-      --text-2: #e0e0e8;
-      --text-3: #a0a0b0;
-      --text-4: #606070;
-      --blue: #3b82f6;
-      --blue-dark: #2563eb;
-      --blue-glow: rgba(59,130,246,0.25);
-      --accent-glow: 0 0 12px rgba(59,130,246,0.3);
-    }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      background: var(--bg);
-      color: var(--text-1);
-      font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+      background: #010101;
+      color: #e0e0e8;
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
     }
@@ -75,13 +38,12 @@
       position: relative;
       z-index: 1;
     }
-    /* navbar */
     .landing-nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 16px 0;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #2a2a3a;
       flex-wrap: wrap;
     }
     .landing-logo {
@@ -96,40 +58,40 @@
     .landing-logo img {
       width: 40px;
       height: 40px;
-      filter: drop-shadow(0 0 8px var(--blue));
+      filter: drop-shadow(0 0 8px #3b82f6);
     }
-    .landing-logo span { background: linear-gradient(135deg, #fff, var(--blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .landing-logo span { background: linear-gradient(135deg, #fff, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .landing-links {
       display: flex;
       align-items: center;
       gap: 32px;
     }
     .landing-links a {
-      color: var(--text-2);
+      color: #a0a0b0;
       text-decoration: none;
       font-weight: 500;
       transition: color 0.2s;
     }
-    .landing-links a:hover { color: var(--blue); text-shadow: 0 0 4px var(--blue); }
+    .landing-links a:hover { color: #3b82f6; text-shadow: 0 0 4px #3b82f6; }
     .landing-btn-outline, .landing-btn-primary {
       padding: 8px 24px;
       border-radius: 40px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      border: none;
     }
     .landing-btn-outline {
       background: transparent;
-      border: 1.5px solid var(--border-2);
-      color: var(--text-1);
+      border: 1.5px solid #3a3a50;
+      color: #fff;
     }
     .landing-btn-outline:hover {
-      border-color: var(--blue);
-      box-shadow: var(--accent-glow);
+      border-color: #3b82f6;
+      box-shadow: 0 0 12px rgba(59,130,246,0.3);
     }
     .landing-btn-primary {
-      background: linear-gradient(135deg, var(--blue), #1e40af);
-      border: none;
+      background: linear-gradient(135deg, #3b82f6, #1e40af);
       color: white;
       box-shadow: 0 4px 14px rgba(59,130,246,0.4);
     }
@@ -137,7 +99,6 @@
       transform: translateY(-2px);
       filter: brightness(1.05);
     }
-    /* hero */
     .landing-hero {
       text-align: center;
       padding: 80px 0 40px;
@@ -150,7 +111,7 @@
       padding: 6px 20px;
       font-size: 0.8rem;
       font-weight: 600;
-      color: var(--blue);
+      color: #3b82f6;
       margin-bottom: 24px;
       backdrop-filter: blur(4px);
     }
@@ -162,14 +123,14 @@
       font-family: 'Orbitron', monospace;
     }
     .gradient {
-      background: linear-gradient(135deg, var(--blue), #a855f7);
+      background: linear-gradient(135deg, #3b82f6, #a855f7);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
     }
     .landing-hero-sub {
       font-size: 1.2rem;
-      color: var(--text-3);
+      color: #a0a0b0;
       max-width: 700px;
       margin: 24px auto 32px;
     }
@@ -179,7 +140,6 @@
       justify-content: center;
       margin-bottom: 40px;
     }
-    /* features */
     .landing-section {
       padding: 80px 0;
     }
@@ -201,25 +161,23 @@
       gap: 32px;
     }
     .landing-feature {
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: #0a0a0f;
+      border: 1px solid #2a2a3a;
       border-radius: 28px;
       padding: 28px 24px;
       transition: 0.2s;
-      backdrop-filter: blur(8px);
     }
     .landing-feature:hover {
       transform: translateY(-6px);
-      border-color: var(--blue);
+      border-color: #3b82f6;
       box-shadow: 0 20px 30px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.2);
     }
-    .feature-icon { font-size: 2.2rem; margin-bottom: 16px; color: var(--blue); }
+    .feature-icon { font-size: 2.2rem; margin-bottom: 16px; color: #3b82f6; }
     .landing-feature h3 { font-size: 1.4rem; margin-bottom: 12px; }
-    /* demo */
     .landing-demo-card {
-      background: var(--surface);
+      background: #0a0a0f;
       border-radius: 32px;
-      border: 1px solid var(--border);
+      border: 1px solid #2a2a3a;
       overflow: hidden;
       max-width: 700px;
       margin: 0 auto;
@@ -237,47 +195,47 @@
     .demo-message.user { align-self: flex-end; flex-direction: row-reverse; }
     .demo-avatar {
       width: 36px; height: 36px;
-      background: var(--surface-2);
+      background: #111118;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid var(--border);
+      border: 1px solid #2a2a3a;
     }
     .demo-avatar img { width: 26px; border-radius: 50%; }
     .demo-bubble {
-      background: var(--surface-2);
+      background: #111118;
       padding: 10px 18px;
       border-radius: 24px;
       font-size: 0.9rem;
       line-height: 1.5;
     }
     .demo-bubble.user {
-      background: var(--blue);
+      background: #3b82f6;
       color: white;
     }
     .demo-input-area {
       display: flex;
       padding: 16px;
-      border-top: 1px solid var(--border);
-      background: var(--surface-2);
+      border-top: 1px solid #2a2a3a;
+      background: #0a0a0f;
     }
     .demo-input-area input {
       flex: 1;
       padding: 12px 16px;
       border: none;
       border-radius: 40px;
-      background: var(--surface);
-      color: var(--text-1);
+      background: #111118;
+      color: #fff;
       margin-right: 12px;
+      outline: none;
     }
     .demo-note {
       font-size: 0.7rem;
-      color: var(--text-4);
+      color: #606070;
       text-align: center;
       padding: 12px;
     }
-    /* footer */
     .landing-footer {
       display: flex;
       justify-content: space-between;
@@ -285,62 +243,22 @@
       gap: 40px;
       margin-top: 60px;
       padding-top: 32px;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid #2a2a3a;
     }
     .footer-col h4 {
       font-size: 1rem;
       margin-bottom: 16px;
-      color: var(--text-2);
+      color: #e0e0e8;
     }
     .footer-col a {
       display: block;
-      color: var(--text-4);
+      color: #606070;
       text-decoration: none;
       margin-bottom: 10px;
       font-size: 0.85rem;
       transition: color 0.2s;
     }
-    .footer-col a:hover { color: var(--blue); }
-    /* auth modal */
-    .auth-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .auth-modal.hidden { display: none; }
-    .auth-modal-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(8px);
-    }
-    .auth-modal-sheet {
-      position: relative;
-      background: var(--surface);
-      width: 460px;
-      max-width: 90vw;
-      border-radius: 32px;
-      padding: 32px;
-      border: 1px solid var(--border);
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-    }
-    .auth-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .auth-modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--text-3);
-    }
-    /* responsiveness */
+    .footer-col a:hover { color: #3b82f6; }
     @media (max-width: 700px) {
       .landing-hero-title { font-size: 2.2rem; }
       .landing-links { display: none; }
@@ -352,13 +270,11 @@
       background: none;
       border: none;
       font-size: 1.5rem;
-      color: var(--text-1);
+      color: #fff;
     }
   </style>
 </head>
 <body>
-
-<!-- LANDING PAGE -->
 <div id="landing-view" class="landing-view">
   <div class="landing-bg"></div>
   <div class="landing-container">
@@ -373,6 +289,7 @@
         <a href="privacy.html">Privacy</a>
         <a href="terms.html">Terms</a>
         <a href="community.html">Community</a>
+        <a href="products.html">Projects</a>
         <button class="landing-btn-outline" id="landing-signin-btn"><i class="fas fa-sign-in-alt"></i> Sign in</button>
         <button class="landing-btn-primary" id="landing-getstarted-btn"><i class="fas fa-rocket"></i> Get started</button>
       </div>
@@ -431,12 +348,13 @@
     <footer class="landing-footer">
       <div class="footer-col">
         <div class="landing-logo" style="margin-bottom:12px;"><img src="icons/manifest/icon-192x192.png" width="28" /> Nix<span>Ai</span></div>
-        <p style="color:var(--text-4);">Building the next generation of AI assistants.</p>
+        <p style="color:#606070;">Building the next generation of AI assistants.</p>
       </div>
       <div class="footer-col">
         <h4>Product</h4>
         <a href="#features">Features</a>
         <a href="#demo">Demo</a>
+        <a href="products.html">Projects</a>
       </div>
       <div class="footer-col">
         <h4>Legal</h4>
@@ -451,121 +369,60 @@
   </div>
 </div>
 
-<!-- AUTH MODAL (replaces old auth view) -->
-<div id="auth-modal" class="auth-modal hidden">
-  <div class="auth-modal-overlay"></div>
-  <div class="auth-modal-sheet">
-    <div class="auth-modal-header">
-      <div class="landing-logo" style="font-size:1.2rem;"><img src="icons/manifest/icon-192x192.png" width="24" /> Cyanix AI</div>
-      <button class="auth-modal-close" id="auth-modal-close"><i class="fas fa-times"></i></button>
-    </div>
-    <div id="auth-modal-content">
-      <!-- Sign In Panel -->
-      <div class="auth-panel" id="panel-signin">
-        <h2 class="auth-title">Welcome back</h2>
-        <p class="auth-subtitle">Sign in to your account</p>
-        <div class="field-group">
-          <input class="auth-field" id="si-email"    type="email"    placeholder="Email" />
-          <input class="auth-field" id="si-password" type="password" placeholder="Password" />
-        </div>
-        <div class="auth-forgot"><a id="forgot-link" href="#">Forgot password?</a></div>
-        <div class="auth-msg hidden" id="si-err"></div>
-        <div class="auth-msg hidden" id="si-ok"></div>
-        <button type="button" class="auth-btn" id="si-btn"><span>Sign In</span><i class="fas fa-arrow-right"></i></button>
-        <div class="auth-or"><span>or continue with</span></div>
-        <div class="oauth-grid">
-          <button type="button" class="oauth-btn" id="si-google"><i class="fab fa-google"></i> Google</button>
-          <button type="button" class="oauth-btn" id="si-github"><i class="fab fa-github"></i> GitHub</button>
-        </div>
-        <p class="auth-switch">No account? <a class="switch-link" data-to="signup" href="#">Sign up free</a></p>
-      </div>
-
-      <!-- Sign Up Panel -->
-      <div class="auth-panel hidden" id="panel-signup">
-        <h2 class="auth-title">Create account</h2>
-        <p class="auth-subtitle">Start chatting with Cyanix AI</p>
-        <div class="field-group">
-          <input class="auth-field" id="su-name"     type="text"     placeholder="Full name" />
-          <input class="auth-field" id="su-email"    type="email"    placeholder="Email" />
-          <input class="auth-field" id="su-password" type="password" placeholder="Password (min 8 chars)" />
-          <div class="dob-row"><label class="dob-label">Date of birth <span>(must be 13+)</span></label><input class="auth-field" id="su-dob" type="date" /></div>
-        </div>
-        <div class="referral-field-wrap">
-          <input class="auth-field referral-field" id="su-referral" type="text" placeholder="Referral code (optional)" maxlength="7" />
-        </div>
-        <div class="auth-msg hidden" id="su-err"></div>
-        <div class="auth-msg hidden" id="su-ok"></div>
-        <button type="button" class="auth-btn" id="su-btn"><span>Create Account</span><i class="fas fa-user-plus"></i></button>
-        <div class="auth-or"><span>or</span></div>
-        <div class="oauth-grid">
-          <button class="oauth-btn" id="su-google"><i class="fab fa-google"></i> Google</button>
-          <button class="oauth-btn" id="su-github"><i class="fab fa-github"></i> GitHub</button>
-        </div>
-        <p class="auth-switch">Have an account? <a class="switch-link" data-to="signin" href="#">Sign in</a></p>
-      </div>
-
-      <!-- Forgot Panel -->
-      <div class="auth-panel hidden" id="panel-forgot">
-        <h2 class="auth-title">Reset password</h2>
-        <p class="auth-subtitle">We'll send you a reset link</p>
-        <div class="field-group"><input class="auth-field" id="fp-email" type="email" placeholder="Email" /></div>
-        <div class="auth-msg hidden" id="fp-err"></div>
-        <div class="auth-msg hidden" id="fp-ok"></div>
-        <button type="button" class="auth-btn" id="fp-btn"><span>Send Reset Link</span></button>
-        <p class="auth-switch"><a class="switch-link" data-to="signin" href="#">Back to Sign In</a></p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- CHAT VIEW (hidden until sign-in) – same as original but we replace supabase config in app.js -->
-<div id="view-chat" class="view chat-view hidden">
-  <!-- your existing chat sidebar + main area – copy from original -->
-  <!-- For brevity, I'll keep the structure minimal but it should be identical to your working chat -->
-  <aside class="sidebar" id="sidebar">...</aside>
-  <main class="chat-main">...</main>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-  // IMPORTANT: Replace with your NEW anon key from Supabase
-  const SUPABASE_URL = 'https://hfxagwcwaalrmaqzhyfj.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmeGFnd2N3YWFscm1hcXpoeWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzY5NzIsImV4cCI6MjA5MDIxMjk3Mn0.LMFfFRmqW34PT70zAOTj4zsUWmrDl_P4MXL0wZBkxYc';
+  // DEMO CHAT – static replies (working send button)
+  const demoContainer = document.getElementById('landing-demo-chat');
+  const demoInput = document.getElementById('landing-demo-input');
+  const demoSend = document.getElementById('landing-demo-send');
 
-  // Override the supabase config in the global app.js?
-  // Since app.js will load after this, we set window.__SUPABASE_OVERRIDE
-  window.__SUPABASE_OVERRIDE = { url: SUPABASE_URL, anon: SUPABASE_ANON };
-  console.log('[NixAi] Supabase URL updated to', SUPABASE_URL);
-</script>
-<script src="app.js?v=5&t=20260422"></script>
+  function addDemoMessage(role, text) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `demo-message ${role}`;
+    if (role === 'bot') {
+      msgDiv.innerHTML = `<div class="demo-avatar"><img src="icons/manifest/icon-192x192.png" alt="Cyanix" /></div>
+                          <div class="demo-bubble">${text}</div>`;
+    } else {
+      msgDiv.innerHTML = `<div class="demo-avatar user-avatar-small"><i class="fas fa-user"></i></div>
+                          <div class="demo-bubble user">${text}</div>`;
+    }
+    demoContainer.appendChild(msgDiv);
+    msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 
-<script>
-  (function() {
-    // Landing / auth modal logic
-    const landing = document.getElementById('landing-view');
-    const chatView = document.getElementById('view-chat');
-    const authModal = document.getElementById('auth-modal');
-    const closeModal = document.getElementById('auth-modal-close');
-    const overlay = document.querySelector('.auth-modal-overlay');
-    function openModal() { authModal.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-    function closeModalFn() { authModal.classList.add('hidden'); document.body.style.overflow = ''; }
-    document.getElementById('landing-signin-btn')?.addEventListener('click', openModal);
-    document.getElementById('landing-getstarted-btn')?.addEventListener('click', openModal);
-    document.getElementById('hero-getstarted')?.addEventListener('click', openModal);
-    closeModal?.addEventListener('click', closeModalFn);
-    overlay?.addEventListener('click', closeModalFn);
-
-    // Handle sign-in via app.js events
-    document.addEventListener('cyanix:ready', function() {
-      if (window._session) {
-        landing.classList.add('hidden');
-        chatView.classList.remove('hidden');
+  demoSend.addEventListener('click', () => {
+    const query = demoInput.value.trim();
+    if (!query) return;
+    addDemoMessage('user', query);
+    demoInput.value = '';
+    // Simulate thinking
+    const thinking = document.createElement('div');
+    thinking.className = 'demo-message bot';
+    thinking.innerHTML = `<div class="demo-avatar"><img src="icons/manifest/icon-192x192.png" /></div>
+                          <div class="demo-bubble typing"><i class="fas fa-circle-notch fa-spin"></i> Thinking...</div>`;
+    demoContainer.appendChild(thinking);
+    setTimeout(() => {
+      thinking.remove();
+      let reply = '';
+      if (query.toLowerCase().includes('python')) {
+        reply = 'Here’s a quick Python example:\n```python\ndef fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        yield a\n        a, b = b, a + b\n```';
+      } else if (query.toLowerCase().includes('search') || query.toLowerCase().includes('news')) {
+        reply = 'I can search the web for you! This demo is static, but the full version fetches live results.';
       } else {
-        landing.classList.remove('hidden');
-        chatView.classList.add('hidden');
+        reply = 'Great question! In the full Cyanix AI, I’d give you a detailed answer with memory of our conversation. Sign in to try the real thing →';
       }
-    });
-  })();
+      addDemoMessage('bot', reply);
+    }, 1200);
+  });
+
+  demoInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') demoSend.click();
+  });
+
+  // Redirect to main app on sign-in/get-started
+  const mainAppUrl = 'https://suprosmith-coder.github.io/NixAi_Nova/';
+  document.getElementById('landing-signin-btn')?.addEventListener('click', () => window.location.href = mainAppUrl);
+  document.getElementById('landing-getstarted-btn')?.addEventListener('click', () => window.location.href = mainAppUrl);
+  document.getElementById('hero-getstarted')?.addEventListener('click', () => window.location.href = mainAppUrl);
 </script>
 </body>
 </html>

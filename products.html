@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects · NixAi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: #010101;
+      color: #e0e0e8;
+      font-family: 'Inter', sans-serif;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 40px;
+      padding: 8px 20px;
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 2rem;
+      transition: 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(59,130,246,0.3);
+      border-color: #3b82f6;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, #3b82f6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 2rem;
+      font-family: 'Orbitron', monospace;
+    }
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+    }
+    .project-card {
+      background: #0a0a0f;
+      border: 1px solid #2a2a3a;
+      border-radius: 32px;
+      padding: 1.8rem;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .project-card:hover {
+      transform: translateY(-6px);
+      border-color: #3b82f6;
+      box-shadow: 0 20px 30px -12px rgba(0,0,0,0.5);
+    }
+    .project-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(59,130,246,0.2);
+      border-radius: 40px;
+      padding: 4px 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #3b82f6;
+      margin-bottom: 1rem;
+    }
+    .feature-list {
+      list-style: none;
+      margin: 1rem 0;
+    }
+    .feature-list li {
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .feature-list i {
+      width: 20px;
+      color: #3b82f6;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 8px 20px;
+      border-radius: 40px;
+      background: #3b82f6;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .btn:hover {
+      background: #2563eb;
+      transform: translateY(-2px);
+    }
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: #606070;
+      font-size: 0.8rem;
+      border-top: 1px solid #2a2a3a;
+      padding-top: 2rem;
+    }
+    @media (max-width: 700px) {
+      h1 { font-size: 1.8rem; }
+      .container { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a href="nixai.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Cyanix AI</a>
+  <h1><i class="fas fa-rocket"></i> NixAi Projects</h1>
+
+  <div class="project-grid">
+    <!-- Jiro Bot -->
+    <div class="project-card">
+      <div class="project-icon"><i class="fab fa-discord"></i></div>
+      <h2>Jiro Bot</h2>
+      <div class="badge">Active · Discord</div>
+      <p>Jiro is NixAi's flagship Discord bot – a full‑featured moderation, AI, and utility bot with shared moderation, warning system, games, and more.</p>
+      <ul class="feature-list">
+        <li><i class="fas fa-gavel"></i> Moderation (kick, ban, mute, purge, slowmode, lock)</li>
+        <li><i class="fas fa-robot"></i> AI chat (Groq, vision, mentions, auto‑reply channel)</li>
+        <li><i class="fas fa-shield-alt"></i> Auto‑mod (spam, invites, bad words, mention spam)</li>
+        <li><i class="fas fa-handshake"></i> Shared moderation – claim / donate / leave open</li>
+        <li><i class="fas fa-chart-line"></i> Warning system with auto‑escalation</li>
+        <li><i class="fas fa-dice-d6"></i> Games (Truth or Dare, Never Have I Ever)</li>
+        <li><i class="fas fa-search"></i> Full logging (message edits/deletes, joins/leaves, mod actions)</li>
+        <li><i class="fas fa-clock"></i> Giveaways, reminders, staff notes, leveling system</li>
+        <li><i class="fas fa-flag-checkered"></i> Anti‑raid + mention spam protection</li>
+      </ul>
+      <a href="https://discord.gg/qN6aVDXudf" class="btn" target="_blank"><i class="fab fa-discord"></i> Add to Discord</a>
+    </div>
+
+    <!-- Cybase -->
+    <div class="project-card">
+      <div class="project-icon"><i class="fas fa-database"></i></div>
+      <h2>Cybase</h2>
+      <div class="badge">In Development</div>
+      <p>A lightweight, serverless backend for AI agents – built on Supabase with row‑level security, vector embeddings, and realtime sync. Designed to power the next generation of intelligent applications.</p>
+      <ul class="feature-list">
+        <li><i class="fas fa-cloud-upload-alt"></i> Auto‑scaling edge functions</li>
+        <li><i class="fas fa-brain"></i> pgvector semantic memory</li>
+        <li><i class="fas fa-bolt"></i> Realtime subscriptions out of the box</li>
+        <li><i class="fas fa-lock"></i> Granular RLS policies</li>
+      </ul>
+      <a href="#" class="btn" style="background:#606070; cursor:default;">Coming soon</a>
+    </div>
+  </div>
+  <footer>
+    <p>© 2026 NixAi – Building intelligent infrastructure for everyone.</p>
+  </footer>
+</div>
+</body>
+</html>
