@@ -376,16 +376,21 @@
   ═══════════════════════════════════════════════════════════ */
   var _CONSENT_KEY = 'cx-gdpr-consent-v1';
 
+  var _gdprListenerAdded = false;
   function _showGDPRConsentIfNeeded() {
     if (localStorage.getItem(_CONSENT_KEY)) return;
-    // Wait until user is signed in before showing
+    if (_gdprListenerAdded) return;
+    _gdprListenerAdded = true;
     window.addEventListener('cyanix:ready', function() {
       setTimeout(_renderConsentBanner, 1200);
-    });
+    }, { once: true });
   }
 
+  var _gdprRendered = false;
   function _renderConsentBanner() {
     if (localStorage.getItem(_CONSENT_KEY)) return;
+    if (_gdprRendered) return;
+    _gdprRendered = true;
     var banner = document.createElement('div');
     banner.id = 'cx-gdpr-banner';
     banner.innerHTML =
@@ -401,20 +406,26 @@
     document.body.appendChild(banner);
     requestAnimationFrame(function() { banner.classList.add('cx-gdpr-visible'); });
 
-    $('cx-gdpr-accept') && $('cx-gdpr-accept').addEventListener('click', function() {
-      localStorage.setItem(_CONSENT_KEY, '1');
-      banner.classList.remove('cx-gdpr-visible');
-      setTimeout(function() { banner.remove(); }, 400);
-      trackEvent('gdpr_consent_accepted');
-    });
+    // Use scoped querySelector on the local banner node — never getElementById —
+    // so listeners always bind to the correct element regardless of DOM order.
+    var acceptBtn = banner.querySelector('#cx-gdpr-accept');
+    var policyBtn = banner.querySelector('#cx-gdpr-policy');
+    var deleteBtn = banner.querySelector('#cx-gdpr-delete');
 
-    $('cx-gdpr-policy') && $('cx-gdpr-policy').addEventListener('click', function() {
-      _showPrivacyModal();
-    });
-
-    $('cx-gdpr-delete') && $('cx-gdpr-delete').addEventListener('click', function() {
-      _confirmDeleteAccount();
-    });
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', function() {
+        localStorage.setItem(_CONSENT_KEY, '1');
+        banner.classList.remove('cx-gdpr-visible');
+        setTimeout(function() { banner.remove(); }, 400);
+        trackEvent('gdpr_consent_accepted');
+      });
+    }
+    if (policyBtn) {
+      policyBtn.addEventListener('click', function() { _showPrivacyModal(); });
+    }
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', function() { _confirmDeleteAccount(); });
+    }
   }
 
   function _showPrivacyModal() {
