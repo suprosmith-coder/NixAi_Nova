@@ -232,6 +232,8 @@
 
   // Patch renderMessage to intercept error renders and inject retry button
   function _patchRenderMessageForRetry() {
+    if (_retryPatched) return;
+    _retryPatched = true;
     var _orig = window.renderMessage;
     if (!_orig) return;
 
@@ -534,6 +536,8 @@
   var _pendingUserRow = null;
 
   function _patchRenderMessagePending() {
+    if (_pendingPatched) return;
+    _pendingPatched = true;
     var _origRM = window.renderMessage;
     if (!_origRM) return;
 
@@ -696,17 +700,39 @@
     },
   ];
 
-  var _onboardStep = 0;
-
-  function _showOnboardingIfNeeded() {
-    if (localStorage.getItem(_ONBOARD_KEY)) return;
-    window.addEventListener('cyanix:ready', function() {
-      setTimeout(_renderOnboarding, 1800);
-    });
+  // Converts a #rrggbb hex colour to rgba() with the given alpha (0-1).
+  // Safer than appending a hex alpha suffix (e.g. '#2563eb18') which
+  // has near-invisible opacity and can trip up older colour parsers.
+  function _hexToRgba(hex, alpha) {
+    try {
+      var r = parseInt(hex.slice(1, 3), 16);
+      var g = parseInt(hex.slice(3, 5), 16);
+      var b = parseInt(hex.slice(5, 7), 16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + (alpha || 0.12) + ')';
+    } catch (e) { return 'rgba(37,99,235,' + (alpha || 0.12) + ')'; }
   }
 
+  // Patch-applied guards — prevents double-wrapping when _init runs more than once.
+  var _retryPatched   = false;
+  var _pendingPatched = false;
+  var _actionsPatched = false;
+  var _onboardStep    = 0;
+
+  var _onboardListenerAdded = false;
+  function _showOnboardingIfNeeded() {
+    if (localStorage.getItem(_ONBOARD_KEY)) return;
+    if (_onboardListenerAdded) return;
+    _onboardListenerAdded = true;
+    window.addEventListener('cyanix:ready', function() {
+      setTimeout(_renderOnboarding, 1800);
+    }, { once: true });
+  }
+
+  var _onboardRendered = false;
   function _renderOnboarding() {
     if (localStorage.getItem(_ONBOARD_KEY)) return;
+    if (_onboardRendered) return;
+    _onboardRendered = true;
 
     var overlay = document.createElement('div');
     overlay.id  = 'cx-onboard-overlay';
@@ -726,29 +752,38 @@
     _onboardStep = 0;
     _renderOnboardSlide();
 
-    $('cx-onboard-next') && $('cx-onboard-next').addEventListener('click', function() {
-      _onboardStep++;
-      if (_onboardStep >= ONBOARD_SLIDES.length) {
-        _closeOnboarding();
-      } else {
-        _renderOnboardSlide();
-      }
-    });
+    // Attach listeners to the locally-scoped elements to avoid ID collisions
+    var nextBtn = overlay.querySelector('#cx-onboard-next');
+    var skipBtn = overlay.querySelector('#cx-onboard-skip');
 
-    $('cx-onboard-skip') && $('cx-onboard-skip').addEventListener('click', _closeOnboarding);
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function() {
+        _onboardStep++;
+        if (_onboardStep >= ONBOARD_SLIDES.length) {
+          _closeOnboarding();
+        } else {
+          _renderOnboardSlide();
+        }
+      });
+    }
+
+    if (skipBtn) {
+      skipBtn.addEventListener('click', _closeOnboarding);
+    }
   }
 
   function _renderOnboardSlide() {
-    var slide  = ONBOARD_SLIDES[_onboardStep];
-    var slides = $('cx-onboard-slides');
-    var dots   = $('cx-onboard-dots');
-    var next   = $('cx-onboard-next');
-    var isLast = _onboardStep === ONBOARD_SLIDES.length - 1;
+    var slide   = ONBOARD_SLIDES[_onboardStep];
+    var overlay = document.getElementById('cx-onboard-overlay');
+    var slides  = overlay && overlay.querySelector('#cx-onboard-slides');
+    var dots    = overlay && overlay.querySelector('#cx-onboard-dots');
+    var next    = overlay && overlay.querySelector('#cx-onboard-next');
+    var isLast  = _onboardStep === ONBOARD_SLIDES.length - 1;
 
     if (slides) {
       slides.innerHTML =
         '<div class="cx-onboard-slide" style="--slide-color:' + slide.color + '">' +
-          '<div class="cx-onboard-icon" style="color:' + slide.color + ';background:' + slide.color + '18">' + slide.icon + '</div>' +
+          '<div class="cx-onboard-icon" style="color:' + slide.color + ';background:' + _hexToRgba(slide.color, 0.13) + '">' + slide.icon + '</div>' +
           '<h2 class="cx-onboard-title">' + _esc(slide.title) + '</h2>' +
           '<p class="cx-onboard-body">' + _esc(slide.body) + '</p>' +
         '</div>';
@@ -765,11 +800,11 @@
 
   function _closeOnboarding() {
     localStorage.setItem(_ONBOARD_KEY, '1');
-    var overlay = $('cx-onboard-overlay');
-    if (overlay) {
+    // Remove all overlays in case duplicates exist
+    document.querySelectorAll('#cx-onboard-overlay').forEach(function(overlay) {
       overlay.classList.remove('cx-onboard-visible');
-      setTimeout(function() { overlay.remove(); }, 350);
-    }
+      setTimeout(function() { if (overlay.parentNode) overlay.remove(); }, 350);
+    });
     trackEvent('onboarding_completed', { step: _onboardStep });
   }
 
@@ -897,6 +932,8 @@
 
   // Patch renderMessage to add delete action and upgrade the edit button
   function _patchRenderMessageActions() {
+    if (_actionsPatched) return;
+    _actionsPatched = true;
     var _origRM = window.renderMessage;
     if (!_origRM) return;
 
@@ -1251,8 +1288,9 @@
 #cx-gdpr-banner {
   position: fixed; bottom: 80px; left: 16px; right: 16px;
   max-width: 560px; margin: 0 auto;
-  background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0);
-  border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.12);
+  background: var(--surface, #1e293b);
+  border: 1px solid var(--border, rgba(148,163,184,.2));
+  border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.18);
   padding: 18px 20px; z-index: 9900;
   transform: translateY(20px); opacity: 0;
   transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
@@ -1281,9 +1319,10 @@
 }
 .cx-privacy-modal-overlay.visible { opacity: 1; }
 .cx-privacy-modal {
-  background: var(--surface, #fff); border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0,0,0,.18);
+  background: var(--surface, #1e293b); border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
   width: 90%; max-width: 480px; overflow: hidden;
+  border: 1px solid var(--border, rgba(148,163,184,.18));
   transform: scale(.96); transition: transform .25s cubic-bezier(.22,1,.36,1);
 }
 .cx-privacy-modal-overlay.visible .cx-privacy-modal { transform: scale(1); }
@@ -1351,12 +1390,12 @@
 }
 .cx-skel-icon {
   width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
-  background: var(--border, #e2e8f0);
+  background: var(--border, rgba(148,163,184,.25));
 }
 .cx-skel-lines { flex: 1; }
 .cx-skel-line {
   height: 12px; border-radius: 6px;
-  background: var(--border, #e2e8f0);
+  background: var(--border, rgba(148,163,184,.25));
 }
 .cx-skel-pulse {
   animation: cx-skeleton-pulse 1.4s ease-in-out infinite;
@@ -1389,17 +1428,31 @@
 /* ── § 10  Onboarding ──────────────────────────── */
 #cx-onboard-overlay {
   position: fixed; inset: 0; z-index: 99998;
-  background: rgba(0,0,0,.55); backdrop-filter: blur(6px);
+  background: rgba(0,0,0,.6); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity .3s;
 }
 #cx-onboard-overlay.cx-onboard-visible { opacity: 1; }
 .cx-onboard-modal {
-  background: var(--surface); border-radius: 22px;
-  box-shadow: 0 24px 80px rgba(0,0,0,.22);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,.08));
+  border-radius: 22px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.28);
   width: 90%; max-width: 420px; overflow: hidden;
   padding: 36px 32px 28px;
   transform: scale(.94); transition: transform .3s cubic-bezier(.22,1,.36,1);
+}
+/* Dark mode border override */
+@media (prefers-color-scheme: dark) {
+  .cx-onboard-modal {
+    border-color: rgba(255,255,255,.1);
+    box-shadow: 0 24px 80px rgba(0,0,0,.55);
+  }
+}
+[data-theme="dark"] .cx-onboard-modal {
+  border-color: rgba(255,255,255,.1);
+  box-shadow: 0 24px 80px rgba(0,0,0,.55);
 }
 #cx-onboard-overlay.cx-onboard-visible .cx-onboard-modal { transform: scale(1); }
 .cx-onboard-slide { text-align: center; }
@@ -1450,8 +1503,9 @@
 }
 .cx-shortcut-overlay.visible { opacity: 1; }
 .cx-shortcut-sheet {
-  background: var(--surface); border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  background: var(--surface, #1e293b); border-radius: 18px;
+  border: 1px solid var(--border, rgba(148,163,184,.18));
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
   width: 90%; max-width: 380px; overflow: hidden;
   transform: scale(.94); transition: transform .25s cubic-bezier(.22,1,.36,1);
 }
@@ -1506,7 +1560,10 @@
   /* ═══════════════════════════════════════════════════════════
      § 20  INIT
   ═══════════════════════════════════════════════════════════ */
+  var _initialized = false;
   function _init() {
+    if (_initialized) return;
+    _initialized = true;
     _injectStyles();
 
     // Patch chain — run in dependency order
