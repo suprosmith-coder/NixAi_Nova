@@ -4,26 +4,72 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Cyanix AI</title>
-  <meta name="description" content="Cyanix AI — Intelligent assistant powered by the Axion ensemble." />
-  <meta name="theme-color" content="#0a0a0a" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Cyanix AI  --  Your intelligent assistant powered by advanced language models." />
+  <meta name="keywords"    content="AI, assistant, chat, GPT, Cyanix, productivity" />
+  <meta name="author"      content="Cyanix AI" />
+  <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1e3a8a" media="(prefers-color-scheme: dark)" />
+  <meta name="mobile-web-app-capable"                content="yes" />
+  <meta name="apple-mobile-web-app-capable"          content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Cyanix AI" />
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icons/manifest/icon-192x192.png" />
+  <meta name="msapplication-TileColor"               content="#2563eb" />
+  <meta name="msapplication-tap-highlight"           content="no" />
+  <meta name="format-detection"                      content="telephone=no,date=no,address=no" />
+  <link rel="manifest"     href="./manifest.json" />
+  <link rel="icon"         type="image/png" sizes="48x48"   href="./icons/manifest/icon-48x48.png" />
+  <link rel="icon"         type="image/png" sizes="96x96"   href="./icons/manifest/icon-96x96.png" />
+  <link rel="icon"         type="image/png" sizes="192x192" href="./icons/manifest/icon-192x192.png" />
+  <link rel="icon"         type="image/png" sizes="512x512" href="./icons/manifest/icon-512x512.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="./icons/ios/apple-touch-icon-120x120.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="./icons/ios/apple-touch-icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="./icons/ios/apple-touch-icon-167x167.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/ios/apple-touch-icon-180x180.png" />
+  <!--  Open Graph (Facebook, WhatsApp, Discord, iMessage, LinkedIn)  -->
+  <meta property="og:type"              content="website" />
+  <meta property="og:site_name"         content="Cyanix AI" />
+  <meta property="og:title"             content="Cyanix AI  --  Your AI Assistant" />
+  <meta property="og:description"       content="Chat, code, create and research with Cyanix AI. Powered by advanced language models with web search, voice input, and memory." />
+  <meta property="og:url"               content="https://suprosmith-coder.github.io/NixAi_Nova/" />
+  <meta property="og:image"             content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
+  <meta property="og:image:secure_url"  content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
+  <meta property="og:image:type"        content="image/png" />
+  <meta property="og:image:width"       content="512" />
+  <meta property="og:image:height"      content="512" />
+  <meta property="og:image:alt"         content="Cyanix AI logo" />
+  <meta property="og:locale"            content="en_US" />
+
+  <!--  Twitter / X Card  -->
+  <meta name="twitter:card"        content="summary" />
+  <meta name="twitter:site"        content="@cyanixai" />
+  <meta name="twitter:title"       content="Cyanix AI  --  Your AI Assistant" />
+  <meta name="twitter:description" content="Chat, code, create and research with Cyanix AI. Powered by advanced language models with web search, voice input, and memory." />
+  <meta name="twitter:image"       content="https://suprosmith-coder.github.io/NixAi_Nova/icons/manifest/icon-512x512.png" />
+  <meta name="twitter:image:alt"   content="Cyanix AI logo" />
+
+  <!--  iMessage / Apple  -->
+  <meta name="apple-mobile-web-app-title" content="Cyanix AI" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@700;800;900&family=Orbitron:wght@400;600;700;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=17" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+
+    <!-- Error banner for debugging -->
   <script>
     window.onerror = function(msg, src, line) {
-      console.error('[CyanixAI] JS Error:', msg, src, line);
+      var b = document.getElementById('js-error-banner');
+      if (!b) {
+        b = document.createElement('div');
+        b.id = 'js-error-banner';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:12px 16px;font-size:13px;font-family:monospace;word-break:break-all;';
+        document.body.appendChild(b);
+      }
+      b.textContent = 'JS Error: ' + msg + ' (' + (src||'').split('/').pop() + ':' + line + ')';
+      b.style.display = 'block';
     };
     window.addEventListener('unhandledrejection', function(e) {
-      console.error('[CyanixAI] Unhandled:', e.reason);
+      window.onerror((e.reason && e.reason.message) || String(e.reason), '', 0);
     });
   </script>
 </head>
@@ -34,329 +80,282 @@
   <img src="icons/manifest/icon-192x192.png" class="install-banner-icon" alt="" />
   <div class="install-banner-text">
     <strong>Install Cyanix AI</strong>
-    <span>Works offline · Feels native</span>
+    <span>Works offline * Feels native</span>
   </div>
   <button type="button" class="install-banner-btn" id="install-yes-btn">Add to Home</button>
-  <button type="button" class="install-banner-x" id="install-no-btn">✕</button>
+  <button type="button" class="install-banner-x"   id="install-no-btn"></button>
 </div>
 
 <!-- Update Bar -->
 <div id="update-bar" class="update-bar hidden">
-  <span>Update ready</span>
+  <span> Update ready</span>
   <button type="button" id="update-reload-btn">Reload</button>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     AUTH VIEW  — Full-page Claude-style, no modal/card
-══════════════════════════════════════════════════════════════ -->
-<div id="view-auth" class="view auth-fullpage">
+<!-- 
+     AUTH VIEW  --  shown immediately, no splash
+ -->
+<div id="view-auth" class="view auth-view">
+  <div class="auth-bg-blur"></div>
+  <div class="auth-qw-grid" aria-hidden="true"></div>
 
-  <!-- Left panel: branding + animated headline -->
-  <div class="auth-left">
-    <div class="auth-left-inner">
-      <div class="auth-brand">
-        <div class="auth-brand-mark">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="15" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.3"/>
-            <circle cx="16" cy="16" r="7" fill="currentColor" opacity="0.9"/>
-            <circle cx="16" cy="16" r="3" fill="var(--bg)" />
-          </svg>
-        </div>
-        <span class="auth-brand-name">Cyanix<span class="auth-brand-ai"> AI</span></span>
+  <!-- Left brand panel (desktop) -->
+  <div class="auth-qw-left">
+    <div class="auth-qw-left-inner">
+      <div class="auth-qw-logo-wrap">
+        <img src="icons/manifest/icon-192x192.png" class="auth-qw-emblem" alt="" />
+        <span class="auth-qw-wordmark">Cyanix <em>AI</em></span>
       </div>
-
-      <div class="auth-hero">
-        <h1 class="auth-headline" id="auth-headline">
-          <span class="ah-word acc">Think</span>
-          <span class="ah-word">beyond</span>
-          <span class="ah-word acc">limits.</span>
-        </h1>
-        <p class="auth-tagline" id="auth-tagline">Your AI — built different.</p>
-      </div>
-
-      <div class="auth-features">
-        <div class="auth-feat">
-          <div class="auth-feat-dot"></div>
-          <span>4-model Axion ensemble</span>
-        </div>
-        <div class="auth-feat">
-          <div class="auth-feat-dot"></div>
-          <span>Live web search</span>
-        </div>
-        <div class="auth-feat">
-          <div class="auth-feat-dot"></div>
-          <span>Deep reasoning with visible thought</span>
-        </div>
-        <div class="auth-feat">
-          <div class="auth-feat-dot"></div>
-          <span>File reading & analysis</span>
-        </div>
+      <h1 class="auth-qw-headline">Your intelligent<br/>thinking partner.</h1>
+      <p class="auth-qw-copy">Ask anything. Reason deeply. Create freely.</p>
+      <div class="auth-qw-feats">
+        <div class="auth-qw-feat"><span class="auth-qw-feat-dot"></span>Web search &amp; real-time knowledge</div>
+        <div class="auth-qw-feat"><span class="auth-qw-feat-dot"></span>File reading — code, docs, data</div>
+        <div class="auth-qw-feat"><span class="auth-qw-feat-dot"></span>Cross-session memory</div>
+        <div class="auth-qw-feat"><span class="auth-qw-feat-dot"></span>Voice input &amp; TTS</div>
       </div>
     </div>
   </div>
 
-  <!-- Right panel: auth forms -->
-  <div class="auth-right">
-    <div class="auth-right-inner">
+  <!-- Right form panel -->
+  <div class="auth-qw-right">
+    <div class="auth-card">
+      <div class="auth-header">
+        <img src="icons/manifest/icon-192x192.png" class="auth-logo-img" alt="" />
+        <div class="auth-logo-text">Cyanix <em>AI</em></div>
+      </div>
 
-      <!-- SIGN IN PANEL -->
-      <div class="auth-form-panel" id="panel-signin">
-        <div class="auth-form-header">
-          <h2 class="auth-form-title">Welcome back</h2>
-          <p class="auth-form-sub">Sign in to continue</p>
+      <!-- Sign In -->
+      <div class="auth-panel" id="panel-signin">
+        <h2 class="auth-title">Welcome back</h2>
+        <p class="auth-subtitle">Sign in to your account</p>
+        <div class="oauth-grid">
+          <button type="button" class="oauth-btn" id="si-google">
+            <svg width="15" height="15" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+            Google
+          </button>
+          <button type="button" class="oauth-btn" id="si-github">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+          </button>
         </div>
-
-        <div class="auth-fields">
-          <div class="auth-field-wrap">
-            <label class="auth-field-label">Email</label>
-            <input class="auth-input" id="si-email" type="email" placeholder="you@example.com" autocomplete="email" />
-          </div>
-          <div class="auth-field-wrap">
-            <label class="auth-field-label">
-              Password
-              <a class="auth-forgot-link" id="forgot-link" href="#">Forgot?</a>
-            </label>
-            <input class="auth-input" id="si-password" type="password" placeholder="••••••••" autocomplete="current-password" />
-          </div>
+        <div class="auth-divider"><span>or sign in with email</span></div>
+        <div class="field-group">
+          <input class="auth-field" id="si-email"    type="email"    placeholder="Email address" autocomplete="email" />
+          <input class="auth-field" id="si-password" type="password" placeholder="Password" autocomplete="current-password" />
         </div>
-
+        <div class="auth-forgot"><a id="forgot-link" href="#">Forgot password?</a></div>
         <div class="auth-msg hidden" id="si-err" data-type="err"></div>
-        <div class="auth-msg hidden" id="si-ok" data-type="ok"></div>
-
-        <button type="button" class="auth-submit-btn" id="si-btn">
-          <span>Continue</span>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-
-        <div class="auth-divider"><span>or</span></div>
-
-        <div class="auth-oauth-row">
-          <button type="button" class="auth-oauth-btn" id="si-google">
-            <svg width="16" height="16" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-            Continue with Google
-          </button>
-          <button type="button" class="auth-oauth-btn" id="si-github">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-            Continue with GitHub
-          </button>
-        </div>
-
-        <p class="auth-switch-text">No account? <a class="auth-switch-link" data-to="signup" href="#">Sign up free</a></p>
+        <div class="auth-msg hidden" id="si-ok"  data-type="ok"></div>
+        <button type="button" class="auth-btn" id="si-btn"><span>Sign in</span></button>
+        <p class="auth-switch">No account? <a class="switch-link" data-to="signup" href="#">Create one free</a></p>
       </div>
 
-      <!-- SIGN UP PANEL -->
-      <div class="auth-form-panel hidden" id="panel-signup">
-        <div class="auth-form-header">
-          <h2 class="auth-form-title">Create account</h2>
-          <p class="auth-form-sub">Free during beta · Always</p>
+      <!-- Sign Up -->
+      <div class="auth-panel hidden" id="panel-signup">
+        <h2 class="auth-title">Create account</h2>
+        <p class="auth-subtitle">Start free — no credit card needed</p>
+        <div class="oauth-grid">
+          <button type="button" class="oauth-btn" id="su-google">
+            <svg width="15" height="15" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+            Google
+          </button>
+          <button type="button" class="oauth-btn" id="su-github">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+          </button>
         </div>
-
-        <div class="auth-fields">
-          <div class="auth-field-wrap">
-            <label class="auth-field-label">Email</label>
-            <input class="auth-input" id="su-email" type="email" placeholder="you@example.com" autocomplete="email" />
-          </div>
-          <div class="auth-field-wrap">
-            <label class="auth-field-label">Password</label>
-            <input class="auth-input" id="su-password" type="password" placeholder="Min 8 characters" autocomplete="new-password" />
-          </div>
-          <div class="auth-field-wrap">
-            <label class="auth-field-label">Date of birth <span class="auth-field-hint">(must be 13+)</span></label>
-            <input class="auth-input" id="su-dob" type="date" autocomplete="bday" />
+        <div class="auth-divider"><span>or sign up with email</span></div>
+        <div class="field-group">
+          <input class="auth-field" id="su-name"     type="text"     placeholder="Full name" autocomplete="name" />
+          <input class="auth-field" id="su-email"    type="email"    placeholder="Email address" autocomplete="email" />
+          <input class="auth-field" id="su-password" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+          <div class="dob-row">
+            <label class="dob-label">Date of birth <span>(must be 13+)</span></label>
+            <input class="auth-field" id="su-dob" type="date" autocomplete="bday" max="" />
           </div>
         </div>
-
         <div class="auth-msg hidden" id="su-err" data-type="err"></div>
-        <div class="auth-msg hidden" id="su-ok" data-type="ok"></div>
-
-        <button type="button" class="auth-submit-btn" id="su-btn">
-          <span>Create Account</span>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-
-        <div class="auth-divider"><span>or</span></div>
-
-        <div class="auth-oauth-row">
-          <button type="button" class="auth-oauth-btn" id="su-google">
-            <svg width="16" height="16" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-            Continue with Google
-          </button>
-          <button type="button" class="auth-oauth-btn" id="su-github">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-            Continue with GitHub
-          </button>
-        </div>
-
-        <p class="auth-switch-text">Already have an account? <a class="auth-switch-link" data-to="signin" href="#">Sign in</a></p>
+        <div class="auth-msg hidden" id="su-ok"  data-type="ok"></div>
+        <button type="button" class="auth-btn" id="su-btn"><span>Create account</span></button>
+        <p class="auth-switch">Have an account? <a class="switch-link" data-to="signin" href="#">Sign in</a></p>
       </div>
 
-      <!-- FORGOT PASSWORD PANEL -->
-      <div class="auth-form-panel hidden" id="panel-forgot">
-        <div class="auth-form-header">
-          <h2 class="auth-form-title">Reset password</h2>
-          <p class="auth-form-sub">We'll send a reset link to your email</p>
-        </div>
-        <div class="auth-fields">
-          <div class="auth-field-wrap">
-            <label class="auth-field-label">Email</label>
-            <input class="auth-input" id="fp-email" type="email" placeholder="you@example.com" />
-          </div>
+      <!-- Forgot Password -->
+      <div class="auth-panel hidden" id="panel-forgot">
+        <h2 class="auth-title">Reset password</h2>
+        <p class="auth-subtitle">Enter your email for a reset link</p>
+        <div class="field-group">
+          <input class="auth-field" id="fp-email" type="email" placeholder="Email address" />
         </div>
         <div class="auth-msg hidden" id="fp-err" data-type="err"></div>
-        <div class="auth-msg hidden" id="fp-ok" data-type="ok"></div>
-        <button type="button" class="auth-submit-btn" id="fp-btn"><span>Send Reset Link</span></button>
-        <p class="auth-switch-text"><a class="auth-switch-link" data-to="signin" href="#">← Back to sign in</a></p>
+        <div class="auth-msg hidden" id="fp-ok"  data-type="ok"></div>
+        <button type="button" class="auth-btn" id="fp-btn"><span>Send reset link</span></button>
+        <p class="auth-switch"><a class="switch-link" data-to="signin" href="#">← Back to sign in</a></p>
       </div>
-
     </div>
   </div>
+</div>
 
-</div><!-- /view-auth -->
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     CHAT VIEW
-══════════════════════════════════════════════════════════════ -->
+<!-- 
+     CHAT VIEW  (Gemini-style layout)
+ -->
 <div id="view-chat" class="view chat-view hidden">
 
-  <!-- SIDEBAR -->
+  <!-- LEFT SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sb-top">
       <div class="sb-logo-row">
-        <div class="sb-emblem-wrap">
-          <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.4"/>
-            <circle cx="16" cy="16" r="6" fill="currentColor" opacity="0.9"/>
-            <circle cx="16" cy="16" r="2.5" fill="var(--bg)"/>
-          </svg>
-        </div>
-        <span class="sb-brand">Cyanix<em> AI</em></span>
+        <img src="icons/manifest/icon-192x192.png" class="sb-emblem" alt="" />
+        <span class="sb-brand">Cyanix <em>AI</em></span>
         <button type="button" class="sb-collapse-btn" id="sb-collapse-btn" title="Close sidebar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
 
-      <!-- Search -->
-      <div class="sb-search-row">
-        <svg class="sb-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="sb-search-input" id="sb-search-input" type="text" placeholder="Search chats…" autocomplete="off" />
-        <button type="button" class="sb-search-clear hidden" id="sb-search-clear">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
+
     </div>
 
-    <!-- Chats Panel -->
+    <!--  CHATS PANEL  -->
     <div id="sb-panel-chats" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
       <button type="button" class="sb-new-btn" id="new-chat-btn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         New chat
       </button>
-      <div class="sb-section-label" id="sb-section-label">Recent</div>
-      <div class="sb-list" id="chat-list"><div class="sb-empty">No conversations yet</div></div>
-      <div class="sb-search-results hidden" id="sb-search-results"></div>
+      <div class="sb-section">Recent</div>
+      <div class="sb-list" id="chat-list">
+        <div class="sb-empty">No conversations yet</div>
+      </div>
     </div>
+
+
 
     <div class="sb-bottom">
       <button type="button" class="sb-nav-btn" id="help-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
         Help
       </button>
       <button type="button" class="sb-nav-btn" id="settings-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
       </button>
       <button type="button" class="sb-user-btn" id="user-btn">
-        <div class="user-avatar sb-avatar" id="sb-avatar">?</div>
-        <div class="sb-user-info">
-          <div class="sb-user-name" id="sb-user-name">Loading…</div>
-          <div class="sb-user-email" id="sb-user-email"></div>
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name-row">
+          <span class="user-name" id="user-name">Loading...</span>
+          <span class="supporter-badge" id="supporter-badge" style="display:none"></span>
         </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
     </div>
   </aside>
 
-  <!-- Sidebar overlay (mobile) -->
-  <div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
+  <!-- User popup menu -->
+  <div class="user-menu hidden" id="user-menu">
+    <button type="button" class="um-item" id="um-settings">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
+    <div class="um-divider"></div>
+    <button type="button" class="um-item um-danger" id="um-signout">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </button>
+  </div>
 
   <!-- MAIN CHAT AREA -->
-  <main class="chat-main" id="chat-main">
+  <main class="chat-main">
 
-    <!-- Topbar -->
-    <div class="topbar" id="topbar">
-      <button type="button" class="topbar-menu-btn" id="topbar-menu-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title" id="chat-title">New chat</div>
-      <div class="topbar-actions">
-        <button type="button" class="topbar-btn" id="share-chat-btn" title="Share chat">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button type="button" class="topbar-icon" id="sidebar-toggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <button type="button" class="topbar-btn" id="new-chat-topbar-btn" title="New chat">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span class="chat-title" id="chat-title">New chat</span>
+      </div>
+      <div class="topbar-right">
+        <!-- RAG indicator -->
+        <div class="rag-pill hidden" id="rag-pill" title="Web search active">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Web
+        </div>
+        <!-- Model is selected in Settings only -->
+        <!-- model-picker removed from topbar -->
+        <button type="button" class="topbar-icon" id="new-chat-top" title="New chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </div>
-    </div>
+    </header>
 
-    <!-- Chat scroll area -->
+    <!-- Messages -->
     <div class="chat-scroll" id="chat-scroll">
       <div class="messages" id="messages">
 
-        <!-- WELCOME STATE -->
-        <div class="welcome-state" id="welcome-state">
-          <div class="welcome-emblem" id="welcome-emblem">
-            <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
-              <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.25"/>
-              <circle cx="24" cy="24" r="10" fill="currentColor" opacity="0.85"/>
-              <circle cx="24" cy="24" r="4" fill="var(--bg)"/>
-            </svg>
+        <!-- Welcome state  --  randomised on every new chat -->
+        <div class="welcome" id="welcome-state">
+          <div class="welcome-glow"></div>
+          <div class="welcome-logo">
+            <img src="icons/manifest/icon-512x512.png" class="welcome-emblem" alt="Cyanix AI" />
           </div>
-          <h2 class="welcome-heading" id="welcome-heading">Good morning.</h2>
-          <p class="welcome-sub" id="welcome-sub">What shall we work on?</p>
+          <h1 class="welcome-heading" id="welcome-heading">Good morning</h1>
+          <p  class="welcome-sub"     id="welcome-sub">What's on your mind today?</p>
           <div class="welcome-cards" id="welcome-cards"></div>
         </div>
 
       </div>
-
-      <!-- Typing indicator -->
-      <div class="typing-row hidden" id="typing-row">
-        <div class="typing-avatar">
-          <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="12" fill="currentColor" opacity="0.8"/>
-            <circle cx="16" cy="16" r="5" fill="var(--bg)"/>
-          </svg>
-        </div>
-        <div class="typing-bubble">
-          <div class="thinking-label" id="thinking-text">Cyanix is thinking</div>
-          <div class="typing-dots">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-      </div>
-
     </div>
 
-    <!-- COMPOSER -->
-    <div class="composer-wrap" id="composer-wrap">
-      <div class="composer-box" id="composer-box">
-
-        <!-- Attachment preview -->
-        <div class="attachment-preview hidden" id="attachment-preview">
-          <div class="attach-chip" id="attach-chip">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span id="attach-name">file.txt</span>
-            <button type="button" id="attach-remove">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
+    <!-- Thinking indicator -->
+    <div class="thinking-row hidden" id="typing-row">
+      <div class="cx-thinking">
+        <div class="cx-think-emblem">
+          <img src="icons/manifest/icon-192x192.png" alt="" />
+          <div class="cx-think-ring cx-ring-1"></div>
+          <div class="cx-think-ring cx-ring-2"></div>
         </div>
+        <div class="cx-orbit-wrap">
+          <div class="cx-orbit cx-orbit-a"><div class="cx-orb"></div></div>
+          <div class="cx-orbit cx-orbit-b"><div class="cx-orb"></div></div>
+          <div class="cx-orbit cx-orbit-c"><div class="cx-orb"></div></div>
+        </div>
+      </div>
+      <div class="thinking-label">
+        <span id="thinking-text">Cyanix is thinking</span>
+        <span class="thinking-dots"><span></span><span></span><span></span></span>
+      </div>
+    </div>
 
-        <!-- Text input -->
-        <div class="composer-input-row">
+    <!-- Flying logo traveler (animated on send) -->
+    <div id="logo-traveler" aria-hidden="true">
+      <img src="icons/manifest/icon-192x192.png" alt="" draggable="false"/>
+    </div>
+
+    <!-- Composer -->
+    <div class="composer-area">
+      <div class="ai-thinking-float" id="ai-thinking-float">
+        <div class="ai-dot"></div>
+        <div class="ai-dot"></div>
+        <div class="ai-dot"></div>
+      </div>
+
+      <!-- AI & Intelligence Toolbar -->
+      <div class="cx-ai-toolbar" id="cx-ai-toolbar">
+        <!-- Buttons injected by JS: Wiki RAG, CoT, Templates, Groq Ctx -->
+      </div>
+
+      <!-- Copilot-style Composer Box -->
+      <div class="composer-box cx-composer-v2" id="composer-box">
+
+        <!-- Attachment preview strip (inside box, above textarea) -->
+        <div class="cx-attach-strip hidden" id="attach-preview"></div>
+
+        <!-- Main textarea row -->
+        <div class="cx-composer-body">
           <textarea
             id="composer-input"
-            class="composer-input"
-            placeholder="Message Cyanix…"
+            class="composer-input cx-input-v2"
+            placeholder="Ask Cyanix anything…"
             rows="1"
             autocomplete="off"
             autocorrect="on"
@@ -364,152 +363,707 @@
           ></textarea>
         </div>
 
-        <!-- Footer row -->
-        <div class="composer-footer">
-          <div class="footer-left">
-            <button type="button" class="foot-btn" id="attach-btn" title="Attach file">
+        <!-- Bottom action row (Copilot-style) -->
+        <div class="cx-composer-footer">
+          <!-- Left: file attach + web search + voice -->
+          <div class="cx-footer-left">
+            <button type="button" class="cx-foot-btn" id="attach-btn" title="Attach image or code/text file"  >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
-            <button type="button" class="foot-btn" id="rag-toggle-btn" title="Toggle web search">
+            <button type="button" class="cx-foot-btn" id="rag-toggle-btn" title="Toggle web search">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <span class="foot-label">Search</span>
+              <span class="cx-foot-label">Search</span>
             </button>
-            <button type="button" class="foot-btn" id="mic-btn" title="Voice input">
+            <button type="button" class="cx-foot-btn" id="mic-btn" title="Voice input">
               <svg id="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-              <span class="foot-label">Voice</span>
+              <span class="cx-foot-label">Voice</span>
             </button>
           </div>
-          <div class="footer-right">
+
+          <!-- Right: character counter + send -->
+          <div class="cx-footer-right">
             <span class="composer-counter" id="composer-counter"></span>
-            <button type="button" class="send-btn" id="send-btn" title="Send (Enter)" disabled>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <button type="button" class="send-btn cx-send-v2" id="send-btn" title="Send (Enter)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
         </div>
+      </div>
 
+      <div id="echo-mode-bar" style="display:none;align-items:center;gap:8px;padding:6px 12px;background:var(--surface-2);border-radius:8px;margin-top:6px;">
+        <span style="font-size:.72rem;color:var(--purple);font-weight:600;">Echo Mode ON &mdash; Cyanix will write in your voice</span>
+        <button type="button" onclick="window.toggleEchoMode()" style="margin-left:auto;font-size:.68rem;color:var(--text-3);background:none;border:none;cursor:pointer;">Turn off</button>
       </div>
       <p class="composer-hint">Cyanix AI can make mistakes. Verify important info.</p>
     </div>
 
   </main>
-
-  <!-- User menu -->
-  <div class="user-menu hidden" id="user-menu">
-    <div class="user-menu-header">
-      <div class="user-avatar um-avatar" id="um-avatar">?</div>
-      <div>
-        <div class="um-name" id="um-name">Loading…</div>
-        <div class="um-email" id="um-email"></div>
-      </div>
-    </div>
-    <div class="user-menu-divider"></div>
-    <button type="button" class="um-btn" onclick="window.openSettings()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Settings
-    </button>
-    <button type="button" class="um-btn" id="signout-btn-menu">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Sign out
-    </button>
-  </div>
-
-</div><!-- /view-chat -->
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     SETTINGS FULL-PAGE
-══════════════════════════════════════════════════════════════ -->
-<div class="settings-fullpage hidden" id="settings-modal">
-  <div id="settings-page-main" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
-    <div class="settings-fp-head">
-      <button type="button" class="modal-back-btn" id="settings-close" onclick="window.closeSettings()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <h3 class="modal-title">Settings</h3>
-      <div style="width:32px"></div>
-    </div>
-    <div class="modal-body">
-
-      <!-- Profile -->
-      <div class="stg-avatar-section">
-        <div class="stg-avatar-wrap" id="stg-avatar-tap">
-          <div class="user-avatar stg-avatar-el" id="stg-avatar-el">?</div>
-          <div class="stg-avatar-edit"><i class="fa-solid fa-camera"></i></div>
-        </div>
-        <div class="stg-avatar-info">
-          <div class="stg-avatar-name" id="stg-avatar-name">Loading…</div>
-          <div class="stg-avatar-email" id="stg-avatar-email"></div>
-        </div>
-        <input type="file" id="stg-avatar-upload" accept="image/*" style="display:none"/>
-      </div>
-
-      <div class="settings-card">
-        <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('appearance')">
-          <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
-          <div class="scr-body"><div class="scr-label">Appearance</div></div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="settings-card-divider"></div>
-        <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('memory')">
-          <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
-          <div class="scr-body"><div class="scr-label">Memory</div></div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="settings-card-divider"></div>
-        <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('ai-intel')">
-          <div class="scr-icon" style="color:var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-          <div class="scr-body"><div class="scr-label">AI &amp; Intelligence</div><div class="scr-desc">Reasoning, context depth, web search</div></div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="settings-card-divider"></div>
-        <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('files')">
-          <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>
-          <div class="scr-body"><div class="scr-label">Files &amp; Uploads</div><div class="scr-desc">Supabase storage, Termux file reading</div></div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="settings-card-divider"></div>
-        <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('notifications')">
-          <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-          <div class="scr-body"><div class="scr-label">Notifications</div><div class="scr-desc" id="notif-nav-status">Off</div></div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="settings-card-divider"></div>
-        <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('improve')">
-          <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-          <div class="scr-body"><div class="scr-label">Improve Cyanix</div><div class="scr-desc" id="improve-nav-status">Off</div></div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="settings-card-divider"></div>
-        <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('tos')">
-          <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
-          <div class="scr-body"><div class="scr-label">Terms &amp; Privacy</div></div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-
-      <div class="settings-card" style="margin-top:8px">
-        <div class="settings-card-row" style="cursor:pointer;color:var(--red)" onclick="window.closeSettings();signOut()">
-          <div class="scr-icon" style="color:var(--red)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
-          <div class="scr-body"><div class="scr-label">Sign Out</div></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- SUB-PAGES (Appearance, Memory, AI, Files, etc.) -->
-  <div id="settings-subpage" class="settings-subpage hidden">
-    <div class="settings-fp-head">
-      <button type="button" class="modal-back-btn" id="subpage-back-btn" onclick="window.closeSettingsPage()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <h3 class="modal-title" id="subpage-title">Settings</h3>
-      <div style="width:32px"></div>
-    </div>
-    <div class="modal-body" id="subpage-body"></div>
-  </div>
 </div>
 
+<!-- SETTINGS FULL-PAGE VIEW -->
+<div class="settings-fullpage hidden" id="settings-modal">
+
+    <!--  MAIN PAGE  -->
+    <div id="settings-page-main" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" id="settings-close" onclick="window.closeSettings()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Settings</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+
+        <!-- Profile / Avatar -->
+        <div class="stg-avatar-section">
+          <div class="stg-avatar-wrap" id="stg-avatar-tap">
+            <div class="user-avatar stg-avatar-el" id="stg-avatar-el">?</div>
+            <div class="stg-avatar-edit"><i class="fa-solid fa-camera"></i></div>
+          </div>
+          <div class="stg-avatar-info">
+            <div class="stg-avatar-name" id="stg-avatar-name">Loading…</div>
+            <div class="stg-avatar-email" id="stg-avatar-email"></div>
+          </div>
+          <input type="file" id="stg-avatar-upload" accept="image/*" style="display:none"/>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('appearance')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Appearance</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('personas')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H3a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Personas</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('memory')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Memory</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('personalization')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Personalization</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row qwen-ai-nav-row" style="cursor:pointer" onclick="window.openSettingsPage('ai-intel')">
+            <div class="scr-icon" style="color:#6366f1;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="scr-body"><div class="scr-label" style="font-weight:600;">AI &amp; Intelligence</div><div class="scr-desc">Wiki RAG, CoT, Groq context, templates</div></div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <span class="qwen-nav-badge">New</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group-label">ABOUT</div>
+        <div class="settings-card">
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('tos')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Terms of Service</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('improve')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+            <div class="scr-body">
+              <div class="scr-label">Help Cyanix Improve</div>
+              <div class="scr-desc" id="improve-nav-status">Off</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('privacy')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Privacy Policy</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('about')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            <div class="scr-body"><div class="scr-label">About &amp; Contact</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div class="settings-group-label">ADVANCED SETTINGS</div>
+        <div class="settings-card">
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('referral')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Referral Code</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" style="cursor:pointer" onclick="window.openSettingsPage('supporter')">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Supporter Perks</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div class="settings-card" style="margin-top:8px;">
+          <div class="settings-card-row" id="signout-btn" style="cursor:pointer">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Log out</div></div>
+          </div>
+        </div>
+
+        <div class="settings-card" style="margin-top:8px;">
+          <div class="settings-card-row settings-card-row--danger" id="clear-chats-btn" style="cursor:pointer">
+            <div class="scr-icon scr-icon--danger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+            <div class="scr-body"><div class="scr-label scr-label--danger">Delete all chats</div></div>
+          </div>
+        </div>
+
+        <div style="height:32px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Appearance  -->
+    <div id="settings-page-appearance" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Appearance</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card">
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Theme</div></div>
+            <select class="scr-select" id="theme-select"><option value="light">Light</option><option value="dark">Dark</option></select>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Font Style</div></div>
+            <select class="scr-select" id="font-style-select">
+              <option value="inter">Inter</option>
+              <option value="space-grotesk">Space Grotesk</option>
+              <option value="syne">Syne</option>
+              <option value="orbitron">Orbitron</option>
+            </select>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h10M4 17h6"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Font Size</div><div class="scr-desc" id="font-size-desc">Medium</div></div>
+            <div class="font-size-stepper">
+              <button type="button" class="fss-btn" id="font-size-down"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+              <span class="fss-val" id="font-size-val">15</span>
+              <button type="button" class="fss-btn" id="font-size-up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Personas  -->
+    <div id="settings-page-personas" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Personas</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card" id="personas-card">
+          <div id="persona-list"></div>
+          <div class="settings-card-divider" id="persona-add-divider"></div>
+          <div class="settings-card-row" id="persona-add-btn" style="cursor:pointer" onclick="window.openPersonaModal()">
+            <div class="scr-icon" style="color:var(--blue);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <div class="scr-body"><div class="scr-label" style="color:var(--blue)">New Persona</div><div class="scr-desc" id="persona-limit-desc">Up to 3 free</div></div>
+          </div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Memory  -->
+    <div id="settings-page-memory" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Memory</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card">
+          <div class="settings-card-row" id="context-depth-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Memory Recall</div><div class="scr-desc" id="context-depth-desc">Past context injected per message</div></div>
+            <select class="scr-select" id="context-depth-select">
+              <option value="light">Light (5)</option>
+              <option value="standard">Standard (15)</option>
+              <option value="deep">Deep (30)</option>
+            </select>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Memory Slots</div><div class="scr-desc">Facts Cyanix knows about you</div></div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <span class="perk-value" id="memory-perk-value">50 slots</span>
+              <span class="perk-lock" id="memory-perk-lock" title="Upgrade to unlock more">&#128274;</span>
+            </div>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row" id="memory-manager-toggle-row" style="cursor:pointer" onclick="window.toggleMemoryManager()">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Manage Memories</div><div class="scr-desc" id="memory-manager-desc">See and delete what Cyanix knows</div></div>
+            <svg id="memory-manager-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="transition:transform .25s;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div id="memory-manager-panel" style="display:none;padding:0 16px 12px;">
+            <div id="memory-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
+            <div id="memory-empty" style="display:none;text-align:center;padding:20px 0;font-size:.82rem;color:var(--text-4);">No memories yet. Start chatting!</div>
+            <button type="button" id="clear-all-memories-btn" style="display:none;margin-top:10px;width:100%;padding:8px;border-radius:8px;border:1.5px solid #ef4444;background:transparent;color:#ef4444;font-size:.82rem;font-weight:600;cursor:pointer;">Clear All Memories</button>
+          </div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Personalization  -->
+    <div id="settings-page-personalization" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Personalization</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+
+        <!-- Identity -->
+        <div class="settings-group-label">IDENTITY</div>
+        <div class="settings-card">
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Your Name</div><div class="scr-desc">How Cyanix addresses you</div></div>
+            <input type="text" id="display-name-input" class="scr-inline-input" placeholder="e.g. Alex…" maxlength="40" autocomplete="off" />
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Response Language</div><div class="scr-desc">Language Cyanix replies in</div></div>
+            <select class="scr-select" id="language-select"></select>
+          </div>
+        </div>
+
+        <!-- Communication Style -->
+        <div class="settings-group-label" style="margin-top:16px;">COMMUNICATION STYLE</div>
+        <div class="settings-card">
+          <div class="settings-card-row col">
+            <div class="scr-row-top">
+              <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div>
+              <div class="scr-body"><div class="scr-label">Personality</div><div class="scr-desc">How Cyanix communicates</div></div>
+            </div>
+            <div class="personality-chips">
+              <button type="button" class="p-chip active" data-value="friendly">&#128522; Friendly</button>
+              <button type="button" class="p-chip" data-value="professional">&#128188; Pro</button>
+              <button type="button" class="p-chip" data-value="creative">&#127912; Creative</button>
+              <button type="button" class="p-chip" data-value="concise">&#9889; Concise</button>
+              <button type="button" class="p-chip" data-value="mentor">&#127891; Mentor</button>
+              <button type="button" class="p-chip" data-value="witty">&#128516; Witty</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Terms of Service  -->
+    <div id="settings-page-tos" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Terms of Service</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card" style="padding:16px 20px;">
+          <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;">By using Cyanix AI you agree to use the service responsibly and in accordance with applicable laws. Cyanix AI is provided as-is. We reserve the right to update these terms at any time.</p>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Privacy Policy  -->
+    <!--  SUB-PAGE: Help Cyanix Improve  -->
+    <div id="settings-page-improve" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Help Cyanix Improve</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+
+        <!-- Hero description -->
+        <div style="padding:4px 0 18px;">
+          <p style="font-size:.9rem;color:var(--text-1);font-weight:600;margin:0 0 6px;">Make Cyanix smarter for everyone</p>
+          <p style="font-size:.82rem;color:var(--text-2);line-height:1.7;margin:0;">
+            When you opt in, your conversations are automatically cleaned, improved, and anonymized before being stored.
+            This creates a high-quality dataset that helps Cyanix give better answers over time -- not just for you, but for all users.
+          </p>
+        </div>
+
+        <!-- Main toggle -->
+        <div class="settings-card">
+          <div class="settings-card-row" style="padding:14px 20px">
+            <div class="scr-body">
+              <div class="scr-label">Contribute to training</div>
+              <div class="scr-desc">Anonymized + cleaned versions of your chats help improve Cyanix</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="consent-toggle" /><span class="track"></span></label>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <!-- How it works -->
+        <div class="settings-card">
+          <div style="padding:14px 20px">
+            <div class="scr-label" style="margin-bottom:12px;">How your data is used</div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--accent);opacity:.15;flex-shrink:0;"></div>
+              <div style="position:relative;">
+                <div style="position:absolute;left:-22px;top:6px;width:28px;height:28px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div style="padding-left:6px;">
+                  <div style="font-size:.82rem;font-weight:600;color:var(--text-1);">Prompt Refiner</div>
+                  <div style="font-size:.78rem;color:var(--text-2);margin-top:2px;line-height:1.5;">Your message is rewritten to be clear and specific before storing</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+              <div style="position:relative;width:28px;flex-shrink:0;">
+                <div style="position:absolute;left:0;top:6px;width:28px;height:28px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+              </div>
+              <div style="padding-left:6px;">
+                <div style="font-size:.82rem;font-weight:600;color:var(--text-1);">Response Improver</div>
+                <div style="font-size:.78rem;color:var(--text-2);margin-top:2px;line-height:1.5;">The AI response is polished and structured before being saved</div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div style="position:relative;width:28px;flex-shrink:0;">
+                <div style="position:absolute;left:0;top:6px;width:28px;height:28px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+              </div>
+              <div style="padding-left:6px;">
+                <div style="font-size:.82rem;font-weight:600;color:var(--text-1);">Quality Filter</div>
+                <div style="font-size:.78rem;color:var(--text-2);margin-top:2px;line-height:1.5;">Only high-quality, toxicity-free exchanges are kept. Your feedback votes count toward this.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <!-- Withdraw -->
+        <div class="settings-card" id="training-data-row">
+          <div class="settings-card-row" style="padding:14px 20px">
+            <div class="scr-body">
+              <div class="scr-label">Withdraw contributions</div>
+              <div class="scr-desc">Remove all your anonymized data from the training dataset</div>
+            </div>
+            <button type="button" class="scr-link-btn" id="delete-training-btn">Withdraw</button>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <!-- Privacy note -->
+        <p style="font-size:.75rem;color:var(--text-3);line-height:1.6;padding:0 4px;">
+          All stored data is fully anonymized -- emails, URLs, and personal identifiers are removed before storage. Cyanix never sells data. You can withdraw at any time.
+        </p>
+
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <div id="settings-page-privacy" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Privacy Policy</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card" style="padding:16px 20px;">
+          <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;">Cyanix AI stores your chat history and memories in Supabase to power your personalized experience. We do not sell your data. You can delete your memories and chats at any time from Settings.</p>
+          <div class="settings-card-divider" style="margin:14px 0"></div>
+          <div class="settings-card-row" style="padding:0;cursor:pointer" onclick="window.openSettingsPage('improve')">
+            <div class="scr-body"><div class="scr-label">Help Improve Cyanix</div><div class="scr-desc">Manage your training data contribution</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: About & Contact  -->
+    <div id="settings-page-about" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">About &amp; Contact</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card" style="padding:16px 20px;text-align:center;">
+          <div style="font-size:1.6rem;font-weight:900;color:var(--blue);font-family:var(--font-brand,monospace);letter-spacing:.05em;margin-bottom:4px;">CYANIX AI</div>
+          <div style="font-size:.78rem;color:var(--text-3);margin-bottom:12px;">Built by Sarano</div>
+          <div style="font-size:.82rem;color:var(--text-2);">For support or feedback, reach out via the community or open an issue on GitHub.</div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Referral Code  -->
+    <div id="settings-page-referral" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Referral Code</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card">
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Your Referral Code</div><div class="scr-desc">Share to earn +5 msgs per referral</div></div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <span id="referral-code-val" style="font-size:.82rem;font-weight:700;color:var(--blue);letter-spacing:.05em;">--</span>
+              <button type="button" id="referral-copy-btn" title="Copy" style="width:28px;height:28px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface-2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row">
+            <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div class="scr-body"><div class="scr-label">Referrals</div><div class="scr-desc" id="referral-stats-desc">Loading...</div></div>
+            <span id="referral-reward-badge" style="display:none;font-size:.72rem;font-weight:700;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px;">+5 msgs</span>
+          </div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: Supporter Perks  -->
+    <div id="settings-page-supporter" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <h3 class="modal-title">Supporter Perks</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+        <div id="supporter-section">
+          <div class="settings-card">
+            <div class="settings-card-row">
+              <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+              <div class="scr-body"><div class="scr-label">Usage This Window</div><div class="scr-desc" id="usage-display">-</div></div>
+              <span class="perk-on">Unlimited</span>
+            </div>
+            <div class="settings-card-divider" id="early-access-row" style="display:none"></div>
+            <div class="settings-card-row" id="early-access-row-inner" style="display:none">
+              <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+              <div class="scr-body"><div class="scr-label">Early Access</div><div class="scr-desc">Beta features before anyone else</div></div>
+              <span class="perk-on">Active</span>
+            </div>
+            <div class="settings-card-divider"></div>
+            <div class="settings-card-row">
+              <div class="scr-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+              <div class="scr-body"><div class="scr-label">Exclusive Themes</div><div class="scr-desc">Founder, Neon &amp; Midnight unlocked</div></div>
+              <span class="perk-on">On</span>
+            </div>
+          </div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!--  SUB-PAGE: AI & Intelligence  -->
+    <div id="settings-page-ai-intel" style="display:none;flex-direction:column;height:100%;">
+      <div class="settings-fp-head">
+        <button type="button" class="modal-back-btn" onclick="window.openSettingsPage('main')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h3 class="modal-title">AI &amp; Intelligence</h3>
+        <div style="width:32px"></div>
+      </div>
+      <div class="modal-body">
+
+        <!-- Section: Model & Output -->
+        <div class="qwen-section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Model &amp; Output
+        </div>
+        <div class="settings-card qwen-card">
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(37,99,235,.12);color:#2563eb;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Model</div>
+              <div class="scr-desc">Active AI model for responses</div>
+            </div>
+            <select class="scr-select" id="model-select"></select>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(16,185,129,.12);color:#10b981;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Streaming Responses</div>
+              <div class="scr-desc">Show text as it generates in real-time</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="streaming-toggle" checked /><span class="track"></span></label>
+          </div>
+        </div>
+
+        <!-- Section: Web & Retrieval -->
+        <div class="qwen-section-label" style="margin-top:18px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Web &amp; Retrieval
+        </div>
+        <div class="settings-card qwen-card">
+          <div class="settings-card-row qwen-row" id="rag-toggle-row">
+            <div class="qwen-row-icon" style="background:rgba(59,130,246,.12);color:#3b82f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Auto Web Search</div>
+              <div class="scr-desc" id="rag-auto-desc">Search when questions need current info</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="rag-auto-toggle" /><span class="track"></span></label>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(6,182,212,.12);color:#06b6d4;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Wiki RAG</div>
+              <div class="scr-desc">Pull Wikipedia context for factual questions</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="wiki-rag-settings-toggle" /><span class="track"></span></label>
+          </div>
+          <div class="settings-card-divider"></div>
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(99,102,241,.12);color:#6366f1;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Groq Compound Context</div>
+              <div class="scr-desc">Enrich Wiki RAG with Groq's compound model</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="groq-ctx-settings-toggle" checked /><span class="track"></span></label>
+          </div>
+        </div>
+
+        <!-- Section: Reasoning -->
+        <div class="qwen-section-label" style="margin-top:18px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          Reasoning &amp; Thinking
+        </div>
+        <div class="settings-card qwen-card">
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(245,158,11,.12);color:#f59e0b;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Chain-of-Thought</div>
+              <div class="scr-desc">Show step-by-step reasoning for math &amp; logic</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="cot-settings-toggle" /><span class="track"></span></label>
+          </div>
+        </div>
+
+        <!-- Section: Response Quality -->
+        <div class="qwen-section-label" style="margin-top:18px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Response Quality
+        </div>
+        <div class="settings-card qwen-card">
+          <div class="settings-card-row qwen-row">
+            <div class="qwen-row-icon" style="background:rgba(239,68,68,.10);color:#ef4444;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Auto-Refine</div>
+              <div class="scr-desc">One-tap AI improvement of any response</div>
+            </div>
+            <span class="qwen-badge qwen-badge--on">Active</span>
+          </div>
+        </div>
+
+        <!-- Section: Templates -->
+        <div class="qwen-section-label" style="margin-top:18px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Prompt Templates
+        </div>
+        <div class="settings-card qwen-card">
+          <div class="settings-card-row qwen-row" style="cursor:pointer;" onclick="window.closeSettings();setTimeout(function(){var t=document.getElementById('cx-template-btn');if(t)t.click();},400);">
+            <div class="qwen-row-icon" style="background:rgba(139,92,246,.12);color:#8b5cf6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <div class="scr-body">
+              <div class="scr-label">Browse Template Library</div>
+              <div class="scr-desc">Coding, writing, analysis &amp; productivity templates</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div style="height:28px"></div>
+      </div>
+    </div>
+
+
+    <div id="persona-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+      <div class="persona-modal-sheet">
+        <div class="modal-head" style="padding:16px 20px 12px;">
+          <h3 class="modal-title" id="persona-modal-title">New Persona</h3>
+          <button type="button" class="modal-back-btn" onclick="window.closePersonaModal()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:.78rem;font-weight:600;color:var(--text-3);">AVATAR</label>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div id="persona-emoji-preview" style="width:52px;height:52px;border-radius:50%;background:var(--surface-2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;" onclick="window.toggleEmojiPicker()">&#129302;</div>
+              <div style="flex:1;"><div id="persona-emoji-picker" style="display:none;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:8px;background:var(--surface-2);border-radius:10px;border:1.5px solid var(--border);"></div></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:.78rem;font-weight:600;color:var(--text-3);">NAME</label>
+            <input type="text" id="persona-name-input" class="setting-input" placeholder="e.g. Sage, Nova, Aria..." maxlength="30" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface-2);font-size:.95rem;color:var(--text-1);" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:.78rem;font-weight:600;color:var(--text-3);">PERSONALITY &amp; INSTRUCTIONS</label>
+            <textarea id="persona-prompt-input" placeholder="Describe how this persona should behave..." maxlength="800" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface-2);font-size:.88rem;color:var(--text-1);resize:vertical;min-height:100px;font-family:var(--font);line-height:1.5;"></textarea>
+            <div style="font-size:.72rem;color:var(--text-4);text-align:right;"><span id="persona-prompt-count">0</span>/800</div>
+          </div>
+          <button type="button" id="persona-save-btn" onclick="window.savePersona()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;">Save Persona</button>
+          <button type="button" id="persona-delete-btn" onclick="window.deletePersona()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1.5px solid #ef4444;background:transparent;color:#ef4444;font-size:.88rem;font-weight:600;cursor:pointer;">Delete Persona</button>
+        </div>
+      </div>
+    </div>
+
+</div>
 <!-- HELP MODAL -->
 <div class="modal-overlay hidden" id="help-modal">
   <div class="modal-sheet">
@@ -525,52 +1079,45 @@
       <div class="help-row"><span>New line</span><kbd>Shift+Enter</kbd></div>
       <div class="help-row"><span>New chat</span><kbd>Ctrl+Shift+N</kbd></div>
       <div class="help-row"><span>Toggle web search</span><kbd>Ctrl+Shift+W</kbd></div>
-      <div class="help-row"><span>Stop response</span><kbd>Esc</kbd></div>
+      <div class="help-row"><span>Stop response</span><kbd>Escape</kbd></div>
       <div class="help-row"><span>Focus input</span><kbd>/</kbd></div>
       <div class="help-row"><span>Toggle sidebar</span><kbd>Ctrl+B</kbd></div>
     </div>
   </div>
 </div>
 
-<!-- FILE UPLOAD HIDDEN INPUT -->
-<input type="file" id="file-input" style="display:none"
-  accept=".txt,.md,.html,.htm,.css,.js,.ts,.jsx,.tsx,.json,.py,.sh,.yaml,.yml,.toml,.ini,.env,.sql,.csv,.log,.xml,.rs,.go,.java,.c,.cpp,.h,.php,.rb,.swift,.kt,.dart,.r,.tex,.rst,.pdf,.docx,.pptx,.xlsx,.zip,.png,.jpg,.jpeg,.gif,.webp" />
-
-<!-- LOGO TRAVELER ANIMATION -->
-<div class="logo-traveler hidden" id="logo-traveler">
-  <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
-    <circle cx="16" cy="16" r="12" fill="currentColor" opacity="0.9"/>
-    <circle cx="16" cy="16" r="5" fill="var(--bg)"/>
-  </svg>
-</div>
-
 <div class="toast hidden" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=20&t=20260424"></script>
+<script src="app.js?v=5&t=20260422"></script>
 <script>
 (function(){
-  var p = new URLSearchParams(location.search);
-  var a = p.get('action'), t = p.get('text') || p.get('url') || p.get('title');
-  if (a) window._startAction = a;
-  if (t) window._sharedText = t;
+  var p=new URLSearchParams(location.search);
+  var a=p.get('action'),t=p.get('text')||p.get('url')||p.get('title');
+  if(a) window._startAction=a;
+  if(t) window._sharedText=t;
 })();
 
+// Register service worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js', { scope: './' })
       .then(function(reg) {
+        // Check for updates on every load
         reg.addEventListener('updatefound', function() {
-          var nw = reg.installing;
-          nw.addEventListener('statechange', function() {
-            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-              var bar = document.getElementById('update-bar');
-              if (bar) bar.classList.remove('hidden');
+          var newWorker = reg.installing;
+          newWorker.addEventListener('statechange', function() {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available — show update banner
+              var banner = document.getElementById('update-banner');
+              if (banner) banner.classList.remove('hidden');
             }
           });
         });
       })
-      .catch(function(err) { console.warn('[CyanixAI] SW failed:', err); });
+      .catch(function(err) { console.warn('[CyanixAI] SW registration failed:', err); });
+
+    // When SW activates new version, reload to apply it
     var refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', function() {
       if (!refreshing) { refreshing = true; window.location.reload(); }
@@ -581,32 +1128,34 @@ if ('serviceWorker' in navigator) {
 var _ip = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault(); _ip = e;
-  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
-  if (sessionStorage.getItem('cx-no-install')) return;
-  setTimeout(function() {
-    var b = document.getElementById('install-banner');
-    if (b) b.classList.remove('hidden');
-  }, 5000);
+  if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone) return;
+  if(sessionStorage.getItem('cx-no-install')) return;
+  setTimeout(function(){
+    var b=document.getElementById('install-banner');
+    if(b) b.classList.remove('hidden');
+  },4000);
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-  var yes = document.getElementById('install-yes-btn');
-  var no  = document.getElementById('install-no-btn');
-  var rb  = document.getElementById('update-reload-btn');
-  if (yes) yes.onclick = function() {
+document.addEventListener('DOMContentLoaded',function(){
+  var yes=document.getElementById('install-yes-btn');
+  var no=document.getElementById('install-no-btn');
+  var rb=document.getElementById('update-reload-btn');
+  if(yes) yes.onclick=function(){
     document.getElementById('install-banner').classList.add('hidden');
-    if (_ip) { _ip.prompt(); _ip.userChoice.then(function() { _ip = null; }); }
+    if(_ip){_ip.prompt();_ip.userChoice.then(function(){_ip=null;});}
   };
-  if (no) no.onclick = function() {
+  if(no) no.onclick=function(){
     document.getElementById('install-banner').classList.add('hidden');
-    sessionStorage.setItem('cx-no-install', '1');
+    sessionStorage.setItem('cx-no-install','1');
   };
-  if (rb) rb.onclick = function() { location.reload(); };
+  if(rb) rb.onclick=function(){location.reload();};
 });
 
-if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone)
+if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone)
   document.documentElement.classList.add('pwa-mode');
 </script>
+
+
 
 </body>
 </html>
