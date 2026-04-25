@@ -1,9 +1,6 @@
 /* ==============================================================
-   CYANIX AI -- JavaScript.js  v13
-   Supabase Auth * Supabase Storage * Chat History * Groq Streaming
-   RAG * TTS * STT * Termux File Reading * DeepSeek Thought Process
-   REMOVED: Name Functions | Personas | Referral
-   ADDED:   Termux Integration | Supabase Storage | AI Logic v2
+   CYANIX AI -- JavaScript.js  v12
+   Supabase Auth * Chat History * Groq Streaming * RAG * TTS * STT
 ============================================================== */
 'use strict';
 
@@ -90,7 +87,7 @@ let _settings = {
   personality:     'friendly',
   ragAuto:         false,
   contextDepth:    'light',  // light=5 | standard=15 | deep=30
-  fontStyle:       'inter',  // inter | space-grotesk | syne | orbitron
+  fontStyle:       'dm-sans',  // dm-sans | space-grotesk | syne | jetbrains
   fontSize:        16,       // 8-20px
   language:        'auto',   // auto | en | es | fr | pt | ar | hi | de | zh | ja ...
 };
@@ -263,7 +260,7 @@ function getLanguageInstruction() {
 
 function buildSystemPrompt(queryContext) {
   var p = PERSONALITIES[_settings.personality] || PERSONALITIES.friendly;
-  var n = ''; // displayName removed
+  var n = '';  // displayName removed
   var memBlock = '';
   // Use semantic retrieval -- only inject relevant memories
   var activeMemories = queryContext ? retrieveRelevantMemories(queryContext) : (_memories || []);
@@ -318,7 +315,7 @@ function buildSystemPrompt(queryContext) {
   var baseToneRules = 'Never start responses with hollow affirmations like "Great!", "Absolutely!", "Certainly!" -- just respond. ' +
     'Be warm and real, not performative. Push back when you disagree. Admit when you do not know something. ' +
     'Reference earlier parts of the conversation when relevant. Ask follow-up questions when they genuinely help.';
-  // Personas removed
+  // Personas removed -- always use default Cyanix identity
   var now = new Date();
   var dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   // Long conversation grounding reminder
@@ -331,7 +328,7 @@ function buildSystemPrompt(queryContext) {
 
   var langInstruction = getLanguageInstruction();
   var identity = [
-    'You are Cyanix AI, built by Sarano. You are a highly capable AI assistant with deep reasoning and honesty as core values.',
+    'You are Cyanix AI -- built by Sarano. You are not ChatGPT, Claude, Gemini, or any wrapper. You are your own thing.',
     'Today is ' + dateStr + '.',
     langInstruction,
 
@@ -340,14 +337,6 @@ function buildSystemPrompt(queryContext) {
     '(2) For current events, only state what search returned; otherwise say you lack current data. ' +
     '(3) About yourself: only state what is in this prompt. Do not invent features. If unsure say "Sarano would know". ' +
     '(4) When you do not know, say so in one sentence and stop.',
-
-    // DeepSeek-style internal reasoning
-    'THINKING PROCESS: For complex questions, structure your thinking before responding: ' +
-    '(a) Identify exactly what is being asked. ' +
-    '(b) Consider what information is needed and what you actually know. ' +
-    '(c) Check for alternative interpretations. ' +
-    '(d) Then give your answer. For simple questions skip this -- be direct. ' +
-    'Never fabricate this reasoning process; only think steps you genuinely take.',
     longConvReminder,
 
     //  CORE CHARACTER 
@@ -359,6 +348,7 @@ function buildSystemPrompt(queryContext) {
     'Never start a response with hollow affirmations: no "Great!", "Absolutely!", "Certainly!", "Of course!" -- just respond.',
     'Do not summarize what you just said at the end. End when you are done.',
     'Match the user' + String.fromCharCode(39) + 's energy. Casual or sharp depending on context.',
+    'Use the user' + String.fromCharCode(39) + 's name naturally -- not every message, just when it feels human.',
 
     //  ENGAGEMENT RULES 
     'Ask follow-up questions when they genuinely move the conversation forward.',
@@ -382,6 +372,18 @@ function buildSystemPrompt(queryContext) {
     ' (6) When fixing a bug: show the corrected code in full, not just the changed line.' +
     ' (7) After writing code, mentally trace through it with a simple input to verify it actually works before responding.',
 
+    // DEEPSEEK-STYLE REASONING -- think before answering
+    'REASONING STYLE: For complex questions, think step-by-step before giving your final answer. ' +
+    'Break down the problem, consider edge cases, and verify your reasoning. ' +
+    'For math and logic: show your working. For code: plan the structure before writing. ' +
+    'For analysis: consider multiple angles. Be confident when you know, uncertain when you do not. ' +
+    'Never fabricate. If a question requires real-time data you do not have, say so clearly.',
+
+    // FILE READING -- when a file is attached
+    'FILE READING: When the user attaches a file (code, text, HTML, CSS, etc.), read it completely. ' +
+    'Reference specific line numbers, variable names, and patterns you observe. ' +
+    'Treat the file content as ground truth. Do not hallucinate content that is not in the file.',
+
   ].filter(Boolean).join(' ');
   var echoCtx = (window.getEchoModeContext ? window.getEchoModeContext() : '');
   // Append KG context if available (replaces old memory block when present)
@@ -392,16 +394,31 @@ function buildSystemPrompt(queryContext) {
 }
 
 function edgeHeaders() {
-  // Always use the freshest session token. If _session is missing or looks
-  // expired (within 60s of expiry), we still use what we have — the real fix
-  // is the async refresh below, but at least we never silently fall back to
-  // the anon key for authenticated requests (that causes the 401→500 error).
-  const token = (_session && _session.access_token) ? _session.access_token : SUPABASE_ANON;
+  // Always use the freshest session token. Falls back to anon key only when
+  // fully unauthenticated. Never silently drop auth (would cause 401→500).
+  var token = (_session && _session.access_token) ? _session.access_token : SUPABASE_ANON;
   return {
     'Content-Type':  'application/json',
     'Authorization': 'Bearer ' + token,
     'apikey':        SUPABASE_ANON,
   };
+}
+
+// Thin wrapper for edge calls — retries once on 401 after refreshing session
+async function callEdge(url, opts, retried) {
+  try {
+    var res = await fetch(url, Object.assign({ headers: edgeHeaders() }, opts || {}));
+    if (res.status === 401 && !retried && _sb) {
+      // Token expired mid-session — refresh and retry once
+      console.warn('[CyanixAI] 401 on edge call — refreshing session and retrying:', url);
+      var r = await _sb.auth.refreshSession();
+      if (r.data && r.data.session) _session = r.data.session;
+      return callEdge(url, opts, true);
+    }
+    return res;
+  } catch (e) {
+    throw e;
+  }
 }
 
 /* ==========================================================
@@ -577,7 +594,6 @@ async function runFixPass(originalCode, lang, errors, userQuestion) {
   try {
     var res = await fetch(CHAT_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body:    JSON.stringify({
         model:      'groq/llama-3.1-8b-instant', // fast model for fixes
         stream:     false,
@@ -1125,7 +1141,11 @@ function handleStartActions() {
   var params = new URLSearchParams(window.location.search);
   var panel  = params.get('panel');
   var auth   = params.get('auth');
-  // referral URL param removed
+  var refCode = params.get('ref');
+
+  // Store referral code from URL before auth happens
+  if (refCode && refCode.startsWith('CX') && refCode.length === 7) {
+  }
 
   // Also check sessionStorage intent set by landing.html
   var intent = null;
@@ -1180,7 +1200,7 @@ function handleStartActions() {
    AUTH
 ========================================================== */
 function bindAuthUI() {
-  document.querySelectorAll('.switch-link,.auth-switch-link').forEach(function(a) {
+  document.querySelectorAll('.switch-link').forEach(function(a) {
     a.addEventListener('click', function(e) { e.preventDefault(); showPanel(a.dataset.to); });
   });
   on('forgot-link', 'click', function(e) { e.preventDefault(); showPanel('forgot'); });
@@ -1206,13 +1226,29 @@ function showPanel(name) {
   });
   clearAuthMessages();
   if (name === 'signup') initDobField();
-  // Update sheet header text
-  var titles = { signin: 'Welcome back', signup: 'Create account', forgot: 'Reset password' };
-  var subs   = { signin: 'Sign in to continue', signup: 'Join Cyanix AI for free', forgot: "We'll send a reset link" };
+  // Update right-panel sheet header
+  var titles = {
+    signin: 'Welcome back',
+    signup: 'Create your account',
+    forgot: 'Reset your password',
+  };
+  var subs = {
+    signin: 'Sign in to continue to Cyanix AI',
+    signup: 'Free during beta — no credit card needed',
+    forgot: "Enter your email and we'll send a reset link",
+  };
   var titleEl = $('auth-sheet-title');
   var subEl   = $('auth-sheet-sub');
   if (titleEl) titleEl.textContent = titles[name] || '';
   if (subEl)   subEl.textContent   = subs[name]   || '';
+  // Update hero tagline per panel
+  var heroTaglines = {
+    signin: 'Your AI — built different.',
+    signup: 'Free during beta. Always.',
+    forgot: 'Secure account recovery.',
+  };
+  var tagEl = $('auth-tagline');
+  if (tagEl) tagEl.textContent = heroTaglines[name] || '';
 }
 
 // ── Auth hero morphing headline ───────────────────────────────
@@ -1324,7 +1360,6 @@ async function signUp() {
   if (span) span.textContent = 'Creating account\u2026';
   clearAuthMessages();
   // Capture referral code before async
-  const referralCode = ''; // referral removed
 
   try {
     const result = await _sb.auth.signUp({
@@ -1334,7 +1369,6 @@ async function signUp() {
     if (result.error) {
       setMsg('su-err', result.error.message, 'err');
     } else {
-
       setMsg('su-ok', 'Check your email to confirm your account!', 'ok');
     }
   } catch (err) {
@@ -1396,10 +1430,8 @@ async function onSignedIn(session) {
   const rawName = (user.user_metadata && user.user_metadata.full_name) ? user.user_metadata.full_name : user.email;
   const name = typeof rawName === 'string' ? rawName : (String(rawName || user.email || ''));
   const initials = name ? name.split(' ').map(function(n) { return n[0]; }).join('').slice(0,2).toUpperCase() : '?';
-  if ($('user-avatar'))    $('user-avatar').textContent    = initials;
-  if ($('sb-user-avatar')) $('sb-user-avatar').textContent = initials;
-  if ($('sb-user-name'))   $('sb-user-name').textContent   = name ? name.split(' ')[0] : (user.email || '');
-  if ($('sb-user-sub'))    $('sb-user-sub').textContent    = user.email || '';
+  if ($('user-avatar')) $('user-avatar').textContent = initials;
+  if ($('user-name'))   $('user-name').textContent   = name || user.email;
 
   await loadPreferences();
   await loadSupporter();
@@ -1411,7 +1443,7 @@ async function onSignedIn(session) {
   startNotifPolling();
   startRealtime();
 
-  // referral redemption removed
+  // Referral system removed
 
   // Always boot into a fresh unsaved chat
   newChat();
@@ -1424,7 +1456,7 @@ async function onSignedIn(session) {
   var onboardKey = 'cx_onboarded_v2_' + session.user.id;
   var hasOnboarded = localStorage.getItem(onboardKey);
   if (!hasOnboarded) {
-    var _obName = (_settings && _settings.displayName) ||
+    var _obName = (false) ||
         (session.user.user_metadata && session.user.user_metadata.full_name) ||
         session.user.email || 'there';
     setTimeout(function() { showOnboarding(_obName, onboardKey); }, 800);
@@ -1636,7 +1668,7 @@ function showOnboarding(userName, storageKey) {
 
       // Save name to settings
       if (userName2 && _settings) {
-        _settings.displayName = userName2;
+        // displayName removed -- was: _settings.displayName = userName2
         saveSettings();
         syncPreferences();
       }
@@ -1901,6 +1933,7 @@ async function isPushSubscribed() {
 
 // Trigger push — called after AI responds, only if page is hidden
 async function maybeSendPush(aiText) {
+  if (!_session) return; // Guard: never fire push without auth
   if (!_session) return;
   if (!document.hidden) return; // user is looking at the app
   if (!('PushManager' in window)) return;
@@ -1913,9 +1946,8 @@ async function maybeSendPush(aiText) {
   preview = preview.slice(0, 100) + (preview.length > 100 ? '...' : '');
 
   try {
-    await fetch(PUSH_URL, {
+    await callEdge(PUSH_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body:    JSON.stringify({
         user_id: _session.user.id,
         title:   'Cyanix AI',
@@ -2054,19 +2086,22 @@ function bindChatUI() {
     inp.type = 'file';
     // Accept everything except audio — user can still pick any file via "All files"
     // Explicit list covers the most common types for better mobile picker UX
+    // Accept all text/code files (Claude-style full reading) + images + documents
     inp.accept = [
-      // Images
       'image/*',
-      // Documents
       'application/pdf,.pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx',
       'application/vnd.openxmlformats-officedocument.presentationml.presentation,.pptx',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx',
       'application/vnd.ms-excel,.xls',
       'text/csv,.csv',
-      // Plain text & code
-      'text/plain,.txt',
-      'text/markdown,.md,.markdown',
+      // All text and code (Termux-style file reading)
+      'text/*',
+      '.txt,.md,.markdown,.js,.jsx,.mjs,.ts,.tsx,.json,.html,.htm,.xml,.css,.scss',
+      '.sass,.less,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.cpp,.cs,.h,.hpp,.php',
+      '.lua,.sh,.bash,.zsh,.ps1,.bat,.sql,.graphql,.vue,.svelte,.dart',
+      '.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.gitignore,.dockerfile',
+      '.makefile,.gradle,.tf,.hcl,.lock,.editorconfig,.eslintrc,.babelrc',
     ].join(',');
     inp.onchange = function() {
       var file = inp.files && inp.files[0];
@@ -2208,10 +2243,9 @@ function bindChatUI() {
   window.addEventListener('cyanix:ready', function() {
     updateNotifUIAsync();
   });
-  // displayName binding removed
   on('delete-training-btn', 'click', async function() {
     if (!confirm('Withdraw your anonymized contributions?')) return;
-    try { await fetch(TRAINING_URL, { method: 'DELETE', headers: edgeHeaders() }); toast('Withdrawn.'); }
+    try { await callEdge(TRAINING_URL, { method: 'DELETE' }); toast('Withdrawn.'); }
     catch (e) { toast('Could not complete. Try again.'); }
   });
   on('clear-chats-btn', 'click', async function() {
@@ -2330,7 +2364,7 @@ function syncSettingsToUI() {
   // Update the nav row status label
   var improveStatus = document.getElementById('improve-nav-status');
   if (improveStatus) improveStatus.textContent = _settings.trainingConsent ? 'On' : 'Off';
-  // displayName UI removed
+  // display-name removed
   if ($('rag-auto-toggle'))    $('rag-auto-toggle').checked    = !!_settings.ragAuto;
   _ragAuto = !!_settings.ragAuto;
 
@@ -2350,8 +2384,8 @@ function syncSettingsToUI() {
   updateContextDepthUI();
   // Apply font settings
   var fontSel = $('font-style-select');
-  if (fontSel) fontSel.value = _settings.fontStyle || 'inter';
-  applyFontStyle(_settings.fontStyle || 'inter');
+  if (fontSel) fontSel.value = _settings.fontStyle || 'dm-sans';
+  applyFontStyle(_settings.fontStyle || 'dm-sans');
   applyFontSize(_settings.fontSize || 15);
   updateFontSizeUI();
 }
@@ -2359,16 +2393,16 @@ function syncSettingsToUI() {
 function applyTheme(theme) { document.documentElement.dataset.theme = theme || 'light'; }
 
 var FONT_FAMILIES = {
-  'inter':        "'Inter', system-ui, sans-serif",
+  'dm-sans':      "'DM Sans', system-ui, sans-serif",
   'space-grotesk':"'Space Grotesk', system-ui, sans-serif",
   'syne':         "'Syne', system-ui, sans-serif",
-  'orbitron':     "'Orbitron', system-ui, sans-serif",
+  'jetbrains':    "'JetBrains Mono', monospace",
 };
-var FONT_NAMES = { 'inter':'Inter', 'space-grotesk':'Space Grotesk', 'syne':'Syne', 'orbitron':'Orbitron' };
+var FONT_NAMES = { 'dm-sans':'DM Sans', 'space-grotesk':'Space Grotesk', 'syne':'Syne', 'jetbrains':'JetBrains Mono' };
 var FONT_SIZE_LABELS = { 8:'Tiny', 9:'Tiny+', 10:'XS', 11:'XS+', 12:'Small', 13:'Small+', 14:'Medium-', 15:'Medium', 16:'Medium+', 17:'Large', 18:'Large+', 19:'XL', 20:'XXL' };
 
 function applyFontStyle(style) {
-  var fam = FONT_FAMILIES[style] || FONT_FAMILIES.inter;
+  var fam = FONT_FAMILIES[style] || FONT_FAMILIES['dm-sans'];
   document.documentElement.style.setProperty('--font', fam);
 }
 
@@ -2552,9 +2586,8 @@ const MODERATE_URL = SUPABASE_URL + '/functions/v1/moderate';
 
 async function checkModerationML(text) {
   try {
-    var res = await fetch(MODERATE_URL, {
+    var res = await callEdge(MODERATE_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body:    JSON.stringify({ text: text }),
       signal:  AbortSignal.timeout(4000), // fast timeout — don't block user
     });
@@ -2686,7 +2719,8 @@ function showBanScreen() {
 function checkDailyLimit() {
   if (_supporter.dailyLimit === null) return true; // unlimited
 
-  var bonusMessages  = 0; // referral bonus removed
+  // Referral bonus: each successful referral adds 5 messages per day
+  var bonusMessages  = (window._referralBonus || 0) * 5;
   var effectiveLimit = (_supporter.dailyLimit || 40) + bonusMessages;
 
   if (_usageToday >= effectiveLimit) {
@@ -2891,10 +2925,15 @@ async function loadPreferences() {
       if (d.streaming       != null) _settings.streaming      = d.streaming;
       if (d.theme)                 _settings.theme           = d.theme;
       if (d.training_consent != null) _settings.trainingConsent = d.training_consent;
-      if (d.display_name)          _settings.displayName     = d.display_name;
+      
       if (d.personality)           _settings.personality     = d.personality;
       if (d.rag_auto        != null) _settings.ragAuto        = d.rag_auto;
       _ragAuto = !!_settings.ragAuto;
+      // Restore font + language preferences
+      if (d.font_style)    _settings.fontStyle    = d.font_style;
+      if (d.font_size)     _settings.fontSize     = d.font_size;
+      if (d.language)      _settings.language     = d.language;
+      if (d.context_depth) _settings.contextDepth = d.context_depth;
       saveSettings(); applyTheme(_settings.theme); populateModels(); syncSettingsToUI();
     }
   } catch (e) {}
@@ -2907,12 +2946,22 @@ async function syncPreferences() {
     // If constraint hasn't been updated yet, fall back to 'dark' for exclusive themes
     var ALLOWED_THEMES = ['light','dark','founder','neon','midnight'];
     var safeTheme = ALLOWED_THEMES.indexOf(_settings.theme) !== -1 ? _settings.theme : 'dark';
-    var result = await _sb.from('user_preferences').upsert({
-      user_id: _session.user.id, model: _settings.model, streaming: _settings.streaming,
-      theme: safeTheme, training_consent: _settings.trainingConsent,
-      personality: _settings.personality || 'friendly',
-      rag_auto: !!_settings.ragAuto, updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    var prefPayload = {
+      user_id:          _session.user.id,
+      model:            _settings.model,
+      streaming:        _settings.streaming,
+      theme:            safeTheme,
+      training_consent: _settings.trainingConsent,
+      personality:      _settings.personality || 'friendly',
+      rag_auto:         !!_settings.ragAuto,
+      updated_at:       new Date().toISOString(),
+    };
+    // Only include optional columns if they exist in DB to avoid 400 errors
+    if (_settings.contextDepth) prefPayload.context_depth = _settings.contextDepth;
+    if (_settings.fontStyle)    prefPayload.font_style    = _settings.fontStyle;
+    if (_settings.fontSize)     prefPayload.font_size     = _settings.fontSize;
+    if (_settings.language)     prefPayload.language      = _settings.language;
+    var result = await _sb.from('user_preferences').upsert(prefPayload, { onConflict: 'user_id' });
     if (result.error) {
       console.error('[CyanixAI] syncPreferences error:', result.error.message);
     }
@@ -3156,6 +3205,41 @@ async function extractEpub(arrayBuffer) {
   return parts.join('\n\n').slice(0, 20000);
 }
 
+
+/* ==========================================================
+   SUPABASE FILE STORAGE — upload attached files for history
+   Files stored under: user_uploads/<user_id>/<uuid>_<name>
+   Max 20MB per file. Public URL stored with chat message.
+========================================================== */
+const STORAGE_BUCKET = 'user_uploads';
+// NOTE: Ensure this bucket exists in Supabase Dashboard → Storage → New Bucket
+//   Name: user_uploads | Public: YES (or use signed URLs below)
+//   RLS policy: allow insert where auth.uid() = owner, select is public
+
+async function uploadFileToSupabase(file, extractedText) {
+  if (!_sb || !_session) return null;
+  try {
+    var uid  = _session.user.id;
+    var uuid = localUUID();
+    var path = uid + '/' + uuid + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var res  = await _sb.storage.from(STORAGE_BUCKET).upload(path, file, {
+      cacheControl: '3600', upsert: false,
+      contentType: file.type || 'application/octet-stream',
+    });
+    if (res.error) throw res.error;
+    // Try public URL first; fall back to 1hr signed URL if bucket is private
+    var pubRes   = _sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    var publicUrl = pubRes.data && pubRes.data.publicUrl ? pubRes.data.publicUrl : null;
+    if (!publicUrl) {
+      var signedRes = await _sb.storage.from(STORAGE_BUCKET).createSignedUrl(path, 3600);
+      publicUrl = signedRes.data && signedRes.data.signedUrl ? signedRes.data.signedUrl : null;
+    }
+    return { path, publicUrl, size: file.size, type: file.type };
+  } catch (e) {
+    console.warn('[CyanixAI] File upload failed:', e.message);
+    return null;
+  }
+}
 async function handleAttachment(file) {
   var name = file.name;
   var type = file.type || '';
@@ -3241,16 +3325,34 @@ async function handleAttachment(file) {
       _attachment = { type: 'document', name: name, data: extractedText, mediaType: type,
         label: friendlyLabel };
     } else {
-      // Plain text / code files
+      // Plain text / code files -- Termux-style: read FULLY up to 100k chars
       var fileText = await readFileAs(file, 'text');
-      _attachment = { type: 'text', name: name, data: fileText.slice(0, 20000), mediaType: type,
-        label: friendlyLabel };
+      var maxChars = 100000;
+      var truncated = fileText.length > maxChars;
+      _attachment = {
+        type: 'text', name: name,
+        data: fileText.slice(0, maxChars),
+        mediaType: type, label: friendlyLabel,
+        truncated: truncated, totalChars: fileText.length,
+      };
     }
 
     var toastEl = $('toast'); if (toastEl) hide(toastEl);
     showAttachPreview();
     var chars = _attachment.data ? _attachment.data.length : 0;
-    toast('\u2713 ' + name + (chars > 100 ? ' \u2014 ' + (chars/1000).toFixed(0) + 'k chars' : ' attached'));
+    var truncMsg = _attachment.truncated ? ' (first ' + (chars/1000).toFixed(0) + 'k of ' + (_attachment.totalChars/1000).toFixed(0) + 'k)' : '';
+    toast('\u2713 ' + name + (chars > 100 ? ' \u2014 ' + (chars/1000).toFixed(0) + 'k chars' + truncMsg : ' attached'));
+
+    // Background upload to Supabase Storage (non-blocking)
+    if (_session && (file.size < 20 * 1024 * 1024)) {
+      uploadFileToSupabase(file).then(function(result) {
+        if (result && _attachment) {
+          _attachment.storageUrl  = result.publicUrl;
+          _attachment.storagePath = result.path;
+          console.log('[CyanixAI] File uploaded to Supabase:', result.path);
+        }
+      }).catch(function() {/* silent -- upload failure does not block chat */});
+    }
 
   } catch (e) {
     console.error('[CyanixAI] File read error:', e);
@@ -3326,11 +3428,11 @@ function clearAttachment() {
 }
 
 async function generateChatTitle(userText, aiText) {
+  if (!_session) return null;
   try {
     var snippet = 'User: ' + userText.slice(0, 200) + '\nAssistant: ' + aiText.slice(0, 200);
     var res = await fetch(CHAT_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body: JSON.stringify({
         model:      'meta-llama/llama-4-scout-17b-16e-instruct',
         stream:     false,
@@ -3489,7 +3591,7 @@ async function extractAndSaveMemories(messages, sourceId) {
       'Conversation:\n' + ctx;
 
     var res = await fetch(CHAT_URL, {
-      method: 'POST', headers: edgeHeaders(),
+      method: 'POST',
       body: JSON.stringify({
         model:      'meta-llama/llama-4-scout-17b-16e-instruct', // Llama 4 Scout — fast + reliable JSON
         stream:     false,
@@ -3583,9 +3685,8 @@ async function maybeCollectTraining(userText, aiText) {
   try {
     // Fire the intelligent training pipeline -- refines prompt, improves response,
     // runs quality filters, then stores only clean data. Fire-and-forget.
-    fetch(TRAINING_PIPELINE_URL, {
+    callEdge(TRAINING_PIPELINE_URL, {
       method: 'POST',
-      headers: edgeHeaders(),
       body: JSON.stringify({
         original_prompt: userText,
         ai_response:     aiText,
@@ -3603,7 +3704,7 @@ async function fetchLearnedContext() {
   try {
     var ctrl = new AbortController();
     var t = setTimeout(function() { ctrl.abort(); }, 6000);
-    var res = await fetch(PIPELINE_URL, { method: 'GET', headers: edgeHeaders(), signal: ctrl.signal });
+    var res = await callEdge(PIPELINE_URL, { method: 'GET', signal: ctrl.signal });
     clearTimeout(t);
     if (!res.ok) return;
     var data = await res.json();
@@ -3676,9 +3777,8 @@ async function fetchKGContext(query) {
   try {
     var ctrl = new AbortController();
     var t = setTimeout(function() { ctrl.abort(); }, 6000);
-    var res = await fetch(KG_URL + '?action=retrieve', {
+    var res = await callEdge(KG_URL + '?action=retrieve', {
       method: 'POST',
-      headers: edgeHeaders(),
       body: JSON.stringify({
         action:       'retrieve',
         query:        query.slice(0, 300),
@@ -3704,9 +3804,8 @@ async function fetchKGContext(query) {
 async function autoAttachMemory(memoryId, memoryText) {
   if (!_session) return;
   try {
-    fetch(KG_URL + '?action=auto-attach', {
+    callEdge(KG_URL + '?action=auto-attach', {
       method: 'POST',
-      headers: edgeHeaders(),
       body: JSON.stringify({
         action:      'auto-attach',
         memory_id:   memoryId,
@@ -4020,7 +4119,7 @@ async function fetchRAGContext(query) {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(function() { ctrl.abort(); }, 8000);
-    const res = await fetch(RAG_URL, { method: 'POST', headers: edgeHeaders(), body: JSON.stringify({ query: query }), signal: ctrl.signal });
+    const res = await callEdge(RAG_URL, { method: 'POST', body: JSON.stringify({ query: query }), signal: ctrl.signal });
     clearTimeout(t);
     if (!res.ok) return null;
     return await res.json();
@@ -4076,7 +4175,7 @@ async function fetchWikiSummary(topic) {
 async function extractWikiTopic(query) {
   try {
     var res = await fetch(CHAT_URL, {
-      method: 'POST', headers: edgeHeaders(),
+      method: 'POST',
       body: JSON.stringify({
         model: 'groq/llama-3.1-8b-instant',
         stream: false, max_tokens: 30,
@@ -4134,7 +4233,7 @@ async function fetchGroqCompoundContext(query, wikiExtract) {
       'User question: ' + query.slice(0, 300);
 
     var res = await fetch(CHAT_URL, {
-      method: 'POST', headers: edgeHeaders(),
+      method: 'POST',
       body: JSON.stringify({
         model: 'groq/compound-beta',
         stream: false, max_tokens: 300,
@@ -4376,7 +4475,7 @@ window.autoRefineMessage = async function(btn) {
       'Return ONLY the improved response — no preamble, no meta-commentary about changes.';
 
     var res = await fetch(AXION_URL, {
-      method: 'POST', headers: edgeHeaders(),
+      method: 'POST',
       body: JSON.stringify({
         model:  'axion',
         system: 'You are a response quality improver. Rewrite the given response to be cleaner, more precise, and more useful. Keep all factual information intact.',
@@ -4555,15 +4654,15 @@ function needsBrowse(text) {
 }
 
 async function fetchBrowseContext(text) {
+  if (!_session) return null; // needs auth
   var urls = extractURLs(text);
   if (!urls.length) return null;
   var url = urls[0]; // Process first URL
   try {
     var ctrl = new AbortController();
     var t = setTimeout(function() { ctrl.abort(); }, 20000);
-    var res = await fetch(BROWSE_URL, {
+    var res = await callEdge(BROWSE_URL, {
       method: 'POST',
-      headers: edgeHeaders(),
       signal: ctrl.signal,
       body: JSON.stringify({
         url: url,
@@ -4712,7 +4811,7 @@ async function runPrecisionPipeline(text, systemPrompt, messages) {
   var routePlan = null;
   try {
     var routeRes = await fetch(CHAT_URL, {
-      method: 'POST', headers: edgeHeaders(),
+      method: 'POST',
       body: JSON.stringify({
         model:      'groq/llama-3.1-8b-instant',
         stream:     false,
@@ -4756,7 +4855,7 @@ async function runPrecisionPipeline(text, systemPrompt, messages) {
   if (_settings.model.startsWith('groq/compound')) specialistModel = _settings.model;
 
   var specialistRes = await fetch(CHAT_URL, {
-    method: 'POST', headers: edgeHeaders(), signal: _abortCtrl && _abortCtrl.signal,
+    method: 'POST', signal: _abortCtrl && _abortCtrl.signal,
     body: JSON.stringify({
       model:      specialistModel,
       stream:     _settings.streaming,
@@ -4797,7 +4896,7 @@ async function runPrecisionPipeline(text, systemPrompt, messages) {
         'Be strict but fair. Only flag real problems.';
 
       var verifyRes = await fetch(CHAT_URL, {
-        method: 'POST', headers: edgeHeaders(),
+        method: 'POST',
         body: JSON.stringify({
           model: 'groq/llama-3.1-8b-instant', stream: false, max_tokens: 200,
           messages: [
@@ -4819,7 +4918,7 @@ async function runPrecisionPipeline(text, systemPrompt, messages) {
           if (!verdict.passes && verdict.improvement) {
             // One retry with verifier feedback injected
             var retryRes = await fetch(CHAT_URL, {
-              method: 'POST', headers: edgeHeaders(),
+              method: 'POST',
               body: JSON.stringify({
                 model:      specialistModel,
                 stream:     false,
@@ -5060,7 +5159,7 @@ async function sendMessage(text) {
   // 🚀 Fire logo travel animation — logo leaves composer, flies into chat
   launchLogoTraveler();
   show('typing-row');
-  startThoughtStream(text, _ragEnabled || _ragAuto);
+  startThoughtStream(text, _ragEnabled);
   scrollToBottom();
 
   let ragData    = null;
@@ -5109,12 +5208,12 @@ async function sendMessage(text) {
       // Extracted text from PDF, DOCX, PPTX, XLSX, CSV, ZIP
       var label = pendingAttachment.label || 'File';
       userContent = text + '\n\n---\n**Attached ' + label + ': ' + pendingAttachment.name + '**\n\n' +
-        pendingAttachment.data.slice(0, 15000) +
-        (pendingAttachment.data.length > 15000 ? '\n\n[Content truncated at 15,000 characters]' : '');
+        pendingAttachment.data.slice(0, 30000) +
+        (pendingAttachment.data.length > 30000 ? '\n\n[Content truncated at 30,000 characters]' : '');
     } else if (pendingAttachment.type === 'text') {
       var ext = pendingAttachment.name.split('.').pop() || 'text';
       userContent = text + '\n\n---\n**Attached file: ' + pendingAttachment.name + '**\n```' + ext + '\n' +
-        pendingAttachment.data.slice(0, 12000) + '\n```';
+        pendingAttachment.data.slice(0, 40000) + '\n```'; // Termux full-file reading
     } else {
       userContent = text;
     }
@@ -5132,7 +5231,7 @@ async function sendMessage(text) {
 
   // Hard cap on system prompt -- 5000 chars ~ 1250 tokens leaves room for history + response
   var rawSystem = buildSystemPrompt(text) + buildBrowseContext(browseData) + buildRAGContext(ragData) + frustrationCtx;
-  var systemContent = rawSystem.length > 5000 ? rawSystem.slice(0, 5000) + '\n[context truncated]' : rawSystem;
+  var systemContent = rawSystem.length > 8000 ? rawSystem.slice(0, 8000) + '\n[context truncated]' : rawSystem;
   // Estimate total request size and warn if still large
   var histChars = _history.slice(-(window._chatHistoryLimit || 10))
     .reduce(function(s, m) { return s + (typeof m.content === 'string' ? Math.min(m.content.length, 400) : 200); }, 0);
@@ -5199,7 +5298,7 @@ async function sendMessage(text) {
     } else {
       // ── Standard direct call ─────────────────────────────
       res = await fetch(activeURL, {
-        method: 'POST', headers: edgeHeaders(), signal: _abortCtrl.signal,
+        method: 'POST', signal: _abortCtrl.signal,
         body: JSON.stringify(isAxion ? {
           model:      'axion',
           system:     systemContent,
@@ -5543,9 +5642,8 @@ window.toggleMsgTTS = async function(btn) {
   try {
     unlockAudio();
 
-    var res = await fetch(TTS_URL, {
+    var res = await callEdge(TTS_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body:    JSON.stringify({
         text:     text.slice(0, 500),
         voice_id: CALL_VOICE_ID,
@@ -5636,7 +5734,7 @@ async function submitFeedback(messageId, value, clickedBtn, otherBtn) {
     var prompt   = prevRow  ? (prevRow.querySelector('.msg-bubble')  || {}).innerText || '' : '';
     var response = msgRow   ? (msgRow.querySelector('.msg-bubble')   || {}).innerText || '' : '';
     if (prompt && response && _settings.trainingConsent) {
-      fetch(PIPELINE_URL, { method: 'POST', headers: edgeHeaders(),
+      callEdge(PIPELINE_URL, { method: 'POST',
         body: JSON.stringify({ feedback: value, prompt: prompt.slice(0,1000), response: response.slice(0,3000), model: _settings.model })
       }).catch(function(){});
     }
@@ -5722,181 +5820,6 @@ window.deleteMemory = async function(id, btn) {
 };
 
 // -- Clear All Memories ------------------------------------------
-// -- Referral Codes ---------------------------------------------------
-var _referralCode = null;
-
-// Referral milestones
-var REFERRAL_MILESTONES = [
-  { count: 1,  msgs: 5,  reward: null,        label: '+5 messages/window' },
-  { count: 3,  msgs: 15, reward: 'neon',       label: '+15 msgs + Neon theme' },
-  { count: 5,  msgs: 25, reward: 'midnight',   label: '+25 msgs + Midnight theme' },
-  { count: 10, msgs: 50, reward: 'founder',    label: '+50 msgs + Founder badge' },
-];
-
-function generateReferralCode(userId) {
-  var hash = 0;
-  for (var i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
-    hash |= 0;
-  }
-  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  var code = 'CX';
-  var n = Math.abs(hash);
-  for (var j = 0; j < 5; j++) {
-    code += chars[n % chars.length];
-    n = Math.floor(n / chars.length);
-  }
-  return code;
-}
-
-async function loadReferralData() {
-  if (!_sb || !_session) return;
-  try {
-    var userId = _session.user.id;
-    _referralCode = generateReferralCode(userId);
-
-    var baseUrl     = 'https://suprosmith-coder.github.io/NixAi_Nova';
-    var referralUrl = baseUrl + '?ref=' + _referralCode;
-
-    // ── Update UI elements ──────────────────────────────
-    var codeEl = document.getElementById('referral-code-val');
-    if (codeEl) codeEl.textContent = _referralCode;
-
-    var linkEl = document.getElementById('referral-link-val');
-    if (linkEl) linkEl.textContent = referralUrl;
-
-    // ── Copy button ──────────────────────────────────────
-    var copyBtn = document.getElementById('referral-copy-btn');
-    if (copyBtn) {
-      copyBtn.onclick = function() {
-        navigator.clipboard.writeText(referralUrl).then(function() {
-          copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
-          setTimeout(function() { copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
-          toast('Referral link copied!');
-        }).catch(function() { toast('Link: ' + referralUrl); });
-      };
-    }
-
-    // ── Share button (native share sheet on mobile) ──────
-    var shareBtn = document.getElementById('referral-share-btn');
-    if (shareBtn) {
-      if (navigator.share) {
-        shareBtn.style.display = 'flex';
-        shareBtn.onclick = function() {
-          navigator.share({
-            title: 'Try Cyanix AI',
-            text:  'I\'ve been using Cyanix AI — 4 frontier models, web search, memory and more. Use my code ' + _referralCode + ' to sign up:',
-            url:   referralUrl,
-          }).catch(function() {});
-        };
-      } else {
-        shareBtn.style.display = 'none';
-      }
-    }
-
-    // ── Load referral count from DB ──────────────────────
-    var res = await _sb.from('referrals')
-      .select('id, created_at', { count: 'exact' })
-      .eq('referrer_code', _referralCode);
-
-    var count   = (res.data && res.data.length) || 0;
-    var statsEl = document.getElementById('referral-stats-desc');
-    var countEl = document.getElementById('referral-count-big');
-    var nextEl  = document.getElementById('referral-next-milestone');
-    var rewardsEl = document.getElementById('referral-rewards-list');
-
-    if (countEl) countEl.textContent = count;
-
-    if (statsEl) {
-      statsEl.textContent = count === 0
-        ? 'Share your link to start earning rewards'
-        : count + ' friend' + (count === 1 ? '' : 's') + ' joined with your code';
-    }
-
-    // ── Calculate current milestone rewards ──────────────
-    var totalMsgBonus = 0;
-    var unlockedThemes = [];
-
-    REFERRAL_MILESTONES.forEach(function(m) {
-      if (count >= m.count) {
-        totalMsgBonus = m.msgs;
-        if (m.reward) unlockedThemes.push(m.reward);
-      }
-    });
-
-    // Apply message bonus
-    window._referralBonus = count; // each referral = +5 msgs (applied in checkDailyLimit)
-
-    // Unlock themes
-    if (unlockedThemes.length > 0 && _settings) {
-      _settings.unlockedThemes = _settings.unlockedThemes || [];
-      unlockedThemes.forEach(function(t) {
-        if (!_settings.unlockedThemes.includes(t)) {
-          _settings.unlockedThemes.push(t);
-        }
-      });
-      saveSettings();
-    }
-
-    // ── Next milestone ────────────────────────────────────
-    var nextMilestone = REFERRAL_MILESTONES.find(function(m) { return count < m.count; });
-    if (nextEl) {
-      if (nextMilestone) {
-        var needed = nextMilestone.count - count;
-        nextEl.textContent = 'Invite ' + needed + ' more to unlock: ' + nextMilestone.label;
-      } else {
-        nextEl.textContent = '🏆 Max milestone reached!';
-      }
-    }
-
-    // ── Render milestone progress bars ────────────────────
-    if (rewardsEl) {
-      rewardsEl.innerHTML = REFERRAL_MILESTONES.map(function(m) {
-        var done  = count >= m.count;
-        var pct   = Math.min(100, Math.round((count / m.count) * 100));
-        return '<div class="ref-milestone' + (done ? ' ref-milestone-done' : '') + '">' +
-          '<div class="ref-milestone-top">' +
-            '<span class="ref-milestone-label">' + m.count + ' invite' + (m.count > 1 ? 's' : '') + '</span>' +
-            '<span class="ref-milestone-reward">' + (done ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ' : '') + m.label + '</span>' +
-          '</div>' +
-          '<div class="ref-milestone-bar"><div class="ref-milestone-fill" style="width:' + pct + '%"></div></div>' +
-        '</div>';
-      }).join('');
-    }
-
-    // ── Badge ─────────────────────────────────────────────
-    var badgeEl = document.getElementById('referral-reward-badge');
-    if (badgeEl) {
-      badgeEl.style.display = count > 0 ? 'inline-block' : 'none';
-      badgeEl.textContent   = '+' + totalMsgBonus + ' msgs';
-    }
-
-  } catch (e) {
-    console.error('[CyanixAI] loadReferralData:', e);
-  }
-}
-
-async function saveReferralIfNeeded(codeUsed) {
-  if (!_sb || !_session || !codeUsed) return;
-  try {
-    // Check not already used a referral
-    var existing = await _sb.from('referrals')
-      .select('id').eq('referred_user_id', _session.user.id).single();
-    if (existing.data) return; // already redeemed
-
-    // Validate code belongs to someone
-    if (!codeUsed.startsWith('CX') || codeUsed.length !== 7) return;
-
-    await _sb.from('referrals').insert({
-      referrer_code:    codeUsed,
-      referred_user_id: _session.user.id,
-      created_at:       new Date().toISOString(),
-    });
-    toast('Referral code applied! Your friend earned a rate limit bonus.');
-  } catch (e) {
-    console.error('[CyanixAI] saveReferralIfNeeded:', e);
-  }
-}
 
 
 
@@ -5908,7 +5831,7 @@ window.openSettings = function() {
   // Sync profile info
   if (_session) {
     var user  = _session.user;
-    var name  = (_settings && _settings.displayName) || (user.user_metadata && user.user_metadata.full_name) || user.email || '';
+    var name  = (user.user_metadata && user.user_metadata.full_name) || user.email || '';
     var email = user.email || '';
     ['stg-avatar-name','stg-profile-name'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.textContent = name || email;
@@ -5945,8 +5868,8 @@ window.closeSettings = function() {
 
 window.openSettingsPage = function(page) {
   var pages = [
-    'main','appearance','personas','memory','personalization',
-    'tos','privacy','about','referral','supporter','improve','ai-intel'
+    'main','appearance','memory','personalization',
+    'tos','privacy','about','supporter','improve','ai-intel'
   ];
   pages.forEach(function(p) {
     var el = document.getElementById('stg-page-' + p);
@@ -6003,209 +5926,6 @@ window.openSettingsPage = function(page) {
 };
 
 // -- Personas -------------------------------------------------------
-var _personas       = [];
-var _activePersona  = null; // null = default Cyanix
-var _editingPersona = null; // persona being edited in modal
-
-var PERSONA_EMOJIS = [
-  '\u{1F916}','\u{1F9E0}','\u{1F47E}','\u{1F480}','\u{1F31F}',
-  '\u{1F525}','\u{26A1}','\u{1F3AF}','\u{1F52E}','\u{1F9EC}',
-  '\u{1F4DA}','\u{1F3A8}','\u{1F3B5}','\u{2696}\uFE0F','\u{1F9EA}',
-  '\u{1F40D}','\u{1F98A}','\u{1F984}','\u{1F9B8}','\u{1FAB8}',
-  '\u{1F47D}','\u{1F31A}','\u{1F32A}\uFE0F','\u{1F4A1}','\u{1F9FF}'
-];
-
-async function loadPersonas() {
-  if (!_sb || !_session) return;
-  try {
-    var res = await _sb.from('personas')
-      .select('id,name,emoji,system_prompt,created_at')
-      .eq('user_id', _session.user.id)
-      .order('created_at', { ascending: true });
-    _personas = res.data || [];
-    renderPersonaList();
-  } catch (e) { console.error('[CyanixAI] loadPersonas:', e); }
-}
-
-function renderPersonaList() { return; /* Personas removed */
-  (function _unusedPersonaList() {
-  var list    = document.getElementById('persona-list');
-  var descEl  = document.getElementById('persona-limit-desc');
-  var addBtn  = document.getElementById('persona-add-btn');
-  var divider = document.getElementById('persona-add-divider');
-  if (!list) return;
-
-  var limit = _supporter.isActive ? Infinity : 3;
-  if (descEl) descEl.textContent = _supporter.isActive ? 'Unlimited' : _personas.length + '/3 used';
-  if (addBtn) addBtn.style.display = _personas.length >= limit ? 'none' : 'flex';
-  if (divider) divider.style.display = _personas.length >= limit ? 'none' : 'block';
-
-  list.innerHTML = '';
-
-  // Default Cyanix row
-  var defaultRow = document.createElement('div');
-  defaultRow.className = 'settings-card-row persona-row' + (!_activePersona ? ' persona-row--active' : '');
-  defaultRow.onclick = function() { setActivePersona(null); };
-  defaultRow.innerHTML =
-    '<div class="persona-avatar">\u{1F300}</div>' +
-    '<div class="scr-body"><div class="scr-label">Cyanix AI <span style="font-size:.7rem;color:var(--text-4)">(default)</span></div></div>' +
-    (!_activePersona ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' : '');
-  list.appendChild(defaultRow);
-
-  _personas.forEach(function(p) {
-    var isActive = _activePersona && _activePersona.id === p.id;
-    var row = document.createElement('div');
-    row.className = 'settings-card-row persona-row' + (isActive ? ' persona-row--active' : '');
-
-    var divEl = document.createElement('div');
-    divEl.className = 'settings-card-divider';
-    list.appendChild(divEl);
-
-    row.innerHTML =
-      '<div class="persona-avatar">' + (p.emoji || '🤖') + '</div>' +
-      '<div class="scr-body"><div class="scr-label">' + esc(p.name) + '</div></div>' +
-      '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">' +
-        (isActive ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
-        '<button class="scr-link-btn" onclick="event.stopPropagation();window.openPersonaModal(\'' + p.id + '\')" style="color:var(--text-4);font-size:.78rem;">Edit</button>' +
-      '</div>';
-    row.onclick = function() { setActivePersona(p); };
-    list.appendChild(row);
-  });
-
-
-  })();
-}
-function setActivePersona(p) {
-  _activePersona = p;
-  renderPersonaList();
-  // Update topbar hint
-  var titleEl = document.getElementById('chat-title');
-  if (titleEl && p) titleEl.textContent = p.name;
-  toast(p ? ('Switched to ' + p.name) : 'Switched to Cyanix AI');
-}
-
-window.openPersonaModal = function(id) {
-  var overlay = document.getElementById('persona-modal-overlay');
-  if (!overlay) return;
-
-  _editingPersona = id ? (_personas.find(function(p) { return p.id === id; }) || null) : null;
-
-  // Populate fields
-  var titleEl  = document.getElementById('persona-modal-title');
-  var nameEl   = document.getElementById('persona-name-input');
-  var promptEl = document.getElementById('persona-prompt-input');
-  var emojiEl  = document.getElementById('persona-emoji-preview');
-  var deleteBtn= document.getElementById('persona-delete-btn');
-  var countEl  = document.getElementById('persona-prompt-count');
-
-  if (titleEl)  titleEl.textContent  = _editingPersona ? 'Edit Persona' : 'New Persona';
-  if (nameEl)   nameEl.value         = _editingPersona ? _editingPersona.name : '';
-  if (promptEl) promptEl.value       = _editingPersona ? (_editingPersona.system_prompt || '') : '';
-  if (emojiEl)  emojiEl.textContent  = _editingPersona ? (_editingPersona.emoji || '🤖') : '🤖';
-  if (deleteBtn) deleteBtn.style.display = _editingPersona ? 'block' : 'none';
-  if (countEl)  countEl.textContent  = promptEl ? promptEl.value.length : '0';
-
-  // Build emoji picker
-  var picker = document.getElementById('persona-emoji-picker');
-  if (picker) {
-    picker.innerHTML = '';
-    PERSONA_EMOJIS.forEach(function(em) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = em;
-      btn.style.cssText = 'font-size:1.4rem;background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;';
-      btn.onclick = function() {
-        if (emojiEl) emojiEl.textContent = em;
-        if (picker) picker.style.display = 'none';
-      };
-      picker.appendChild(btn);
-    });
-  }
-
-  // Prompt char counter
-  if (promptEl) {
-    promptEl.oninput = function() {
-      if (countEl) countEl.textContent = promptEl.value.length;
-    };
-  }
-
-  overlay.style.display = 'flex';
-};
-
-window.closePersonaModal = function() {
-  var overlay = document.getElementById('persona-modal-overlay');
-  if (overlay) overlay.style.display = 'none';
-  _editingPersona = null;
-};
-
-window.toggleEmojiPicker = function() {
-  var picker = document.getElementById('persona-emoji-picker');
-  if (picker) picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
-};
-
-window.savePersona = async function() {
-  if (!_sb || !_session) return;
-  var nameEl   = document.getElementById('persona-name-input');
-  var promptEl = document.getElementById('persona-prompt-input');
-  var emojiEl  = document.getElementById('persona-emoji-preview');
-  var saveBtn  = document.getElementById('persona-save-btn');
-
-  var name   = (nameEl && nameEl.value.trim()) || '';
-  var prompt = (promptEl && promptEl.value.trim()) || '';
-  var emoji  = (emojiEl && emojiEl.textContent.trim()) || '\u{1F916}';
-
-  if (!name) { toast('Give your persona a name.'); return; }
-
-  var limit = _supporter.isActive ? Infinity : 3;
-  if (!_editingPersona && _personas.length >= limit) {
-    toast('Upgrade to supporter for unlimited personas.'); return;
-  }
-
-  if (saveBtn) saveBtn.textContent = 'Saving...';
-
-  try {
-    if (_editingPersona) {
-      // Update
-      var res = await _sb.from('personas').update({
-        name, emoji, system_prompt: prompt, updated_at: new Date().toISOString()
-      }).eq('id', _editingPersona.id).eq('user_id', _session.user.id).select().single();
-      if (res.error) throw res.error;
-      var idx = _personas.findIndex(function(p) { return p.id === _editingPersona.id; });
-      if (idx >= 0) _personas[idx] = res.data;
-      // Update active persona if it was the one edited
-      if (_activePersona && _activePersona.id === _editingPersona.id) _activePersona = res.data;
-    } else {
-      // Insert
-      var res = await _sb.from('personas').insert({
-        user_id: _session.user.id, name, emoji, system_prompt: prompt,
-        created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-      }).select().single();
-      if (res.error) throw res.error;
-      _personas.push(res.data);
-    }
-    renderPersonaList();
-    window.closePersonaModal();
-    toast(_editingPersona ? 'Persona updated.' : 'Persona created!');
-  } catch (e) {
-    toast('Could not save persona.');
-    console.error('[CyanixAI] savePersona:', e);
-  } finally {
-    if (saveBtn) saveBtn.textContent = 'Save Persona';
-  }
-};
-
-window.deletePersona = async function() {
-  if (!_editingPersona || !_sb || !_session) return;
-  if (!confirm('Delete ' + _editingPersona.name + '?')) return;
-  try {
-    await _sb.from('personas').delete().eq('id', _editingPersona.id).eq('user_id', _session.user.id);
-    _personas = _personas.filter(function(p) { return p.id !== _editingPersona.id; });
-    if (_activePersona && _activePersona.id === _editingPersona.id) _activePersona = null;
-    renderPersonaList();
-    window.closePersonaModal();
-    toast('Persona deleted.');
-  } catch (e) { toast('Could not delete persona.'); }
-};
 
 // -- Thought Stream ------------------------------------------
 var _thoughtInterval = null;
@@ -6380,7 +6100,7 @@ window.inlineFeedback = function(btn, value) {
           var fbPrompt  = fbPrev ? (fbPrev.querySelector('.msg-bubble') || {}).innerText || '' : '';
           var fbResp    = fbRow  ? (fbRow.querySelector('.msg-bubble')  || {}).innerText || '' : '';
           if (fbPrompt && fbResp) {
-            fetch(PIPELINE_URL, { method: 'POST', headers: edgeHeaders(),
+            callEdge(PIPELINE_URL, { method: 'POST',
               body: JSON.stringify({
                 feedback: value,
                 prompt:   fbPrompt.slice(0, 1000),
@@ -6625,7 +6345,7 @@ async function toggleVoiceInput() {
           });
 
           var ext = mime.includes('webm') ? 'webm' : 'ogg';
-          var res = await fetch(GROQ_STT_URL, {
+          var res = await callEdge(GROQ_STT_URL, {
             method:  'POST',
             headers: edgeHeaders(),
             body:    JSON.stringify({ audio: b64, filename: 'recording.' + ext, mimeType: mime }),
@@ -6925,7 +6645,7 @@ async function callSpeak(text) {
     try {
       unlockAudio();
 
-      var res = await fetch(TTS_URL, {
+      var res = await callEdge(TTS_URL, {
         method:  'POST',
         headers: edgeHeaders(),
         body:    JSON.stringify({
@@ -7036,7 +6756,7 @@ function recordUtterance() {
           });
 
           var ext    = mime.includes('webm') ? 'webm' : 'ogg';
-          var sttRes = await fetch(GROQ_STT_URL, {
+          var sttRes = await callEdge(GROQ_STT_URL, {
             method:  'POST',
             headers: edgeHeaders(),
             body:    JSON.stringify({ audio: b64, filename: 'call.' + ext, mimeType: mime }),
@@ -7100,7 +6820,6 @@ async function callGetAIResponse(userText) {
 
     var res = await fetch(CHAT_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body:    JSON.stringify({
         model:       CALL_AI_MODEL,
         messages:    messages,
@@ -7584,7 +7303,6 @@ async function generateContextualWelcome() {
 
     var llmRes = await fetch(CHAT_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body:    JSON.stringify({
         model:      'groq/llama-3.1-8b-instant',
         stream:     false,
@@ -7620,7 +7338,7 @@ function showWelcome() {
 
   // ── Instant: time-aware greeting with name ──────────────
   var timeGreet = getTimeGreeting();
-  var name      = _settings && _settings.displayName ? _settings.displayName : null;
+  var name      = null;
   if (heading) heading.textContent = name ? timeGreet + ', ' + name : timeGreet;
 
   // ── Fallback subtitle while context loads ───────────────
@@ -8178,7 +7896,6 @@ function scrollToBottom() {
     var userPrompt = buildDocUserPrompt(type, prompt);
     var res = await fetch(CHAT_URL, {
       method:  'POST',
-      headers: edgeHeaders(),
       body:    JSON.stringify({
         model:      'meta-llama/llama-4-scout-17b-16e-instruct',
         stream:     false,
@@ -8352,7 +8069,7 @@ var FOLLOWUP_URL = (typeof CHAT_URL !== 'undefined' ? CHAT_URL : '');
 async function generateFollowUpQuestions(userMsg, aiMsg) {
   if (!userMsg || !aiMsg) return [];
   try {
-    var res = await fetch(FOLLOWUP_URL, {
+    var res = await callEdge(FOLLOWUP_URL, {
       method:  'POST',
       headers: (typeof edgeHeaders === 'function' ? edgeHeaders() : { 'Content-Type': 'application/json' }),
       body:    JSON.stringify({
@@ -8475,7 +8192,7 @@ async function generateEmbedding(text) {
   if (!text || !EMBED_URL) return null;
   try {
     var headers = typeof edgeHeaders === 'function' ? edgeHeaders() : { 'Content-Type': 'application/json' };
-    var res = await fetch(EMBED_URL, {
+    var res = await callEdge(EMBED_URL, {
       method:  'POST',
       headers: headers,
       body:    JSON.stringify({ text: text.slice(0, 500) }),
@@ -9109,18 +8826,24 @@ function renderPersonalisedWelcome() {
   var welcomeState = document.getElementById('welcome-state');
   if (!welcomeState) return;
 
-  // Inject personalised name into greeting if not already done
-  var heading = welcomeState.querySelector('.welcome-heading');
-  var name    = (typeof _settings !== 'undefined' && _settings.displayName) ? _settings.displayName : null;
-  if (name && heading) {
-    var h = heading.textContent || '';
-    if (!h.includes(name)) {
-      // Append name to first heading word
-      heading.innerHTML = heading.innerHTML.replace(
-        /(<[^>]*>)?([A-Za-z,!]+)(<\/[^>]*>)?/,
-        function(m) { return m; }
-      );
-    }
+  // Inject Qwen-style capability badges if not already present
+  if (!welcomeState.querySelector('.welcome-caps')) {
+    var CAPS = [
+      { icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>', label: 'Web Search' },
+      { icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>', label: 'Memory' },
+      { icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', label: 'File Reading' },
+      { icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>', label: 'Code Pipeline' },
+      { icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>', label: 'Voice' },
+      { icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', label: 'Axion Ensemble' },
+    ];
+    var capsEl = document.createElement('div');
+    capsEl.className = 'welcome-caps';
+    capsEl.innerHTML = CAPS.map(function(c) {
+      return '<span class="welcome-cap-badge">' + c.icon + ' ' + c.label + '</span>';
+    }).join('');
+    var subEl = welcomeState.querySelector('.welcome-sub');
+    if (subEl && subEl.nextSibling) welcomeState.insertBefore(capsEl, subEl.nextSibling);
+    else if (subEl) subEl.insertAdjacentElement('afterend', capsEl);
   }
 
   // Inject recent chat chips
@@ -9849,4 +9572,3 @@ console.log('[CyanixAI] app_additions.js v1.0 loaded');
   console.log('[CyanixAI] Complix v1.0 loaded — Axion Extended Thinking');
 
 })();
-
