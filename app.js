@@ -6073,8 +6073,6 @@ function renderPersonaList() { return; /* Personas removed */
   });
 }
 
-  })();
-}
 function setActivePersona(p) {
   _activePersona = p;
   renderPersonaList();
@@ -9847,5 +9845,8 @@ console.log('[CyanixAI] app_additions.js v1.0 loaded');
   window.addEventListener('cyanix:ready', function() { setTimeout(initComplix, 600); });
 
   console.log('[CyanixAI] Complix v1.0 loaded — Axion Extended Thinking');
+
+})();
+);
 
 })();
