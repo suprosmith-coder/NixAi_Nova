@@ -6071,8 +6071,10 @@ function renderPersonaList() { return; /* Personas removed */
     row.onclick = function() { setActivePersona(p); };
     list.appendChild(row);
   });
-}
 
+
+  })();
+}
 function setActivePersona(p) {
   _activePersona = p;
   renderPersonaList();
@@ -9847,6 +9849,4 @@ console.log('[CyanixAI] app_additions.js v1.0 loaded');
   console.log('[CyanixAI] Complix v1.0 loaded — Axion Extended Thinking');
 
 })();
-);
 
-})();
